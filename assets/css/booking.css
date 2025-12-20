@@ -1,0 +1,112 @@
+:root {
+    --purple: #6a0dad;
+    --bg: #f6f4fb;
+  }
+  
+  /* PAGE */
+  .booking-page {
+    padding: 90px 20px 40px;
+    background: var(--bg);
+    min-height: 100vh;
+  }
+  
+  .booking-header h2 {
+    color: var(--purple);
+    margin-bottom: 20px;
+  }
+  
+  /* LIST */
+  .booking-list {
+    display: grid;
+    gap: 12px;
+  }
+  
+  .booking-item {
+    background: #fff;
+    padding: 14px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  }
+  
+  .booking-item:hover {
+    border-left: 5px solid var(--purple);
+  }
+  
+  .date {
+    font-weight: bold;
+    color: var(--purple);
+    min-width: 60px;
+  }
+  
+  .info h4 {
+    margin: 0;
+  }
+  
+  .info p {
+    font-size: 14px;
+    color: #666;
+  }
+  
+  /* MODAL */
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 3000;
+  }
+  
+  .modal-box {
+    background: #fff;
+    width: 90%;
+    max-width: 420px;
+    padding: 20px;
+    border-radius: 16px;
+  }
+  
+  .modal-box h3 {
+    color: var(--purple);
+    margin-bottom: 10px;
+  }
+  
+  .modal-section {
+    margin-bottom: 15px;
+  }
+  
+  .modal-section h4 {
+    color: var(--purple);
+    margin-bottom: 6px;
+  }
+  
+  .modal-section ul {
+    padding-left: 18px;
+  }
+  
+  .close-btn {
+    width: 100%;
+    padding: 10px;
+    background: var(--purple);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+  }
+  
+  /* UTIL */
+  .hidden {
+    display: none;
+  }
+  
+  /* RESPONSIVE */
+  @media (max-width: 480px) {
+    .booking-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+  
