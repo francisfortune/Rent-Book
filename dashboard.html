@@ -49,6 +49,7 @@
                     </a>
                 </li>
 
+               
                 <li>
                   <a href="#" id="addBookingBtn">
                     <span class="icon">
@@ -76,6 +77,10 @@
                     </a>
                 </li>
 
+                <div class="theme-toggle" id="themeToggle">
+                  <ion-icon name="moon-outline"></ion-icon>
+                </div>
+
             </ul>
         </div>
 
@@ -94,7 +99,15 @@
 
                 <div class="user">
                     <img src="assets/imgs/customer01.jpg" alt="">
-                </div>
+              <div class="dropd hidden">
+                <a href="#">Profile</a>
+                <a href="#">Settings</a>
+                <hr>
+                <a href="#" class="logout">Logout</a>
+             
+              </div>
+                  </div>
+
             </div>
         
 
@@ -115,6 +128,16 @@
       <label>
         Client Name
         <input type="text" id="clientName" required placeholder="John Doe">
+      </label>
+
+      <label>
+        Phone (Optional)
+        <input type="tel" id="PhoneNumber" placeholder="+234 XXX-XXXX-XXX">
+      </label>
+
+      <label>
+        Address/Location
+        <input type="text" id="addRess" required placeholder="4 lugard street near the De Castle">
       </label>
 
       <label>
