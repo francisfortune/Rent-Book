@@ -24,7 +24,7 @@
   background: #fff;
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
 }
 
 .card h3 {
@@ -55,9 +55,20 @@
   margin-top: 6px;
 }
 
-.success { background: #e7f7ee; color: #1e7f4f; }
-.info { background: #eef4ff; color: #3a5fcf; }
-.danger { background: #fdeaea; color: #b3261e; }
+.success {
+  background: #e7f7ee;
+  color: #1e7f4f;
+}
+
+.info {
+  background: #eef4ff;
+  color: #3a5fcf;
+}
+
+.danger {
+  background: #fdeaea;
+  color: #b3261e;
+}
 
 /* Alerts */
 .alert {
@@ -118,10 +129,12 @@
   .dashboard {
     padding-top: 95px;
   }
- .welcome h1{
-  font-size: 1.2rem;
- }
-.welcome p{
-  font-size: 1rem;
-}
+
+  .welcome h1 {
+    font-size: 1.2rem;
+  }
+
+  .welcome p {
+    font-size: 1rem;
+  }
 }
