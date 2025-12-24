@@ -1,0 +1,92 @@
+/* ================== Global Form Styles ================== */
+.add-booking {
+  max-width: 700px;
+  margin: auto;
+  padding: 2rem 1rem;
+  background: #f9f9f9;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.add-booking h2 {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: purple;
+  font-size: 1.8rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.form-group input,
+.form-group textarea {
+  padding: 0.8rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.item-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.primary-btn {
+  width: 100%;
+  padding: 1rem;
+  background-color: purple;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.primary-btn:hover {
+  background-color: darkmagenta;
+}
+
+.secondary-btn {
+  padding: 0.7rem 1rem;
+  border: 1px dashed purple;
+  background: transparent;
+  color: purple;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.secondary-btn:hover {
+  background: purple;
+  color: white;
+}
+
+/* ================== Responsive ================== */
+@media (max-width: 768px) {
+  .item-row {
+    grid-template-columns: 1fr;
+  }
+
+  .add-booking {
+    padding: 1.5rem;
+  }
+}
