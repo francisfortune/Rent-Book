@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory | Rent Book</title>
+     <!-- FAVICON -->
+     <link rel="icon" type="image/x-icon" href="assets/imgs/logo.ico">
+    <!-- ======= Styles ====== -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="stylesheet" href="assets/css/inventory.css">
+    <link rel="stylesheet" href="assets/css/global.css">
+</head>
+
+<body>
+    <!-- =============== Navigation ================ -->
+    <div class="container">
+        <div class="navigation">
+            <ul>
+
+              <li>
+                <a href="dashboard.html">
+                  <span class="icon">
+                    <img src="assets/imgs/logo.png" alt="Rent Book Logo" class="logo">
+                  </span>
+                  <span class="title brand">Rent Book</span>
+                </a>
+              </li>
+              
+
+                <li>
+                    <a href="dashboard.html">
+                        <span class="icon">
+                            <ion-icon name="home-outline"></ion-icon>
+                        </span>
+                        <span class="title">Dashboard</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="booking.html">
+                        <span class="icon">
+                            <ion-icon name="calendar-outline"></ion-icon>
+                        </span>
+                        <span class="title">Bookings</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="add.html">
+                      <span class="icon">
+                        <ion-icon name="add-circle-outline"></ion-icon>
+                      </span>
+                      <span class="title">Add</span>
+                    </a>
+                  </li>
+
+                <li>
+                    <a href="inventory.html">
+                        <span class="icon">
+                            <ion-icon name="cube-outline"></ion-icon>
+                        </span>
+                        <span class="title">Inventory</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="settings.html">
+                        <span class="icon">
+                            <ion-icon name="settings-outline"></ion-icon>
+                        </span>
+                        <span class="title">Settings</span>
+                    </a>
+                </li>
+
+            </ul>
+        </div>
+
+        <!-- ========================= Main ==================== -->
+        
+        <div class="main">
+            <div class="topbar">
+                <div class="toggle">
+                    <ion-icon name="menu-outline"></ion-icon>
+                </div>
+
+                <div class="page-title">
+                    <ion-icon name="cube-outline"></ion-icon>
+                    <h2 class="page-name">Inventory</h2>
+                  </div>
+
+                <div class="user">
+                    <img src="assets/imgs/customer01.jpg" alt="">
+                </div>
+            </div>
+        
+
+            <!-- ======================= Cards ================== -->
+      
+
+  <div class="inventory-page">
+
+    <!-- HEADER -->
+   
+        <div class="inventory-summary">
+          <div class="summary-card">
+            <h3 id="totalItems">0</h3>
+            <span>Total Items</span>
+          </div>
+          <div class="summary-card">
+            <h3 id="availableItems">0</h3>
+            <span>Available</span>
+          </div>
+          <div class="summary-card">
+            <h3 id="outItems">0</h3>
+            <span>Items Out</span>
+          </div>
+        </div>
+
+        <!-- INVENTORY LIST -->
+        <div class="inventory-section">
+          <h3>Your Items</h3>
+          <div id="inventoryList"></div>
+        </div>
+
+        <!-- INVENTORY CALCULATOR -->
+        <div class="calculator-section">
+          <h3>Inventory Calculator</h3>
+          <p>Check if you have enough items for a booking</p>
+          <label>
+            Item
+            <select id="calcItem"></select>
+          </label>
+          <label>
+            Quantity Needed
+            <input type="number" id="calcQty" placeholder="e.g. 500">
+          </label>
+          <button id="checkBtn">Check Availability</button>
+          <div id="calcResult" class="calc-result"></div>
+        </div>
+
+        <!-- STAFF MANAGEMENT -->
+        <div class="staff-section">
+          <h3>Staff Management</h3>
+          <form id="staffForm">
+            <input type="text" id="staffName" placeholder="Name" required>
+            <input type="text" id="staffRole" placeholder="Role" required>
+            <input type="tel" id="staffPhone" placeholder="Phone Number" required>
+            <button type="submit">Add Staff</button>
+          </form>
+          <div id="staffList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+    </div>
+
+    <!-- =========== Scripts =========  -->
+    <script src="assets/js/main.js"></script>
+    <script src="assets/js/inventory.js"></script>
+    
+
+    <!-- ====== ionicons ======= -->
+    <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+<script type="module" src="assets/js/firebase.js"></script>
+<script type="module" src="assets/js/inventory.js"></script>
+  </body>
+</html>

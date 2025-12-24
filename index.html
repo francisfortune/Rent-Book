@@ -1,275 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css"
+      rel="stylesheet"
+    />
+         <link rel="icon" type="image/x-icon" href="assets/logo.ico">
+    
+    <title>RentBook – Smart Rental & Inventory Management</title>
+<link rel="stylesheet" href="styles.css">
+  </head>
 
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | Rent Book</title>
-     <!-- FAVICON -->
-     <link rel="icon" type="image/x-icon" href="assets/imgs/logo.ico">
-    <!-- ======= Styles ====== -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <link rel="stylesheet" href="assets/css/global.css">
-    <link rel="stylesheet" href="assets/css/dashboard.css">
-</head>
-
-<body>
-    <!-- =============== Navigation ================ -->
-    <div class="container">
-        <div class="navigation">
-            <ul>
-             
-              <li>
-                <a href="dashboard.html">
-                  <span class="icon">
-                    <img src="assets/imgs/logo.png" alt="Rent Book Logo" class="logo">
-                  </span>
-                  <span class="title brand">Rent Book</span>
-                </a>
-              </li>
-              
-
-                <li>
-                    <a href="dashboard.html">
-                        <span class="icon">
-                            <ion-icon name="home-outline"></ion-icon>
-                        </span>
-                        <span class="title">Dashboard</span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="booking.html">
-                        <span class="icon">
-                            <ion-icon name="calendar-outline"></ion-icon>
-                        </span>
-                        <span class="title">Bookings</span>
-                    </a>
-                </li>
-
-                <li>
-                  <a href="#" id="addBookingBtn">
-                    <span class="icon">
-                      <ion-icon name="add-circle-outline"></ion-icon>
-                    </span>
-                    <span class="title">Add</span>
-                  </a>
-                </li>
-                
-                <li>
-                    <a href="inventory.html">
-                        <span class="icon">
-                            <ion-icon name="cube-outline"></ion-icon>
-                        </span>
-                        <span class="title">Inventory</span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="settings.html">
-                        <span class="icon">
-                            <ion-icon name="settings-outline"></ion-icon>
-                        </span>
-                        <span class="title">Settings</span>
-                    </a>
-                </li>
-
-            </ul>
-        </div>
-
-        <!-- ========================= Main ==================== -->
-        
-        <div class="main">
-            <div class="topbar">
-                <div class="toggle">
-                    <ion-icon name="menu-outline"></ion-icon>
-                </div>
-
-                <div class="page-title">
-                    <ion-icon name="home-outline"></ion-icon>
-                    <h2 class="page-name">Dashboard</h2>
-                  </div>
-
-                <div class="user">
-                    <img src="assets/imgs/customer01.jpg" alt="">
-                </div>
-            </div>
-        
-
-            <!-- ======================= Cards ================== -->
-          <!-- ADD BOOKING MODAL -->
-<div class="modal hidden" id="addBookingModal">
-  <div class="modal-box">
-
-    <h3>Add Booking</h3>
-
-    <form id="bookingForm">
-
-      <label>
-        Event Name
-        <input type="text" id="eventName" required placeholder="Wedding">
-      </label>
-
-      <label>
-        Client Name
-        <input type="text" id="clientName" required placeholder="John Doe">
-      </label>
-
-      <label>
-        Event Date
-        <input type="date" id="eventDate" required>
-      </label>
-
-      <label>Items</label>
-
-      <div id="itemsWrapper">
-      
-        <div class="item-row">
-          <input type="text" placeholder="Item (e.g Chairs)" class="item-name" required>
-          <input type="number" placeholder="Qty" class="item-qty" required>
-        </div>
-      
+  <body>
+    <!-- NAV -->
+    <nav>
+      <div class="nav__container">
+        <div class="nav__logo">Rent<span>Book</span></div>
+        <a href="signup.html" class="nav__btn">Get Started</a>
       </div>
-      
-      <button type="button" class="add-item" id="addItemBtn">
-        ➕ Add another item
-      </button>
+    </nav>
 
-      <label>Additional Info</label>
-<textarea 
-  id="extraInfo"
-  placeholder="Notes, delivery address, payment method..."
-  rows="3"
-></textarea>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero__content">
+        <h1>
+          Manage Rentals & Inventory<br />
+          <span>Without Stress</span>
+        </h1>
+        <p>
+          RentBook helps rental businesses and stores track items, bookings,
+          customers, and availability in real time — all from one simple dashboard.
+        </p>
+        <div class="hero__buttons">
+          <a href="signup.html" class="btn-primary">Start Free</a>
+          <a href="#" class="btn-secondary">Watch Demo</a>
+        </div>
+      </div>
+      <div class="hero__image">
+        <img src="assets/dashboard.png" alt="RentBook Dashboard" />
+      </div>
+    </section>
 
-<label>Payment Receipt (optional)</label>
-<input type="file" id="receipt" accept="image/*">
+    <!-- FEATURES -->
+    <section class="features">
+      <div class="features__container">
+        <div class="feature">
+          <i class="ri-box-3-line"></i>
+          <h4>Inventory Tracking</h4>
+          <p>Know what is available, rented, or overdue at a glance.</p>
+        </div>
+        <div class="feature">
+          <i class="ri-calendar-check-line"></i>
+          <h4>Rental Bookings</h4>
+          <p>Manage bookings, durations, and returns effortlessly.</p>
+        </div>
+        <div class="feature">
+          <i class="ri-store-2-line"></i>
+          <h4>Business Ready</h4>
+          <p>Perfect for rental shops, event vendors, and retail stores.</p>
+        </div>
+      </div>
+    </section>
 
-<img id="receiptPreview" class="hidden" />
+    <!-- VIDEO -->
+    <section class="video">
+      <h2>How RentBook Works</h2>
+      <p>Watch how to manage your rentals in minutes</p>
+      <div class="video__box">
+        Explainer Video Placeholder
+      </div>
+    </section>
 
+    <!-- CTA -->
+    <section class="cta">
+      <h2>Start Managing Smarter</h2>
+      <p>Create your RentBook account and take control today.</p>
+      <a href="signup.html" class="btn-primary">Create Free Account</a>
+    </section>
 
-      <button type="submit">Save Booking</button>
-      <button type="button" class="cancel" id="closeAddModal">Cancel</button>
-
-    </form>
-
-  </div>
-</div>
-
-<!-- ===== DASHBOARD CONTENT ===== -->
-<section class="dashboard">
-
-  <!-- WELCOME STRIP -->
-  <div class="card" style="box-shadow:0px 8px 12px purple  ;">
-      <div class="welcome">
-    <h2>Good morning, Francis 👋</h2>
-    <p>Here’s what’s happening with your rentals today.</p>
-  </div>
-  </div>
-
-
-  <!-- TODAY EVENTS -->
-  <div class="card">
-    <h3>📅 Today’s Events</h3>
-
-    <div class="event">
-      <h4>Wedding Ceremony</h4>
-      <p>500 Chairs</p>
-      <p class="muted">Location: New Haven Hall</p>
-      <span class="status success">Ready for delivery</span>
-    </div>
-
-    <div class="event">
-      <h4>Burial Event</h4>
-      <p>Canopy × 2, Sound system</p>
-      <span class="status info">Items picked up</span>
-    </div>
-
-    <!-- Empty state (toggle later with JS) -->
-    <!--
-    <p class="empty">
-      No events today 🎉 Your next booking is in 2 days.
-    </p>
-    -->
-  </div>
-
-  <!-- ALERTS -->
-  <div class="card">
-    <h3>⚠️ Alerts</h3>
-
-    <div class="alert critical">
-      ⚠️ Only <strong>25 chairs</strong> remaining
-    </div>
-
-    <div class="alert critical">
-      ⚠️ <strong>100 chairs overdue</strong><br>
-      With: Example Rentals<br>
-      Due since: Aug 10
-    </div>
-
-    <div class="alert warning">
-      🟡 Event in 2 weeks needs 100 more chairs
-    </div>
-
-    <div class="alert warning">
-      🟡 Ice block supplier not confirmed
-    </div>
-  </div>
-
-  <!-- RENTAL TO RENTAL -->
-  <div class="card">
-    <h3>📦 Rental-to-Rental Status</h3>
-
-    <div class="rental-block">
-      <h4>Items With Other Rentals</h4>
-      <p>
-        Chairs — 100<br>
-        With: Example Rentals<br>
-        Return date: Aug 15<br>
-        <span class="status danger">OVERDUE</span>
-      </p>
-    </div>
-
-    <div class="rental-block">
-      <h4>Items You Borrowed</h4>
-      <p>
-        Canopy — 2<br>
-        From: City Events<br>
-        Event: Burial<br>
-        Return: Tomorrow
-      </p>
-    </div>
-  </div>
-
-  <!-- REMINDERS -->
-  <div class="card">
-    <h3>⏰ Upcoming Reminders</h3>
-
-    <ul class="reminders">
-      <li>⏰ Call Example Rentals to reserve 100 chairs <span>(Event in 14 days)</span></li>
-      <li>⏰ Confirm ice block supply <span>(Tomorrow morning)</span></li>
-      <li>⏰ Prepare delivery for Wedding <span>(Today, 4pm)</span></li>
-    </ul>
-
-    <p class="muted small">
-      📌 Reminders are also sent via notifications / WhatsApp.
-    </p>
-  </div>
-
-</section>
-<!-- ===================================================== -->
-
-          
-    </div>
-
-    <!-- =========== Scripts =========  -->
-    <script src="assets/js/main.js"></script>
-
-    <!-- ====== ionicons ======= -->
-    <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
-    <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
-</body>
-
+    <!-- FOOTER -->
+    <footer>
+      © 2025 RentBook. All rights reserved.
+    </footer>
+  </body>
 </html>
