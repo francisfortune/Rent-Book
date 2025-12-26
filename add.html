@@ -1,363 +1,150 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard | Rent Book</title>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Rent Book</title>
+     <!-- FAVICON -->
+     <link rel="icon" type="image/x-icon" href="assets/imgs/logo.ico">
+    <!-- ======= Styles ====== -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-  <link rel="icon" href="assets/imgs/logo.ico" />
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
-  <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
-
-<style>
-    :root {
-  --purple: purple;
-  --white: #fff;
-  --gray: #f5f5f5;
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: "Ubuntu", sans-serif;
-}
-
-body {
-  background: var(--gray);
-}
-
-/* SIDEBAR */
-.navigation {
-  position: fixed;
-  width: 260px;
-  height: 100%;
-  background: var(--purple);
-  transition: 0.3s;
-  overflow-y: auto;
-}
-
-.navigation ul {
-  padding: 20px 0;
-}
-
-.navigation li {
-  list-style: none;
-}
-
-.navigation a {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 15px 20px;
-  color: white;
-  text-decoration: none;
-font-size: 2rem;
-}
-
-.navigation a:hover {
-  background: white;
-  color: var(--purple);
-}
-
-.logo {
-  width: 40px;
-}
-
-/* DROPDOWNS */
-.dropdown .submenu {
-  display: none;
-  background: rgba(255,255,255,0.1);
-}
-
-.dropdown.active .submenu {
-  display: block;
-}
-
-.submenu a {
-  padding-left: 60px;
-  font-size: 14px;
-}
-
-/* MAIN */
-.main {
-  margin-left: 260px;
-  min-height: 100vh;
-}
-
-/* TOPBAR */
-.topbar {
-  height: 60px;
-  background: var(--purple);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 15px;
-}
-
-.toggle {
-  font-size: 28px;
-  cursor: pointer;
-}
-
-/* USER MENU */
-.user-menu {
-  position: relative;
-}
-
-.user-menu img {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.user-dropdown {
-  position: absolute;
-  right: 0;
-  top: 50px;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 5px 20px rgba(0,0,0,.15);
-  width: 150px;
-}
-
-.user-dropdown a {
-  display: block;
-  padding: 10px;
-  color: #333;
-  text-decoration: none;
-}
-
-.user-dropdown a:hover {
-  background: #eee;
-}
-
-.hidden {
-  display: none;
-}
-
-/* MOBILE */
-@media (max-width: 768px) {
-  .navigation {
-    left: -100%;
-  }
-  .navigation.active {
-    left: 0;
-  }
-  .main {
-    margin-left: 0;
-  }
-}
-.dashboard {
-  padding: 80px 20px 20px;
-  display: grid;
-  gap: 20px;
-}
-
-.card {
-  background: white;
-  padding: 20px;
-  border-radius: 14px;
-  box-shadow: 0 6px 20px rgba(0,0,0,.06);
-}
-
-.welcome-card h2 {
-  text-align: center;
-  color: purple;
-}
-
-.welcome-card p {
-  text-align: center;
-  color: #555;
-}
-
-.event {
-  border-bottom: 1px solid #eee;
-  padding: 10px 0;
-}
-
-.status {
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 20px;
-}
-
-.success {
-  background: #e7f7ee;
-  color: #1e7f4f;
-}
-
-.alert {
-  padding: 10px;
-  border-radius: 8px;
-  font-size: 14px;
-}
-
-.critical {
-  background: #fdeaea;
-  color: #b3261e;
-}
-
-.warning {
-  background: #fff4db;
-  color: #8a5a00;
-}
-
-</style>
-
+    <link rel="stylesheet" href="assets/css/global.css">
+    <link rel="stylesheet" href="assets/css/add.css">
 </head>
 
 <body>
+    <!-- =============== Navigation ================ -->
+    <div class="container">
+        <div class="navigation">
+            <ul>
+             
+              <li>
+                <a href="dashboard.html">
+                  <span class="icon">
+                    <img src="assets/imgs/logo.png" alt="Rent Book Logo" class="logo">
+                  </span>
+                  <span class="title brand">Rent Book</span>
+                </a>
+              </li>
+              
 
-<div class="container">
+                <li>
+                    <a href="dashboard.html">
+                        <span class="icon">
+                            <ion-icon name="home-outline"></ion-icon>
+                        </span>
+                        <span class="title">Dashboard</span>
+                    </a>
+                </li>
 
-  <!-- SIDEBAR -->
-  <aside class="navigation">
-    <ul>
+                <li>
+                    <a href="booking.html">
+                        <span class="icon">
+                            <ion-icon name="calendar-outline"></ion-icon>
+                        </span>
+                        <span class="title">Bookings</span>
+                    </a>
+                </li>
 
-      <!-- BRAND -->
-      <li class="brand-item">
-        <span class="icon">
-          <img src="assets/imgs/logo.png" class="logo">
-        </span>
-        <span class="title brand">Rent Book</span>
-      </li>
+               
+                <li>
+                  <a href="add.html">
+                    <span class="icon">
+                      <ion-icon name="add-circle-outline"></ion-icon>
+                    </span>
+                    <span class="title">Add</span>
+                  </a>
+                </li>
+                
+                <li>
+                    <a href="inventory.html">
+                        <span class="icon">
+                            <ion-icon name="cube-outline"></ion-icon>
+                        </span>
+                        <span class="title">Inventory</span>
+                    </a>
+                </li>
 
-      <!-- DASHBOARD -->
-      <li>
-        <a href="dashboard.html">
-          <span class="icon"><ion-icon name="home-outline"></ion-icon></span>
-          <span class="title">Dashboard</span>
-        </a>
-      </li>
+                <li>
+                    <a href="settings.html">
+                        <span class="icon">
+                            <ion-icon name="settings-outline"></ion-icon>
+                        </span>
+                        <span class="title">Settings</span>
+                    </a>
+                </li>
 
-      <!-- BOOKINGS DROPDOWN -->
-      <li class="dropdown">
-        <a href="#">
-          <span class="icon"><ion-icon name="calendar-outline"></ion-icon></span>
-          <span class="title">Bookings</span>
-          <ion-icon name="chevron-down-outline" class="chevron"></ion-icon>
-        </a>
-        <ul class="submenu">
-          <li><a href="booking.html">All Bookings</a></li>
-          <li><a href="#" id="addBookingBtn">Add Booking</a></li>
-        </ul>
-      </li>
-
-      <!-- INVENTORY -->
-      <li class="dropdown">
-        <a href="#">
-          <span class="icon"><ion-icon name="cube-outline"></ion-icon></span>
-          <span class="title">Inventory</span>
-          <ion-icon name="chevron-down-outline" class="chevron"></ion-icon>
-        </a>
-        <ul class="submenu">
-          <li><a href="inventory.html">Items</a></li>
-          <li><a href="#">Suppliers</a></li>
-        </ul>
-      </li>
-
-      <!-- SETTINGS -->
-      <li class="dropdown">
-        <a href="#">
-          <span class="icon"><ion-icon name="settings-outline"></ion-icon></span>
-          <span class="title">Settings</span>
-          <ion-icon name="chevron-down-outline" class="chevron"></ion-icon>
-        </a>
-        <ul class="submenu">
-          <li><a href="#">Profile</a></li>
-          <li><a href="#">Security</a></li>
-        </ul>
-      </li>
-
-    </ul>
-  </aside>
-
-  <!-- MAIN -->
-  <main class="main">
-
-    <!-- TOPBAR -->
-    <header class="topbar">
-      <div class="toggle">
-        <ion-icon name="menu-outline"></ion-icon>
-      </div>
-
-      <div class="page-title">
-        <ion-icon name="home-outline"></ion-icon>
-        <h2>Dashboard</h2>
-      </div>
-
-      <!-- USER DROPDOWN -->
-      <div class="user-menu">
-        <img src="assets/imgs/customer01.jpg" id="userAvatar">
-        <div class="user-dropdown hidden">
-          <a href="#">Profile</a>
-          <a href="#">Settings</a>
-          <hr>
-          <a href="#" class="logout">Logout</a>
+            </ul>
         </div>
-      </div>
-    </header>
 
-    <!-- DASHBOARD CONTENT -->
-    <section class="dashboard">
+        <!-- ========================= Main ==================== -->
+        
+        <div class="main">
+            <div class="topbar">
+                <div class="toggle">
+                    <ion-icon name="menu-outline"></ion-icon>
+                </div>
 
-      <div class="card welcome-card">
-        <h2>Good morning, Francis 👋</h2>
-        <p>Here’s what’s happening with your rentals today.</p>
-      </div>
+                <div class="page-title">
+                    <ion-icon name="home-outline"></ion-icon>
+                    <h2 class="page-name">Dashboard</h2>
+                  </div>
 
-      <div class="card">
-        <h3>📅 Today’s Events</h3>
-        <div class="event">
-          <h4>Wedding Ceremony</h4>
-          <p>500 Chairs</p>
-          <span class="status success">Ready</span>
-        </div>
-      </div>
+                    <div class="user">
+                    <img src="assets/imgs/customer01.jpg" alt="">
+                </div>
 
-      <div class="card">
-        <h3>⚠️ Alerts</h3>
-        <div class="alert critical">25 chairs remaining</div>
-        <div class="alert warning">Event in 2 weeks needs chairs</div>
-      </div>
+            </div>
+        
 
-    </section>
-  </main>
+<!-- ===== DASHBOARD CONTENT ===== -->
+ <!-- Dashboard content -->
+   <!-- Add Booking Form -->
+            <section class="add-booking" style="padding-top: 100px;">
+                <form id="bookingForm">
+                    <div class="form-group">
+                        <label for="bookingName">Booking Name / Client</label>
+                        <input type="text" id="bookingName" placeholder="Client or Event Name" required>
+                    </div>
 
-</div>
-<script>const toggle = document.querySelector(".toggle");
-    const nav = document.querySelector(".navigation");
-    
-    toggle.onclick = () => {
-      nav.classList.toggle("active");
-    };
-    
-    /* DROPDOWNS */
-    document.querySelectorAll(".dropdown > a").forEach(link => {
-      link.onclick = (e) => {
-        e.preventDefault();
-        link.parentElement.classList.toggle("active");
-      };
-    });
-    
-    /* USER MENU */
-    const avatar = document.getElementById("userAvatar");
-    const userMenu = document.querySelector(".user-dropdown");
-    
-    avatar.onclick = () => {
-      userMenu.classList.toggle("hidden");
-    };
-    
-    document.addEventListener("click", (e) => {
-      if (!e.target.closest(".user-menu")) {
-        userMenu.classList.add("hidden");
-      }
-    });
-    </script>
+                    <div class="form-group">
+                        <label for="bookingDate">Booking Date</label>
+                        <input type="date" id="bookingDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Items</label>
+                        <div id="itemsWrapper">
+                            <div class="item-row">
+                                <input type="text" class="item-name" placeholder="Item (e.g Chairs)" required>
+                                <input type="number" class="item-qty" placeholder="Quantity" required>
+                            </div>
+                        </div>
+                        <button type="button" id="addItemBtn" class="secondary-btn">+ Add Item</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tasks (Optional)</label>
+                        <textarea id="bookingTasks" placeholder="e.g Call supplier, Arrange transport"></textarea>
+                    </div>
+
+                    <button type="submit" class="primary-btn">Add Booking</button>
+                </form>
+                <p id="successMsg" style="color: green; display: none;">Booking added successfully!</p>
+            </section>
+
+        
+    </div>
+
+    <!-- =========== Scripts =========  -->
+    <script src="assets/js/main.js"></script>
+    <!-- ====== ionicons ======= -->
+    <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
 </body>
+<script type="module" src="assets/js/firebase.js"></script>
+<script type="module" src="assets/js/add.js"></script>
 </html>

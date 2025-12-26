@@ -1,298 +1,990 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | Rent Book</title>
-     <!-- FAVICON -->
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | Rent Book</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <!-- FAVICON -->
      <link rel="icon" type="image/x-icon" href="assets/imgs/logo.ico">
-    <!-- ======= Styles ====== -->
-    <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    <link rel="stylesheet" href="assets/css/global.css">
-    <link rel="stylesheet" href="assets/css/dashboard.css">
-</head>
+        body {
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f6fa;
+            overflow-x: hidden;
+        }
 
-<body>
-    <!-- =============== Navigation ================ -->
-    <div class="container">
-        <div class="navigation">
-            <ul>
-             
-              <li>
-                <a href="dashboard.html">
-                  <span class="icon">
-                    <img src="assets/imgs/logo.png" alt="Rent Book Logo" class="logo">
-                  </span>
-                  <span class="title brand">Rent Book</span>
-                </a>
-              </li>
-              
+        html, body {
+            height: 100%;
+            width: 100%;
+        }
 
-                <li>
-                    <a href="dashboard.html">
-                        <span class="icon">
-                            <ion-icon name="home-outline"></ion-icon>
-                        </span>
-                        <span class="title">Dashboard</span>
-                    </a>
-                </li>
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
 
-                <li>
-                    <a href="booking.html">
-                        <span class="icon">
-                            <ion-icon name="calendar-outline"></ion-icon>
-                        </span>
-                        <span class="title">Bookings</span>
-                    </a>
-                </li>
+        /* =============== Navigation ================ */
+        .navigation {
+            position: fixed;
+            width: 280px;
+            height: 100%;
+            background: purple;
+            border-left: 10px solid purple;
+            transition: 0.5s;
+            overflow: hidden;
+        }
 
-               
-                <li>
-                  <a href="#" id="addBookingBtn">
-                    <span class="icon">
-                      <ion-icon name="add-circle-outline"></ion-icon>
-                    </span>
-                    <span class="title">Add</span>
-                  </a>
-                </li>
-                
-                <li>
-                    <a href="inventory.html">
-                        <span class="icon">
-                            <ion-icon name="cube-outline"></ion-icon>
-                        </span>
-                        <span class="title">Inventory</span>
-                    </a>
-                </li>
+        .navigation.active {
+            width: 80px;
+        }
 
-                <li>
-                    <a href="settings.html">
-                        <span class="icon">
-                            <ion-icon name="settings-outline"></ion-icon>
-                        </span>
-                        <span class="title">Settings</span>
-                    </a>
-                </li>
+        .navigation ul {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+        }
 
-                <div class="theme-toggle" id="themeToggle">
-                  <ion-icon name="moon-outline"></ion-icon>
-                </div>
+        .navigation ul li {
+            position: relative;
+            width: 100%;
+            list-style: none;
+            border-top-left-radius: 30px;
+            border-bottom-left-radius: 30px;
+        }
 
-            </ul>
-        </div>
+        .navigation ul li:hover,
+        .navigation ul li.hovered {
+            background-color: white;
+        }
 
-        <!-- ========================= Main ==================== -->
-        
-        <div class="main">
-            <div class="topbar">
-                <div class="toggle">
-                    <ion-icon name="menu-outline"></ion-icon>
-                </div>
+        .navigation ul li:nth-child(1) {
+            margin-bottom: 40px;
+            pointer-events: none;
+        }
 
-                <div class="page-title">
-                    <ion-icon name="home-outline"></ion-icon>
-                    <h2 class="page-name">Dashboard</h2>
-                  </div>
+        .navigation ul li a {
+            position: relative;
+            display: block;
+            width: 100%;
+            display: flex;
+            text-decoration: none;
+            color: white;
+        margin: 20px;
+        font-size: 20px;
+        }
 
-                <div class="user">
-                    <img src="assets/imgs/customer01.jpg" alt="">
-              <div class="dropd hidden">
-                <a href="#">Profile</a>
-                <a href="#">Settings</a>
-                <hr>
-                <a href="#" class="logout">Logout</a>
-             
-              </div>
-                  </div>
+        .navigation ul li:hover a,
+        .navigation ul li.hovered a {
+            color: purple;
+        }
 
-            </div>
-        
+        .navigation ul li a .icon {
+            position: relative;
+            display: block;
+            min-width: 60px;
+            height: 60px;
+            line-height: 75px;
+            text-align: center;
+        }
 
-            <!-- ======================= Cards ================== -->
-          <!-- ADD BOOKING MODAL -->
-<div class="modal hidden" id="addBookingModal">
-  <div class="modal-box">
+        .navigation ul li a .icon ion-icon {
+            font-size: 1.75rem;
+            padding-right: 30px;
+        }
 
-    <h3>Add Booking</h3>
+        .navigation ul li a .title {
+            position: relative;
+            display: block;
+            padding: 0 10px;
+            height: 60px;
+            line-height: 60px;
+            text-align: start;
+            white-space: nowrap;
+            font-weight: 500;
+        }
 
-    <form id="bookingForm">
+        .logo {
+            width: 45px;
+            height: 45px;
+            margin-top: 8px;
+        }
 
-      <label>
-        Event Name
-        <input type="text" id="eventName" required placeholder="Wedding">
-      </label>
+        .brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
 
-      <label>
-        Client Name
-        <input type="text" id="clientName" required placeholder="John Doe">
-      </label>
+        /* ================ Main ================ */
+        .main {
+            position: absolute;
+            width: calc(100% - 280px);
+            left: 280px;
+            min-height: 100%;
+            background: white;
+            transition: 0.5s;
+        }
 
-      <label>
-        Phone (Optional)
-        <input type="tel" id="PhoneNumber" placeholder="+234 XXX-XXXX-XXX">
-      </label>
+        .main.active {
+            width: calc(100% - 80px);
+            left: 80px;
+        }
 
-      <label>
-        Address/Location
-        <input type="text" id="addRess" required placeholder="4 lugard street near the De Castle">
-      </label>
+        .topbar {
+            position: fixed;
+            top: 0;
+            left: 280px;
+            width: calc(100% - 280px);
+            height: 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            z-index: 100;
+            transition: 0.5s;
+        }
 
-      <label>
-        Event Date
-        <input type="date" id="eventDate" required>
-      </label>
+        .main.active .topbar {
+            left: 80px;
+            width: calc(100% - 80px);
+        }
 
-      <label>Items</label>
+        .toggle {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            cursor: pointer;
+            color: purple;
+        }
 
-      <div id="itemsWrapper">
-      
-        <div class="item-row">
-          <input type="text" placeholder="Item (e.g Chairs)" class="item-name" required>
-          <input type="number" placeholder="Qty" class="item-qty" required>
-        </div>
-      
-      </div>
-      
-      <button type="button" class="add-item" id="addItemBtn">
-        ➕ Add another item
-      </button>
+        .page-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #2d3748;
+        }
 
-      <label>Additional Info</label>
-<textarea 
-  id="extraInfo"
-  placeholder="Notes, delivery address, payment method..."
-  rows="3"
-></textarea>
+        .page-title ion-icon {
+            font-size: 1.5rem;
+            color: purple;
+        }
 
-<label>Payment Receipt (optional)</label>
-<input type="file" id="receipt" accept="image/*">
+        .page-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
 
-<img id="receiptPreview" class="hidden" />
+        .mobile-brand {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            color: purple;
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
 
+        .mobile-brand .logo {
+            font-size: 1.5rem;
+        }
 
-      <button type="submit">Save Booking</button>
-      <button type="button" class="cancel" id="closeAddModal">Cancel</button>
+        .user {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            cursor: pointer;
+        }
 
-    </form>
+        .user img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
 
+        /* ================ Dashboard Content ================ */
+        .dashboard {
+            padding: 40px;
+            /* padding-top: 90px; */
+            overflow-y: auto;
+            height: 100%;
+        }
+
+        .welcome-section {
+            background: purple;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            color: white;
+            text-align: center;
+        }
+
+        .welcome-text {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .welcome-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+
+        /* Cards Grid */
+        .cardBox {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            position: relative;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            cursor: pointer;
+            box-shadow: 0 7px 25px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .card .numbers {
+            position: relative;
+            font-weight: 700;
+            font-size: 2.5rem;
+            color: purple;
+        }
+
+        .card .cardName {
+            color: #718096;
+            font-size: 1.1rem;
+            margin-top: 10px;
+            font-weight: 500;
+        }
+
+        .card .iconBx {
+            font-size: 3.5rem;
+            color: purple;
+            opacity: 0.2;
+        }
+
+        /* Details Section */
+        .details {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+        }
+
+        .recentOrders,
+        .recentCustomers {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 7px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        .cardHeader {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .cardHeader h2 {
+            font-weight: 700;
+            color: purple;
+            font-size: 1.5rem;
+        }
+
+        .btn {
+            position: relative;
+            padding: 8px 15px;
+            background: purple;
+            color: white;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: purple;
+            transform: translateY(-2px);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        table thead td {
+            font-weight: 600;
+            color: #4a5568;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        table tbody tr {
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        table tbody tr:hover {
+            background: #f7fafc;
+        }
+
+        table tr td {
+            padding: 15px;
+            font-size: 0.95rem;
+            color: #2d3748;
+        }
+
+        .status {
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status.delivered {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status.pending {
+            background: #fef5e7;
+            color: #975a16;
+        }
+
+        .status.return {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .status.inProgress {
+            background: #e6fffa;
+            color: #234e52;
+        }
+
+        /* Recent Customers */
+        .recentCustomers {
+            position: relative;
+        }
+
+        .recentCustomers table tr:hover {
+            background: #f7fafc;
+        }
+
+        .recentCustomers table tr td {
+            padding: 12px;
+        }
+
+        .recentCustomers table tr td h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            line-height: 1.2rem;
+        }
+
+        .recentCustomers table tr td h4 span {
+            font-size: 0.85rem;
+            color: #718096;
+            font-weight: 400;
+        }
+
+        .imgBx {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+
+        .imgBx img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 991px) {
+            .navigation {
+                left: -280px;
+            }
+
+            .navigation.active {
+                width: 280px;
+                left: 0;
+            }
+
+            .main {
+                width: 100%;
+                left: 0;
+            }
+
+            .main.active {
+                left: 280px;
+            }
+
+            .topbar {
+                left: 0;
+                width: 100%;
+            }
+
+            .main.active .topbar {
+                left: 280px;
+                width: calc(100% - 280px);
+            }
+
+            .cardBox {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+
+            .details {
+                grid-template-columns: 1fr;
+            }
+
+            .dashboard {
+                padding: 25px;
+                padding-top: 85px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .topbar {
+                left: 0;
+                width: 100%;
+            }
+
+            .main.active .topbar {
+                left: 0;
+                width: 100%;
+            }
+
+            .page-title {
+                display: none;
+            }
+
+            .mobile-brand {
+                display: flex;
+            }
+
+            .cardBox {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .cardHeader h2 {
+                font-size: 1.2rem;
+            }
+
+            .user {
+                min-width: 40px;
+            }
+
+            .navigation {
+                width: 100%;
+                left: -100%;
+                z-index: 1000;
+            }
+
+            .navigation.active {
+                width: 100%;
+                left: 0;
+            }
+
+            .toggle {
+                display: none;
+            }
+
+            .main.active .toggle {
+                color: white;
+                position: fixed;
+                right: 0;
+                left: initial;
+            }
+
+            .dashboard {
+                padding: 20px;
+                padding-top: 80px;
+                padding-bottom: 90px;
+            }
+
+            .welcome-section {
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+
+            .details {
+                gap: 20px;
+            }
+
+            .recentOrders,
+            .recentCustomers {
+                padding: 20px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+        }
+
+        /* Bottom Navigation for Mobile */
+        .bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            padding: 10px 0;
+        }
+
+        .bottom-nav ul {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .bottom-nav ul li {
+            flex: 1;
+            text-align: center;
+        }
+
+        .bottom-nav ul li a {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            color: #718096;
+            text-decoration: none;
+            padding: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .bottom-nav ul li a .icon {
+            font-size: 1.5rem;
+            min-width: auto;
+            height: auto;
+            line-height: 1;
+        }
+
+        .bottom-nav ul li a .title {
+            font-size: 0.7rem;
+            font-weight: 500;
+            white-space: nowrap;
+            padding: 0;
+            height: auto;
+            line-height: 1;
+        }
+
+        .bottom-nav ul li.active a,
+        .bottom-nav ul li a:active {
+            color: purple;
+        }
+
+        @media (max-width: 768px) {
+            .navigation {
+                display: none;
+            }
+
+            .bottom-nav {
+                display: block;
+            }
+
+            .main {
+                width: 100%;
+                left: 0;
+                padding-bottom: 70px;
+            }
+
+            .main.active {
+                left: 0;
+            }
+
+            .toggle {
+                display: none;
+            }
+
+            .dashboard {
+                padding-bottom: 80px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .card .numbers {
+                font-size: 1.8rem;
+            }
+
+            .card .cardName {
+                font-size: 0.9rem;
+            }
+
+            .welcome-text {
+                font-size: 1.3rem;
+            }
+
+            .welcome-subtitle {
+                font-size: 0.95rem;
+            }
+
+            .welcome-section {
+                padding: 15px;
+            }
+
+            table tr td {
+                padding: 10px;
+                font-size: 0.85rem;
+            }
+
+            .bottom-nav ul li a .title {
+                font-size: 0.65rem;
+            }
+
+            .dashboard {
+                padding: 15px;
+                padding-top: 75px;
+                padding-bottom: 85px;
+            }
+
+            .cardBox {
+                gap: 15px;
+            }
+
+            .card {
+                padding: 15px;
+            }
+
+            .recentOrders,
+            .recentCustomers {
+                padding: 15px;
+            }
+
+            .mobile-brand {
+                font-size: 1.1rem;
+            }
+
+            .mobile-brand .logo {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body><!-- =============== Navigation ================ -->
+  <div class="container">
+   <div class="navigation">
+    <ul>
+     <li><a href="dashboard.html"> <span class="icon">
+        <div class="logo">
+         
+        </div></span> <span class="title brand" id="brand-name">Rent Book</span> </a></li>
+     <li class="hovered"><a href="dashboard.html"> <span class="icon">
+        <ion-icon name="home-outline"></ion-icon> </span> <span class="title">Dashboard</span> </a></li>
+     <li><a href="bookings.html"> <span class="icon">
+        <ion-icon name="calendar-outline"></ion-icon> </span> <span class="title">Bookings</span> </a></li>
+     <li><a href="add.html"> <span class="icon">
+        <ion-icon name="add-circle-outline"></ion-icon> </span> <span class="title">Add</span> </a></li>
+     <li><a href="inventory.html"> <span class="icon">
+        <ion-icon name="cube-outline"></ion-icon> </span> <span class="title">Inventory</span> </a></li>
+     <li><a href="settings.html"> <span class="icon">
+        <ion-icon name="settings-outline"></ion-icon> </span> <span class="title">Settings</span> </a></li>
+    </ul>
+   </div><!-- ========================= Main ==================== -->
+   <div class="main">
+    <div class="topbar">
+     <div class="toggle"><ion-icon name="menu-outline"></ion-icon>
+     </div>
+     <div class="page-title"><ion-icon name="home-outline"></ion-icon>
+      <h2 class="page-name">Dashboard</h2>
+     </div>
+<div class="mobile-brand">
+  <img 
+    src="assets/logo.ico"
+    alt="RentBook"
+    style="
+      width: 34px;
+      height: 34px;
+      object-fit: contain;
+      margin-right: 8px;
+    "
+  />
+  <span id="brand-name-mobile">Loading...</span>
+</div>
+
+<div class="user">
+  <div
+    id="user-avatar"
+    style="
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 1.2rem;
+      text-transform: uppercase;
+    "
+  >
+    ?
   </div>
 </div>
 
-<!-- ===== DASHBOARD CONTENT ===== -->
-<section class="dashboard">
+     </div><!-- ======================= Dashboard Content ========================= -->
 
-  <!-- WELCOME STRIP -->
-  <div class="card" style="box-shadow:0px 8px 12px purple  ;">
-      <div class="welcome">
-    <h2>Good morning, Francis 👋</h2>
-    <p>Here’s what’s happening with your rentals today.</p>
-  </div>
-  </div>
+    <section class="dashboard"><!-- Welcome Section -->
+     <div class="welcome-section">
+  <h1 class="welcome-text" id="welcome-text">
+    Welcome 
+  </h1>
+  <p class="welcome-subtitle" id="welcome-subtitle">
+    Here’s a quick overview of your rental business today
+  </p>
+</div>
 
+<!-- ======================= Cards ================== -->
+<div class="cardBox">
 
-  <!-- TODAY EVENTS -->
   <div class="card">
-    <h3>📅 Today’s Events</h3>
-
-    <div class="event">
-      <h4>Wedding Ceremony</h4>
-      <p>500 Chairs</p>
-      <p class="muted">Location: New Haven Hall</p>
-      <span class="status success">Ready for delivery</span>
+    <div>
+      <div class="numbers" id="total-inventory">0</div>
+      <div class="cardName">Inventory Items</div>
     </div>
-
-    <div class="event">
-      <h4>Burial Event</h4>
-      <p>Canopy × 2, Sound system</p>
-      <span class="status info">Items picked up</span>
-    </div>
-
-    <!-- Empty state (toggle later with JS) -->
-    <!--
-    <p class="empty">
-      No events today 🎉 Your next booking is in 2 days.
-    </p>
-    -->
-  </div>
-
-  <!-- ALERTS -->
-  <div class="card">
-    <h3>⚠️ Alerts</h3>
-
-    <div class="alert critical">
-      ⚠️ Only <strong>25 chairs</strong> remaining
-    </div>
-
-    <div class="alert critical">
-      ⚠️ <strong>100 chairs overdue</strong><br>
-      With: Example Rentals<br>
-      Due since: Aug 10
-    </div>
-
-    <div class="alert warning">
-      🟡 Event in 2 weeks needs 100 more chairs
-    </div>
-
-    <div class="alert warning">
-      🟡 Ice block supplier not confirmed
+    <div class="iconBx">
+      <ion-icon name="cube-outline"></ion-icon>
     </div>
   </div>
 
-  <!-- RENTAL TO RENTAL -->
   <div class="card">
-    <h3>📦 Rental-to-Rental Status</h3>
-
-    <div class="rental-block">
-      <h4>Items With Other Rentals</h4>
-      <p>
-        Chairs — 100<br>
-        With: Example Rentals<br>
-        Return date: Aug 15<br>
-        <span class="status danger">OVERDUE</span>
-      </p>
+    <div>
+      <div class="numbers" id="active-bookings">0</div>
+      <div class="cardName">Active Bookings</div>
     </div>
-
-    <div class="rental-block">
-      <h4>Items You Borrowed</h4>
-      <p>
-        Canopy — 2<br>
-        From: City Events<br>
-        Event: Burial<br>
-        Return: Tomorrow
-      </p>
+    <div class="iconBx">
+      <ion-icon name="calendar-outline"></ion-icon>
     </div>
   </div>
 
-  <!-- REMINDERS -->
   <div class="card">
-    <h3>⏰ Upcoming Reminders</h3>
+    <div>
+      <div class="numbers" id="returned-bookings">0</div>
+      <div class="cardName">Returned</div>
+    </div>
+    <div class="iconBx">
+      <ion-icon name="checkmark-done-outline"></ion-icon>
+    </div>
+  </div>
 
-    <ul class="reminders">
-      <li>⏰ Call Example Rentals to reserve 100 chairs <span>(Event in 14 days)</span></li>
-      <li>⏰ Confirm ice block supply <span>(Tomorrow morning)</span></li>
-      <li>⏰ Prepare delivery for Wedding <span>(Today, 4pm)</span></li>
+  <div class="card">
+    <div>
+      <div class="numbers" id="overdue-bookings">0</div>
+      <div class="cardName">Overdue</div>
+    </div>
+    <div class="iconBx">
+      <ion-icon name="alert-circle-outline"></ion-icon>
+    </div>
+  </div>
+
+</div>
+
+<!-- ================ Order Details List ================= -->
+     <div class="details">
+<div class="recentOrders">
+  <div class="cardHeader">
+    <h2>Recent Bookings</h2>
+    <a href="bookings.html" class="btn">View All</a>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <td>Item</td>
+        <td>Customer</td>
+        <td>Qty</td>
+        <td>Status</td>
+      </tr>
+    </thead>
+    <tbody id="recent-bookings">
+      <tr>
+        <td colspan="4" style="text-align:center; opacity:0.6;">
+          No bookings yet
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ================= New Customers ================ -->
+      <div class="recentCustomers">
+       <div class="cardHeader">
+        <h2>Recent Customers</h2>
+       </div>
+       <table>
+<tbody id="recent-customers">
+  <tr>
+    <td colspan="2" style="text-align:center; opacity:0.6;">
+      No customers yet
+    </td>
+  </tr>
+</tbody>
+       </table>
+      </div>
+     </div>
+    </section>
+   </div><!-- =============== Bottom Navigation (Mobile) ================ -->
+   <nav class="bottom-nav">
+    <ul>
+     <li class="active"><a href="dashboard.html"> <span class="icon">
+        <ion-icon name="home-outline"></ion-icon> </span> <span class="title">Dashboard</span> </a></li>
+     <li><a href="booking.html"> <span class="icon">
+        <ion-icon name="calendar-outline"></ion-icon> </span> <span class="title">Bookings</span> </a></li>
+     <li><a href="add.html"> <span class="icon">
+        <ion-icon name="add-circle-outline"></ion-icon> </span> <span class="title">Add</span> </a></li>
+     <li><a href="inventory.html"> <span class="icon">
+        <ion-icon name="cube-outline"></ion-icon> </span> <span class="title">Inventory</span> </a></li>
+     <li><a href="settings.html"> <span class="icon">
+        <ion-icon name="settings-outline"></ion-icon> </span> <span class="title">Settings</span> </a></li>
     </ul>
+   </nav>
+  </div><!-- =========== Scripts =========  -->
+  <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+  <script>
+        // Menu Toggle
+        let toggle = document.querySelector(".toggle");
+        let navigation = document.querySelector(".navigation");
+        let main = document.querySelector(".main");
 
-    <p class="muted small">
-      📌 Reminders are also sent via notifications / WhatsApp.
-    </p>
-  </div>
+        toggle.onclick = function () {
+            navigation.classList.toggle("active");
+            main.classList.toggle("active");
+        };
 
-</section>
-<!-- ===================================================== -->
+        // Add hovered class on selected list item
+        let list = document.querySelectorAll(".navigation li");
 
-          
-    </div>
+        function activeLink() {
+            list.forEach((item) => {
+                item.classList.remove("hovered");
+            });
+            this.classList.add("hovered");
+        }
 
-    <!-- =========== Scripts =========  -->
-    <script src="assets/js/main.js"></script>
+        list.forEach((item) => item.addEventListener("mouseover", activeLink));
 
-    <!-- ====== ionicons ======= -->
-    <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
-    <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
-</body>
+        // Bottom Nav Active State
+        let bottomNavItems = document.querySelectorAll(".bottom-nav li");
 
+        function activeBottomLink() {
+            bottomNavItems.forEach((item) => {
+                item.classList.remove("active");
+            });
+            this.classList.add("active");
+        }
+
+        bottomNavItems.forEach((item) => item.addEventListener("click", activeBottomLink));
+
+        // Edit Panel Integration
+        const defaultConfig = {
+            brand_name: "Rent Book",
+            welcome_text: "Welcome back, Admin! 👋",
+            welcome_subtitle: "Here's what's happening with your rental business today",
+            properties_label: "Total Properties",
+            tenants_label: "Active Tenants",
+            revenue_label: "Monthly Revenue",
+            tickets_label: "Open Tickets"
+        };
+
+        async function onConfigChange(config) {
+            const brandNameEl = document.getElementById('brand-name');
+            const brandNameMobileEl = document.getElementById('brand-name-mobile');
+            const welcomeTextEl = document.getElementById('welcome-text');
+            const welcomeSubtitleEl = document.getElementById('welcome-subtitle');
+            const propertiesLabelEl = document.getElementById('properties-label');
+            const tenantsLabelEl = document.getElementById('tenants-label');
+            const revenueLabelEl = document.getElementById('revenue-label');
+            const ticketsLabelEl = document.getElementById('tickets-label');
+
+            if (brandNameEl) brandNameEl.textContent = config.brand_name || defaultConfig.brand_name;
+            if (brandNameMobileEl) brandNameMobileEl.textContent = config.brand_name || defaultConfig.brand_name;
+            if (welcomeTextEl) welcomeTextEl.textContent = config.welcome_text || defaultConfig.welcome_text;
+            if (welcomeSubtitleEl) welcomeSubtitleEl.textContent = config.welcome_subtitle || defaultConfig.welcome_subtitle;
+            if (propertiesLabelEl) propertiesLabelEl.textContent = config.properties_label || defaultConfig.properties_label;
+            if (tenantsLabelEl) tenantsLabelEl.textContent = config.tenants_label || defaultConfig.tenants_label;
+            if (revenueLabelEl) revenueLabelEl.textContent = config.revenue_label || defaultConfig.revenue_label;
+            if (ticketsLabelEl) ticketsLabelEl.textContent = config.tickets_label || defaultConfig.tickets_label;
+        }
+
+        function mapToCapabilities(config) {
+            return {
+                recolorables: [],
+                borderables: [],
+                fontEditable: undefined,
+                fontSizeable: undefined
+            };
+        }
+
+        function mapToEditPanelValues(config) {
+            return new Map([
+                ["brand_name", config.brand_name || defaultConfig.brand_name],
+                ["welcome_text", config.welcome_text || defaultConfig.welcome_text],
+                ["welcome_subtitle", config.welcome_subtitle || defaultConfig.welcome_subtitle],
+                ["properties_label", config.properties_label || defaultConfig.properties_label],
+                ["tenants_label", config.tenants_label || defaultConfig.tenants_label],
+                ["revenue_label", config.revenue_label || defaultConfig.revenue_label],
+                ["tickets_label", config.tickets_label || defaultConfig.tickets_label]
+            ]);
+        }
+
+        if (window.elementSdk) {
+            window.elementSdk.init({
+                defaultConfig,
+                onConfigChange,
+                mapToCapabilities,
+                mapToEditPanelValues
+            });
+        }
+    </script>
+    <script type="module" src="assets/js/firebase.js"></script>
+    <script type="module" src="assets/js/dashboard.js"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b34487a56f0b78a',t:'MTc2NjYyMzE4NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

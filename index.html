@@ -1,88 +1,692 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link
-      href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css"
-      rel="stylesheet"
-    />
-         <link rel="icon" type="image/x-icon" href="assets/logo.ico">
-    
-    <title>RentBook – Smart Rental & Inventory Management</title>
-<link rel="stylesheet" href="styles.css">
-  </head>
 
-  <body>
-    <!-- NAV -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RentBook – Smart Rental &amp; Inventory Management</title>
+    <script src="/_sdk/element_sdk.js"></script>
+     <!-- FAVICON -->
+    <link rel="icon" type="image/x-icon" href="assets/logo.ico">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            color: #1a202c;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+        }
+
+        /* =============== Navigation ================ */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            z-index: 1000;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav__container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav__logo {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #1a202c;
+        }
+
+        .nav__logo span {
+            color: purple;
+        }
+
+        .nav__btn {
+            background:purple;
+            color: white;
+            padding: 12px 28px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .nav__btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        /* =============== Hero Section ================ */
+        .hero {
+            padding: 140px 30px 80px;
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+            min-height: 90vh;
+        }
+
+        .hero__content h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 24px;
+            color: #1a202c;
+        }
+
+        .hero__content h1 span {
+            background: purple;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero__content p {
+            font-size: 1.2rem;
+            color: #4a5568;
+            margin-bottom: 32px;
+            line-height: 1.8;
+        }
+
+        .hero__buttons {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            background: purple;
+            color: white;
+            padding: 16px 36px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: purple;
+            padding: 16px 36px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            border: 2px solid purple;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: purple;
+            color: white;
+            transform: translateY(-3px);
+        }
+
+        .hero__image {
+            position: relative;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        /* =============== Features Section ================ */
+        .features {
+            background: #f7fafc;
+            padding: 100px 30px;
+        }
+
+        .features__container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+        }
+
+        .feature {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .feature:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature i {
+            font-size: 3.5rem;
+            background: purple;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .feature h4 {
+            font-size: 1.5rem;
+            margin-bottom: 12px;
+            color: #1a202c;
+        }
+
+        .feature p {
+            color: #4a5568;
+            font-size: 1.05rem;
+            line-height: 1.7;
+        }
+
+        /* =============== Video Section ================ */
+        .video {
+            padding: 100px 30px;
+            max-width: 1000px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .video h2 {
+            font-size: 2.8rem;
+            margin-bottom: 16px;
+            color: #1a202c;
+        }
+
+        .video>p {
+            font-size: 1.2rem;
+            color: #4a5568;
+            margin-bottom: 50px;
+        }
+
+        .video__box {
+            position: relative;
+            background: purple;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
+            height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .video__box:hover {
+            transform: scale(1.02);
+            box-shadow: 0 25px 70px rgba(102, 126, 234, 0.4);
+        }
+
+        .video__placeholder {
+            text-align: center;
+            color: white;
+        }
+
+        .play-button {
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            transition: all 0.3s ease;
+        }
+
+        .video__box:hover .play-button {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.1);
+        }
+
+        .play-button::after {
+            content: '';
+            width: 0;
+            height: 0;
+            border-left: 25px solid white;
+            border-top: 15px solid transparent;
+            border-bottom: 15px solid transparent;
+            margin-left: 8px;
+        }
+
+        .video__placeholder h3 {
+            font-size: 1.8rem;
+            margin-bottom: 12px;
+        }
+
+        .video__placeholder p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* =============== Benefits Section ================ */
+        .benefits {
+            background: #f7fafc;
+            padding: 100px 30px;
+        }
+
+        .benefits__container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .benefits__header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .benefits__header h2 {
+            font-size: 2.8rem;
+            margin-bottom: 16px;
+            color: #1a202c;
+        }
+
+        .benefits__header p {
+            font-size: 1.2rem;
+            color: #4a5568;
+        }
+
+        .benefits__grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 50px;
+            align-items: center;
+        }
+
+        .benefit__item {
+            display: flex;
+            gap: 20px;
+            padding: 30px;
+            background: white;
+            border-radius: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .benefit__item:hover {
+            transform: translateX(10px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        .benefit__icon {
+            width: 60px;
+            height: 60px;
+            background: purple;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .benefit__icon i {
+            font-size: 1.8rem;
+            color: white;
+        }
+
+        .benefit__text h4 {
+            font-size: 1.3rem;
+            margin-bottom: 8px;
+            color: #1a202c;
+        }
+
+        .benefit__text p {
+            color: #4a5568;
+            line-height: 1.7;
+        }
+
+        .benefit__image {
+            text-align: center;
+        }
+
+        .benefit__visual {
+            width: 100%;
+            max-width: 500px;
+            height: 500px;
+            background: purple;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 4rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        /* =============== CTA Section ================ */
+        .cta {
+            background: purple;
+            padding: 100px 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .cta h2 {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        .cta p {
+            font-size: 1.3rem;
+            margin-bottom: 40px;
+            opacity: 0.95;
+        }
+
+        .cta .btn-primary {
+            background: white;
+            color: purple;
+            font-size: 1.2rem;
+        }
+
+        .cta .btn-primary:hover {
+            background: #f7fafc;
+        }
+
+        /* =============== Footer ================ */
+        footer {
+            background: white;
+            color: purple;
+            text-align: center;
+            padding: 40px 30px;
+            font-size: 1rem;
+        }
+
+        /* =============== Responsive Design ================ */
+        @media (max-width: 991px) {
+            .hero {
+                grid-template-columns: 1fr;
+                padding: 130px 25px 60px;
+                gap: 40px;
+                background-image: url(assets/header.png);
+                background-repeat: no-repeat;
+                background-size: cover;
+              
+            }
+
+            .hero__image {
+                display: none;
+            }
+
+            .hero__content h1 {
+                font-size: 2.8rem;
+            }
+
+            .features__container {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+
+            .benefits__grid {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+
+            .benefit__image {
+                order: -1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav__container {
+                padding: 15px 20px;
+            }
+
+            .nav__logo {
+                font-size: 1.5rem;
+            }
+
+            .hero {
+                padding: 150px 20px 50px;
+            }
+
+            .hero__content h1 {
+                font-size: 2.4rem;
+            }
+
+            .hero__content p {
+                font-size: 1.05rem;
+            }
+
+            .hero__buttons {
+                flex-direction: column;
+            }
+
+            .btn-primary,
+            .btn-secondary {
+                width: 100%;
+                text-align: center;
+            }
+
+            .features {
+                padding: 60px 20px;
+            }
+
+            .video {
+                padding: 60px 20px;
+            }
+
+            .video h2 {
+                font-size: 2rem;
+            }
+
+            .video__box {
+                height: 350px;
+            }
+
+            .benefits {
+                padding: 60px 20px;
+            }
+
+            .benefits__header h2 {
+                font-size: 2rem;
+            }
+
+            .benefit__visual {
+                height: 350px;
+                font-size: 3rem;
+            }
+
+            .cta {
+                padding: 60px 20px;
+            }
+
+            .cta h2 {
+                font-size: 2rem;
+            }
+
+            .cta p {
+                font-size: 1.1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero__content h1 {
+                font-size: 1.8rem;
+            }
+
+            .mockup-stat h3 {
+                font-size: 1.5rem;
+            }
+
+            .feature {
+                padding: 30px 20px;
+            }
+
+            .feature i {
+                font-size: 2.5rem;
+            }
+
+            .video__box {
+                height: 250px;
+            }
+
+            .play-button {
+                width: 70px;
+                height: 70px;
+            }
+
+            .play-button::after {
+                border-left-width: 18px;
+                border-top-width: 11px;
+                border-bottom-width: 11px;
+            }
+        }
+    </style>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        @view-transition {
+            navigation: auto;
+        }
+    </style>
+    <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+    <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+</head>
+
+<body><!-- NAV -->
     <nav>
-      <div class="nav__container">
-        <div class="nav__logo">Rent<span>Book</span></div>
-        <a href="signup.html" class="nav__btn">Get Started</a>
-      </div>
-    </nav>
-
-    <!-- HERO -->
+        <div class="nav__container">
+            <div class="nav__logo">
+                Rent<span>Book</span>
+            </div><a href="signup.html" class="nav__btn">Get Started</a>
+        </div>
+    </nav><!-- HERO -->
     <section class="hero">
-      <div class="hero__content">
-        <h1>
-          Manage Rentals & Inventory<br />
-          <span>Without Stress</span>
-        </h1>
-        <p>
-          RentBook helps rental businesses and stores track items, bookings,
-          customers, and availability in real time — all from one simple dashboard.
-        </p>
-        <div class="hero__buttons">
-          <a href="signup.html" class="btn-primary">Start Free</a>
-          <a href="#" class="btn-secondary">Watch Demo</a>
+        <div class="hero__content">
+            <h1>Manage Rentals &amp; Inventory<br><span>Without Stress</span></h1>
+            <p>RentBook helps rental businesses and stores track items, bookings, customers, and availability in real
+                time — all from one simple dashboard.</p>
+            <div class="hero__buttons"><a href="signup.html" class="btn-primary">Start Free</a>
+                 <a href="#" class="btn-secondary">Watch Demo</a>
+            </div>
         </div>
-      </div>
-      <div class="hero__image">
-        <img src="assets/dashboard.png" alt="RentBook Dashboard" />
-      </div>
-    </section>
-
-    <!-- FEATURES -->
+        <div class="hero__image">
+            <img src="assets/dashboard.png" alt="">
+        </div>
+    </section><!-- FEATURES -->
     <section class="features">
-      <div class="features__container">
-        <div class="feature">
-          <i class="ri-box-3-line"></i>
-          <h4>Inventory Tracking</h4>
-          <p>Know what is available, rented, or overdue at a glance.</p>
+        <div class="features__container">
+            <div class="feature"><i class="ri-box-3-line"></i>
+                <h4>Inventory Tracking</h4>
+                <p>Know what is available, rented, or overdue at a glance.</p>
+            </div>
+            <div class="feature"><i class="ri-calendar-check-line"></i>
+                <h4>Rental Bookings</h4>
+                <p>Manage bookings, durations, and returns effortlessly.</p>
+            </div>
+            <div class="feature"><i class="ri-store-2-line"></i>
+                <h4>Business Ready</h4>
+                <p>Perfect for rental shops, event vendors, and retail stores.</p>
+            </div>
         </div>
-        <div class="feature">
-          <i class="ri-calendar-check-line"></i>
-          <h4>Rental Bookings</h4>
-          <p>Manage bookings, durations, and returns effortlessly.</p>
+    </section><!-- BENEFITS -->
+    <section class="benefits">
+        <div class="benefits__container">
+            <div class="benefits__header">
+                <h2>Why Choose RentBook?</h2>
+                <p>Everything you need to run your rental business smoothly</p>
+            </div>
+            <div class="benefits__grid">
+                <div>
+                    <div class="benefit__item">
+                        <div class="benefit__icon"><i class="ri-dashboard-line"></i>
+                        </div>
+                        <div class="benefit__text">
+                            <h4>Real-Time Dashboard</h4>
+                            <p>Monitor all your rentals, inventory, and revenue from one beautiful dashboard.</p>
+                        </div>
+                    </div>
+                    <div class="benefit__item">
+                        <div class="benefit__icon"><i class="ri-notification-line"></i>
+                        </div>
+                        <div class="benefit__text">
+                            <h4>Smart Notifications</h4>
+                            <p>Get alerts for upcoming returns, overdue items, and booking requests.</p>
+                        </div>
+                    </div>
+                    <div class="benefit__item">
+                        <div class="benefit__icon"><i class="ri-team-line"></i>
+                        </div>
+                        <div class="benefit__text">
+                            <h4>Customer Management</h4>
+                            <p>Keep detailed records of customers, rental history, and payment status.</p>
+                        </div>
+                    </div>
+                    <div class="benefit__item">
+                        <div class="benefit__icon"><i class="ri-bar-chart-line"></i>
+                        </div>
+                        <div class="benefit__text">
+                            <h4>Insights &amp; Reports</h4>
+                            <p>Track revenue, popular items, and business trends with detailed analytics.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="benefit__image">
+                    <div class="benefit__visual"><i class="ri-line-chart-line"></i>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="feature">
-          <i class="ri-store-2-line"></i>
-          <h4>Business Ready</h4>
-          <p>Perfect for rental shops, event vendors, and retail stores.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- VIDEO -->
+    </section><!-- VIDEO -->
     <section class="video">
-      <h2>How RentBook Works</h2>
-      <p>Watch how to manage your rentals in minutes</p>
-      <div class="video__box">
-        Explainer Video Placeholder
-      </div>
-    </section>
-
-    <!-- CTA -->
+        <h2>How RentBook Works</h2>
+        <p>Watch how to manage your rentals in minutes</p>
+        <div class="video__box">
+            <div class="video__placeholder">
+                <div class="play-button"></div>
+                <h3>Product Demo Video</h3>
+                <p>Click to watch the full walkthrough</p>
+            </div>
+        </div>
+    </section><!-- CTA -->
     <section class="cta">
-      <h2>Start Managing Smarter</h2>
-      <p>Create your RentBook account and take control today.</p>
-      <a href="signup.html" class="btn-primary">Create Free Account</a>
-    </section>
-
-    <!-- FOOTER -->
+        <h2>Start Managing Smarter</h2>
+        <p>Create your RentBook account and take control today.</p><a href="signup.html" class="btn-primary">Create Free
+            Account</a>
+    </section><!-- FOOTER -->
     <footer>
-      © 2025 RentBook. All rights reserved.
+        © 2025 RentBook. All rights reserved.
     </footer>
-  </body>
+    <script>(function () { function c() { var b = a.contentDocument || a.contentWindow.document; if (b) { var d = b.createElement('script'); d.innerHTML = "window.__CF$cv$params={r:'9b34560d11de8560',t:'MTc2NjYyMzc0MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);"; b.getElementsByTagName('head')[0].appendChild(d) } } if (document.body) { var a = document.createElement('iframe'); a.height = 1; a.width = 1; a.style.position = 'absolute'; a.style.top = 0; a.style.left = 0; a.style.border = 'none'; a.style.visibility = 'hidden'; document.body.appendChild(a); if ('loading' !== document.readyState) c(); else if (window.addEventListener) document.addEventListener('DOMContentLoaded', c); else { var e = document.onreadystatechange || function () { }; document.onreadystatechange = function (b) { e(b); 'loading' !== document.readyState && (document.onreadystatechange = e, c()) } } } })();</script>
+</body>
+
 </html>

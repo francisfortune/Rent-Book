@@ -19,7 +19,7 @@
           margin: 0;
           padding: 0;
           box-sizing: border-box;
-          font-family: "Ubuntu", sans-serif;
+           font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
         body{
             display: flex;
@@ -29,7 +29,7 @@
             background: white;
         }
         form h1{
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 color: var(--main);
         }
         .container{
@@ -208,7 +208,9 @@ font-weight: 400;
  font-size: 20px;
 }
 .toggle-panel h1{
-color: white;
+color: whitesmoke;
+
+
 }
 .toggle-panel .btn{
     width: 260px;
@@ -270,10 +272,11 @@ color: white;
 .toggle-panel{
     width: 100%;
     height: 30%;
+    gap: 16px;
 }
 .toggle-panel p{
  text-align: center;
- margin: 10px;
+ margin: 8px;
  font-size: 17px;
 }
 .toggle-panel h1{
@@ -289,6 +292,9 @@ font-size: 1.8rem;
 .container.active .toggle-panel.toggle-left{
     left: 0;
     top: -30%;
+    gap: 12px;
+    margin-top: 40px;
+
 }
 .toggle-panel.toggle-right{
     right: 0;
@@ -392,6 +398,6 @@ loginBtn.addEventListener("click", () =>{
 container.classList.remove("active");
 });
     </script>
-    <script type="module" src="user/assets/js/auth.js"></script>
+    <script type="module" src="assets/js/auth.js"></script>
 </body>
 </html>

@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Setup Your Business | RentBook</title>
+       <!-- FAVICON -->
+    <link rel="icon" type="image/x-icon" href="assets/logo.ico">
+  <script src="/_sdk/element_sdk.js"></script>
+  <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: purple;
+            min-height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+        }
+
+        .setup-container {
+            width: 100%;
+            max-width: 700px;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        /* Header */
+        .setup-header {
+            background: gainsboro;
+            padding: 40px 30px;
+            text-align: center;
+            border-radius: 20px;
+            color: #333;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+        }
+
+        .setup-header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .setup-header p {
+            font-size: 1.05rem;
+            opacity: 0.95;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            padding: 30px 30px 20px;
+            background: #f7fafc;
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .progress-line {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #e2e8f0;
+            z-index: 0;
+        }
+
+        .progress-line-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: purple;
+            transition: width 0.4s ease;
+            width: 0%;
+        }
+
+        .progress-step {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #cbd5e0;
+            transition: all 0.3s ease;
+            margin-bottom: 8px;
+        }
+
+        .progress-step.active .step-circle {
+            background: purple;
+            border-color: #667eea;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .progress-step.completed .step-circle {
+            background: #48bb78;
+            border-color: #48bb78;
+            color: white;
+        }
+
+        .step-label {
+            font-size: 0.75rem;
+            color: #718096;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .progress-step.active .step-label {
+            color: purple;
+            font-weight: 600;
+        }
+
+        /* Form Content */
+        .form-content {
+            padding: 40px 30px;
+        }
+
+        .form-step {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .form-step.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .step-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 8px;
+        }
+
+        .step-description {
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 1rem;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            background: white;
+        }
+
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* Radio Buttons */
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .radio-option:hover {
+            border-color: purple;
+            background: #f7fafc;
+        }
+
+        .radio-option input[type="radio"] {
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border: 2px solid #cbd5e0;
+            border-radius: 50%;
+            margin-right: 12px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .radio-option input[type="radio"]:checked {
+            border-color: purple;
+            background: linear-gradient(135deg, purple 0%, #764ba2 100%);
+        }
+
+        .radio-option input[type="radio"]:checked::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .radio-option.selected {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .radio-label {
+            font-weight: 500;
+            color: #2d3748;
+            flex: 1;
+        }
+
+        /* Buttons */
+        .form-navigation {
+            display: flex;
+            gap: 12px;
+            margin-top: 40px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 16px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: purple;
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: purple;
+            border: 2px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            border-color: purple;
+            background: #f7fafc;
+        }
+
+        .btn-back {
+            flex: 0 0 auto;
+            padding: 16px 20px;
+        }
+
+        /* Success Screen */
+        .success-screen {
+            display: none;
+            text-align: center;
+            padding: 60px 30px;
+        }
+
+        .success-screen.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .success-icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            font-size: 3rem;
+            color: white;
+            animation: scaleIn 0.5s ease;
+        }
+
+        @keyframes scaleIn {
+            from {
+                transform: scale(0);
+            }
+            to {
+                transform: scale(1);
+            }
+        }
+
+        .success-screen h2 {
+            font-size: 2rem;
+            color: #1a202c;
+            margin-bottom: 12px;
+        }
+
+        .success-screen p {
+            font-size: 1.1rem;
+            color: #718096;
+            margin-bottom: 30px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .setup-header {
+                padding: 30px 20px;
+            }
+
+            .setup-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .progress-container {
+                padding: 20px 15px 15px;
+            }
+
+            .step-circle {
+                width: 35px;
+                height: 35px;
+                font-size: 0.9rem;
+            }
+
+            .step-label {
+                font-size: 0.7rem;
+            }
+
+            .form-content {
+                padding: 30px 20px;
+            }
+
+            .step-title {
+                font-size: 1.3rem;
+            }
+
+            .form-navigation {
+                flex-direction: column-reverse;
+            }
+
+            .btn-back {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .setup-container {
+                border-radius: 16px;
+            }
+
+            .logo {
+                font-size: 2rem;
+            }
+
+            .setup-header h1 {
+                font-size: 1.3rem;
+            }
+
+            .setup-header p {
+                font-size: 0.95rem;
+            }
+
+            .step-label {
+                display: none;
+            }
+        }
+    </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+  <div class="setup-container"><!-- Header -->
+   <header class="setup-header">
+    <div class="logo">
+     <h1 style="color: purple;font-size: 39px;"> <span style="color: #333;">
+        Rent</span>Book</h1>
+    </div>
+    <h1 id="page-title">Welcome to RentBook</h1>
+    <p id="page-subtitle">Let's set up your rental business in just a few steps</p>
+   </header><!-- Progress Bar -->
+   <div class="progress-container">
+    <div class="progress-steps">
+     <div class="progress-line">
+      <div class="progress-line-fill" id="progressFill"></div>
+     </div>
+     <div class="progress-step active" data-step="1">
+      <div class="step-circle">
+       1
+      </div>
+      <div class="step-label">
+       Business Info
+      </div>
+     </div>
+     <div class="progress-step" data-step="2">
+      <div class="step-circle">
+       2
+      </div>
+      <div class="step-label">
+       Location
+      </div>
+     </div>
+     <div class="progress-step" data-step="3">
+      <div class="step-circle">
+       3
+      </div>
+      <div class="step-label">
+       Rental Details
+      </div>
+     </div>
+     <div class="progress-step" data-step="4">
+      <div class="step-circle">
+       4
+      </div>
+      <div class="step-label">
+       Duration
+      </div>
+     </div>
+<div class="progress-step" data-step="5">
+  <div class="step-circle">5</div>
+  <div class="step-label">Inventory</div>
+</div>
+    </div>
+   </div><!-- Form Content -->
+   <main class="form-content">
+    <form id="setupForm"><!-- Step 1: Business Info -->
+     <div class="form-step active" data-step="1">
+      <h2 class="step-title">Tell us about your business</h2>
+      <p class="step-description">What should we call your rental business?</p>
+      <div class="form-group"><label for="businessName">Business Name *</label> <input type="text" id="businessName" name="businessName" placeholder="e.g., Premier Event Rentals" required>
+      </div>
+      <div class="form-group"><label for="businessType">Business Type *</label>
+       <div class="radio-group"><label class="radio-option"> <input type="radio" name="businessType" value="event" required> <span class="radio-label">Event Rentals</span> </label> <label class="radio-option"> <input type="radio" name="businessType" value="equipment" required> <span class="radio-label">Equipment Rentals</span> </label> <label class="radio-option"> <input type="radio" name="businessType" value="mixed" required> <span class="radio-label">Mixed</span> </label>
+       </div>
+      </div>
+      <div class="form-navigation"><button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+      </div>
+     </div><!-- Step 2: Location -->
+     <div class="form-step" data-step="2">
+      <h2 class="step-title">Where are you located?</h2>
+      <p class="step-description">This helps us customize your experience</p>
+      <div class="form-group"><label for="city">City *</label> <input type="text" id="city" name="city" placeholder="e.g., Los Angeles" required>
+      </div>
+      <div class="form-group"><label for="state">State *</label> <input type="text" id="state" name="state" placeholder="e.g., California" required>
+      </div>
+      <div class="form-navigation"><button type="button" class="btn btn-secondary btn-back" onclick="prevStep()">Back</button> <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+      </div>
+     </div><!-- Step 3: Rental Type -->
+     <div class="form-step" data-step="3">
+      <h2 class="step-title">How do you rent items?</h2>
+      <p class="step-description">Choose your primary rental model</p>
+      <div class="form-group"><label>Rental Model *</label>
+       <div class="radio-group"><label class="radio-option"> <input type="radio" name="rentalModel" value="day" required> <span class="radio-label">By Day</span> </label> <label class="radio-option"> <input type="radio" name="rentalModel" value="event" required> <span class="radio-label">By Event</span> </label>
+       </div>
+      </div>
+      <div class="form-navigation"><button type="button" class="btn btn-secondary btn-back" onclick="prevStep()">Back</button> <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+      </div>
+     </div><!-- Step 4: Return Duration -->
+<div class="form-step" data-step="4">
+  <h2 class="step-title">Set default return duration</h2>
+  <p class="step-description">You can always customize this for individual rentals</p>
+
+  <div class="form-group">
+    <label>Default Return Duration *</label>
+    <div class="radio-group">
+      <label class="radio-option">
+        <input type="radio" name="returnDuration" value="1" required>
+        <span class="radio-label">1 Day</span>
+      </label>
+
+      <label class="radio-option">
+        <input type="radio" name="returnDuration" value="2" checked>
+        <span class="radio-label">2 Days (Recommended)</span>
+      </label>
+
+      <label class="radio-option">
+        <input type="radio" name="returnDuration" value="custom">
+        <span class="radio-label">Custom</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="form-navigation">
+    <button type="button" class="btn btn-secondary btn-back" onclick="prevStep()">Back</button>
+    <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+  </div>
+</div>
+
+<!-- Step 5 (NOW SEPARATE) -->
+<div class="form-step" data-step="5">
+  <h2 class="step-title">Add your first inventory</h2>
+  <p class="step-description">
+    This ensures your dashboard is ready immediately
+  </p>
+
+  <div id="inventoryList">
+    <div class="inventory-item">
+      <div class="form-group">
+        <label>Item Name *</label>
+        <input type="text" class="item-name" placeholder="e.g. White Plastic Chair" required>
+      </div>
+
+      <div class="form-group">
+        <label>Quantity *</label>
+        <input type="number" class="item-qty" min="1" required>
+      </div>
+
+      <div class="form-group">
+        <label>Price (optional)</label>
+        <input type="number" class="item-price" min="0">
+      </div>
+    </div>
+  </div>
+
+  <button type="button" class="btn btn-secondary" onclick="addInventoryItem()">
+    + Add another item
+  </button>
+
+  <div class="form-navigation">
+    <button type="button" class="btn btn-secondary btn-back" onclick="prevStep()">Back</button>
+    <button type="submit" class="btn btn-primary" id="submit-btn">
+      Complete Setup
+    </button>
+  </div>
+</div>
+
+     </div>
+    </form><!-- Success Screen -->
+    <div class="success-screen">
+     <div class="success-icon">
+      ✓
+     </div>
+     <h2>Setup Complete!</h2>
+     <p>Your RentBook account is ready to go. Let's start managing your rentals.</p><button type="button" class="btn btn-primary" onclick="goToDashboard()">Go to Dashboard</button>
+    </div>
+   </main>
+  </div>
+  <script>
+        let currentStep = 1;
+        const totalSteps = 5;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateProgress();
+            setupRadioButtons();
+        });
+
+        // Radio button styling
+        function setupRadioButtons() {
+            const radioOptions = document.querySelectorAll('.radio-option');
+            radioOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    const radio = this.querySelector('input[type="radio"]');
+                    radio.checked = true;
+                    
+                    // Remove selected class from siblings
+                    const name = radio.name;
+                    document.querySelectorAll(`input[name="${name}"]`).forEach(r => {
+                        r.closest('.radio-option').classList.remove('selected');
+                    });
+                    
+                    // Add selected class to current
+                    this.classList.add('selected');
+                });
+            });
+        }
+
+        // Navigation
+        function nextStep() {
+            if (!validateStep(currentStep)) {
+                return;
+            }
+
+            if (currentStep < totalSteps) {
+                document.querySelector(`.form-step[data-step="${currentStep}"]`).classList.remove('active');
+                currentStep++;
+                document.querySelector(`.form-step[data-step="${currentStep}"]`).classList.add('active');
+                updateProgress();
+                window.scrollTo(0, 0);
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                document.querySelector(`.form-step[data-step="${currentStep}"]`).classList.remove('active');
+                currentStep--;
+                document.querySelector(`.form-step[data-step="${currentStep}"]`).classList.add('active');
+                updateProgress();
+                window.scrollTo(0, 0);
+            }
+        }
+
+        function updateProgress() {
+            const progressPercentage = ((currentStep - 1) / (totalSteps - 1)) * 100;
+            document.getElementById('progressFill').style.width = progressPercentage + '%';
+
+            // Update step indicators
+            document.querySelectorAll('.progress-step').forEach((step, index) => {
+                const stepNumber = index + 1;
+                if (stepNumber < currentStep) {
+                    step.classList.add('completed');
+                    step.classList.remove('active');
+                } else if (stepNumber === currentStep) {
+                    step.classList.add('active');
+                    step.classList.remove('completed');
+                } else {
+                    step.classList.remove('active', 'completed');
+                }
+            });
+        }
+
+function validateStep(step) {
+  const stepEl = document.querySelector(`.form-step[data-step="${step}"]`);
+  let isValid = true;
+
+  // 1️⃣ Validate text / number inputs
+  const textInputs = stepEl.querySelectorAll(
+    'input[type="text"][required], input[type="number"][required]'
+  );
+
+  textInputs.forEach(input => {
+    if (!input.value.trim()) {
+      isValid = false;
+      input.style.borderColor = '#f56565';
+    } else {
+      input.style.borderColor = '#e2e8f0';
+    }
+  });
+
+  // 2️⃣ Validate radio groups (ONCE per group)
+  const radioGroups = [...new Set(
+    Array.from(stepEl.querySelectorAll('input[type="radio"][required]'))
+      .map(r => r.name)
+  )];
+
+  radioGroups.forEach(groupName => {
+    const checked = stepEl.querySelector(`input[name="${groupName}"]:checked`);
+    if (!checked) {
+      isValid = false;
+    }
+  });
+
+  if (!isValid) {
+    showToast('Please fill in all required fields');
+  }
+
+  return isValid;
+}
+function addInventoryItem() {
+  const div = document.createElement("div");
+  div.className = "inventory-item";
+  div.innerHTML = `
+    <hr style="margin:20px 0">
+    <div class="form-group">
+      <label>Item Name *</label>
+      <input type="text" class="item-name" required>
+    </div>
+    <div class="form-group">
+      <label>Quantity *</label>
+      <input type="number" class="item-qty" min="1" required>
+    </div>
+    <div class="form-group">
+      <label>Price</label>
+      <input type="number" class="item-price" min="0">
+    </div>
+  `;
+  document.getElementById("inventoryList").appendChild(div);
+}
+
+
+        // Form submission
+        document.getElementById('setupForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            if (!validateStep(currentStep)) {
+                return;
+            }
+
+            // Collect form data
+            const formData = {
+                businessName: document.getElementById('businessName').value,
+                businessType: document.querySelector('input[name="businessType"]:checked').value,
+                city: document.getElementById('city').value,
+                state: document.getElementById('state').value,
+                rentalModel: document.querySelector('input[name="rentalModel"]:checked').value,
+                returnDuration: document.querySelector('input[name="returnDuration"]:checked').value
+            };
+
+            console.log('Setup Data:', formData);
+
+            // Show success screen
+            document.querySelector('.form-content form').style.display = 'none';
+            document.querySelector('.success-screen').classList.add('active');
+            document.querySelector('.progress-container').style.display = 'none';
+        });
+
+        function goToDashboard() {
+            showToast('Redirecting to dashboard...');
+            // In a real app, this would redirect to the dashboard
+            setTimeout(() => {
+                window.location.href = 'dashboard.html';
+            }, 1000);
+        }
+
+
+        // Toast notification
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 30px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #1a202c;
+                color: white;
+                padding: 16px 24px;
+                border-radius: 12px;
+                font-weight: 500;
+                z-index: 10000;
+                animation: slideUp 0.3s ease;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideDown 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
+        }
+
+        // Edit Panel Integration
+        const defaultConfig = {
+            page_title: "Welcome to RentBook",
+            page_subtitle: "Let's set up your rental business in just a few steps",
+            button_text: "Complete Setup"
+        };
+
+        async function onConfigChange(config) {
+            const titleEl = document.getElementById('page-title');
+            const subtitleEl = document.getElementById('page-subtitle');
+            const buttonEl = document.getElementById('submit-btn');
+
+            if (titleEl) titleEl.textContent = config.page_title || defaultConfig.page_title;
+            if (subtitleEl) subtitleEl.textContent = config.page_subtitle || defaultConfig.page_subtitle;
+            if (buttonEl) buttonEl.textContent = config.button_text || defaultConfig.button_text;
+        }
+
+        function mapToCapabilities(config) {
+            return {
+                recolorables: [],
+                borderables: [],
+                fontEditable: undefined,
+                fontSizeable: undefined
+            };
+        }
+
+        function mapToEditPanelValues(config) {
+            return new Map([
+                ["page_title", config.page_title || defaultConfig.page_title],
+                ["page_subtitle", config.page_subtitle || defaultConfig.page_subtitle],
+                ["button_text", config.button_text || defaultConfig.button_text]
+            ]);
+        }
+
+        if (window.elementSdk) {
+            window.elementSdk.init({
+                defaultConfig,
+                onConfigChange,
+                mapToCapabilities,
+                mapToEditPanelValues
+            });
+        }
+
+        // Add slide animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideUp {
+                from {
+                    transform: translateX(-50%) translateY(20px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(-50%) translateY(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes slideDown {
+                from {
+                    transform: translateX(-50%) translateY(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(-50%) translateY(20px);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b34705de3b76373',t:'MTc2NjYyNDgxOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+ <script type="module" src="assets/js/setup.js"></script>
+ </body>
+</html>

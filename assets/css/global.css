@@ -193,7 +193,7 @@ position:fixed;
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-left: 20px;
+  margin-left: 10px;
   color: var(--white);
   margin: 20%;
   margin-right: 30%;
@@ -373,6 +373,7 @@ position:fixed;
  
   .user {
     min-width: 40px;
+    margin-right: 15px;
   }
 
   .navigation {
@@ -396,139 +397,6 @@ position:fixed;
     right: 0;
     left: initial;
   }
-}
-
-/* MODAL BASE */
-.modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 5000;
-  margin: auto;
-}
-
-.hidden {
-  display: none;
-}
-
-.modal-box {
-  background: #fff;
-  width: 90%;
-  max-width: 420px;
-  padding: 50px;
-  border-radius: 16px;
-}
-
-.modal-box {
-  background: #fff;
-  width: 95%;
-  max-width: 520px;
-  max-height: 85vh;
-  /* ✅ LIMIT HEIGHT */
-  overflow-y: auto;
-  /* ✅ ENABLE SCROLL */
-  padding: 20px;
-  border-radius: 16px;
-  -webkit-overflow-scrolling: touch;
-  margin: auto;
-}
-
-.modal-box h3 {
-  color: var(--blue);
-  margin-bottom: 25px;
-  text-align: center;
-}
-
-/* FORM */
-.modal-box label {
-  display: block;
-  margin-bottom: 12px;
-  font-size: 14px;
-}
-
-.modal-box input,
-.modal-box textarea {
-  width: 100%;
-  padding: 10px;
-  margin-top: 5px;
-  border-radius: 10px;
-  border: 1px solid #ccc;
-}
-
-.modal-box textarea {
-  resize: none;
-  height: 70px;
-}
-
-.modal-box button {
-  width: 100%;
-  padding: 12px;
-  border: none;
-  border-radius: 10px;
-  margin-top: 10px;
-  cursor: pointer;
-}
-
-.modal-box button[type="submit"] {
-  background: var(--blue);
-  color: #fff;
-}
-
-.modal-box .cancel {
-  background: #eee;
-}
-
-.item-row {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.item-row input {
-  flex: 1;
-}
-
-.add-item {
-  background: transparent;
-  border: 1px dashed var(--blue);
-  color: var(--blue);
-  padding: 10px;
-  border-radius: 10px;
-  width: 100%;
-}
-
-/* MODAL WRAPPER */
-.modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-  margin: auto;
-}
-
-/* NICE SCROLLBAR (OPTIONAL) */
-.modal-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.modal-content::-webkit-scrollbar-thumb {
-  background: var(--blue);
-  border-radius: 10px;
-}
-
-.modal-box::-webkit-scrollbar {
-  width: 6px;
-}
-
-.modal-box::-webkit-scrollbar-thumb {
-  background: var(--blue);
-  border-radius: 10px;
 }
 
 html::-webkit-scrollbar {

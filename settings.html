@@ -50,7 +50,7 @@
                 </li>
 
                 <li>
-                    <a href="#" id="addBookingBtn">
+                    <a href="add.html">
                       <span class="icon">
                         <ion-icon name="add-circle-outline"></ion-icon>
                       </span>
@@ -100,78 +100,7 @@
         
 
             <!-- ======================= Cards ================== -->
-          
-    <!-- ADD BOOKING MODAL -->
-    <div class="modal hidden" id="addBookingModal">
-        <div class="modal-box">
-      
-          <h3>Add Booking</h3>
-      
-          <form id="bookingForm">
-      
-            <label>
-              Event Name
-              <input type="text" id="eventName" required placeholder="Wedding">
-            </label>
-      
-            <label>
-              Client Name
-              <input type="text" id="clientName" required placeholder="John Doe">
-            </label>
-      
-            <label>
-              Phone (Optional)
-              <input type="tel" id="PhoneNumber" placeholder="+234 XXX-XXXX-XXX">
-            </label>
-      
-            <label>
-              Address/Location
-              <input type="text" id="addRess" required placeholder="4 lugard street near the De Castle">
-            </label>
-
-            <label>
-              Event Date
-              <input type="date" id="eventDate" required>
-            </label>
-      
-            <label>Items</label>
-      
-            <div id="itemsWrapper">
-            
-              <div class="item-row">
-                <input type="text" placeholder="Item (e.g Chairs)" class="item-name" required>
-                <input type="number" placeholder="Qty" class="item-qty" required>
-              </div>
-            
-            </div>
-            
-            <button type="button" class="add-item" id="addItemBtn">
-              ➕ Add another item
-            </button>
-      
-            <label>Additional Info</label>
-      <textarea 
-        id="extraInfo"
-        placeholder="Notes, delivery address, payment method..."
-        rows="3"
-      ></textarea>
-      
-      <label>Payment Receipt (optional)</label>
-      <input type="file" id="receipt" accept="image/*">
-      
-      <img id="receiptPreview" class="hidden" />
-      
-      
-            <button type="submit">Save Booking</button>
-            <button type="button" class="cancel" id="closeAddModal">Cancel</button>
-      
-          </form>
-      
-        </div>
-      </div>
     
-
-
       <section class="settings-page">
 
         <h2 class="settings-title">Settings</h2>
@@ -318,10 +247,12 @@
 
     <!-- =========== Scripts =========  -->
     <script src="assets/js/main.js"></script>
+    <script src="assets/js/setting.js"></script>
 
     <!-- ====== ionicons ======= -->
     <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
-</body>
+<script type="module" src="assets/js/firebase.js"></script>
+  </body>
 
 </html>

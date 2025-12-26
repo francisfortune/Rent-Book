@@ -50,7 +50,7 @@
                 </li>
 
                 <li>
-                    <a href="#" id="addBookingBtn">
+                    <a href="add.html">
                       <span class="icon">
                         <ion-icon name="add-circle-outline"></ion-icon>
                       </span>
@@ -99,196 +99,76 @@
         
 
             <!-- ======================= Cards ================== -->
-        
-                <!-- ADD BOOKING MODAL -->
-<div class="modal hidden" id="addBookingModal">
-    <div class="modal-box">
-  
-      <h3>Add Booking</h3>
-  
-      <form id="bookingForm">
-  
-        <label>
-          Event Name
-          <input type="text" id="eventName" required placeholder="Wedding">
-        </label>
-  
-        <label>
-          Client Name
-          <input type="text" id="clientName" required placeholder="John Doe">
-        </label>
-        
-      <label>
-        Phone (Optional)
-        <input type="tel" id="PhoneNumber" placeholder="+234 XXX-XXXX-XXX">
-      </label>
-
-      <label>
-        Address/Location
-        <input type="text" id="addRess" required placeholder="4 lugard street near the De Castle">
-      </label>
-  
-        <label>
-          Event Date
-          <input type="date" id="eventDate" required>
-        </label>
-  
-        <label>Items</label>
-  
-        <div id="itemsWrapper">
-        
-          <div class="item-row">
-            <input type="text" placeholder="Item (e.g Chairs)" class="item-name" required>
-            <input type="number" placeholder="Qty" class="item-qty" required>
-          </div>
-        
-        </div>
-        
-        <button type="button" class="add-item" id="addItemBtn">
-          ➕ Add another item
-        </button>
-  
-        <label>Additional Info</label>
-  <textarea 
-    id="extraInfo"
-    placeholder="Notes, delivery address, payment method..."
-    rows="3"
-  ></textarea>
-  
-  <label>Payment Receipt (optional)</label>
-  <input type="file" id="receipt" accept="image/*">
-  
-  <img id="receiptPreview" class="hidden" />
-  
-  
-        <button type="submit">Save Booking</button>
-        <button type="button" class="cancel" id="closeAddModal">Cancel</button>
-  
-      </form>
-  
-    </div>
-  </div>
-
+      
 
   <div class="inventory-page">
 
     <!-- HEADER -->
    
-  
-    <!-- SUMMARY -->
-    <div class="inventory-summary">
-      <div class="summary-card">
-        <h3>12</h3>
-        <span>Total Items</span>
-      </div>
-      <div class="summary-card">
-        <h3>650</h3>
-        <span>Available</span>
-      </div>
-      <div class="summary-card">
-        <h3>350</h3>
-        <span>Items Out</span>
-      </div>
-      <div class="summary-card danger">
-        <h3>2</h3>
-        <span>Overdue</span>
+        <div class="inventory-summary">
+          <div class="summary-card">
+            <h3 id="totalItems">0</h3>
+            <span>Total Items</span>
+          </div>
+          <div class="summary-card">
+            <h3 id="availableItems">0</h3>
+            <span>Available</span>
+          </div>
+          <div class="summary-card">
+            <h3 id="outItems">0</h3>
+            <span>Items Out</span>
+          </div>
+        </div>
+
+        <!-- INVENTORY LIST -->
+        <div class="inventory-section">
+          <h3>Your Items</h3>
+          <div id="inventoryList"></div>
+        </div>
+
+        <!-- INVENTORY CALCULATOR -->
+        <div class="calculator-section">
+          <h3>Inventory Calculator</h3>
+          <p>Check if you have enough items for a booking</p>
+          <label>
+            Item
+            <select id="calcItem"></select>
+          </label>
+          <label>
+            Quantity Needed
+            <input type="number" id="calcQty" placeholder="e.g. 500">
+          </label>
+          <button id="checkBtn">Check Availability</button>
+          <div id="calcResult" class="calc-result"></div>
+        </div>
+
+        <!-- STAFF MANAGEMENT -->
+        <div class="staff-section">
+          <h3>Staff Management</h3>
+          <form id="staffForm">
+            <input type="text" id="staffName" placeholder="Name" required>
+            <input type="text" id="staffRole" placeholder="Role" required>
+            <input type="tel" id="staffPhone" placeholder="Phone Number" required>
+            <button type="submit">Add Staff</button>
+          </form>
+          <div id="staffList"></div>
+        </div>
       </div>
     </div>
-  
-    <!-- INVENTORY LIST -->
-    <div class="inventory-section">
-      <h3>Your Items</h3>
-  
-      <div class="inventory-item">
-        <div>
-          <strong>Chairs</strong>
-          <p>Total: 1000</p>
-        </div>
-        <div class="stats">
-          <span class="available">Available: 500</span>
-          <span class="out">Out: 500</span>
-        </div>
-      </div>
-  
-      <div class="inventory-item">
-        <div>
-          <strong>Canopy</strong>
-          <p>Total: 20</p>
-        </div>
-        <div class="stats">
-          <span class="available">Available: 12</span>
-          <span class="out">Out: 8</span>
-        </div>
-      </div>
-    </div>
-  
-    <!-- INVENTORY CALCULATOR -->
-    <div class="calculator-section">
-      <h3>Inventory Calculator</h3>
-      <p>Check if you have enough items for a booking</p>
-  
-      <label>
-        Item
-        <select id="calcItem">
-          <option value="chairs">Chairs</option>
-          <option value="canopy">Canopy</option>
-        </select>
-      </label>
-  
-      <label>
-        Quantity Needed
-        <input type="number" id="calcQty" placeholder="e.g. 500">
-      </label>
-  
-      <button onclick="checkInventory()">Check Availability</button>
-  
-      <div id="calcResult" class="calc-result"></div>
-    </div>
-  
-    <!-- FOOTER -->
-    <footer class="inventory-footer">
-      Inventory updates automatically based on bookings
-    </footer>
-  
   </div>
-     
+
+
     </div>
 
     <!-- =========== Scripts =========  -->
     <script src="assets/js/main.js"></script>
-
-    <script>
-      const inventoryData = {
-        chairs: 500,
-        canopy: 12
-      };
-      
-      function checkInventory() {
-        const item = document.getElementById("calcItem").value;
-        const qty = Number(document.getElementById("calcQty").value);
-        const available = inventoryData[item];
-        const result = document.getElementById("calcResult");
-      
-        if (!qty) {
-          result.innerHTML = "Enter a quantity.";
-          return;
-        }
-      
-        if (qty <= available) {
-          result.innerHTML = "✅ You have enough items available.";
-          result.style.color = "green";
-        } else {
-          const short = qty - available;
-          result.innerHTML = `⚠️ Short by ${short}. Rent from another rental or reduce quantity.`;
-          result.style.color = "#d00000";
-        }
-      }
-      </script>
-      
+    <script src="assets/js/inventory.js"></script>
+    
 
     <!-- ====== ionicons ======= -->
     <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
-</body>
-
+<script type="module" src="assets/js/firebase.js"></script>
+<script type="module" src="assets/js/inventory.js"></script>
+  </body>
 </html>
