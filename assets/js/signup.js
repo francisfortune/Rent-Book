@@ -47,7 +47,7 @@ form.addEventListener("submit", async (e) => {
       createdAt: Date.now()
     });
 
-    window.location.href = "user/setup.html";
+    window.location.href = "setup.html";
 
   } catch (err) {
     alert(err.message);

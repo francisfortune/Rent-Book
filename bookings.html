@@ -773,113 +773,70 @@
   </div>
 </div>
 
+
      </div><!-- ======================= Dashboard Content ========================= -->
+<section class="dashboard">
 
-    <section class="dashboard"><!-- Welcome Section -->
-     <div class="welcome-section">
-  <h1 class="welcome-text" id="welcome-text">
-    Welcome 
-  </h1>
-  <p class="welcome-subtitle" id="welcome-subtitle">
-    Here’s a quick overview of your rental business today
-  </p>
-</div>
+  <!-- Page Header -->
+  <div class="welcome-section">
+    <h1 class="welcome-text">Bookings</h1>
+    <p class="welcome-subtitle">
+      View, add, and manage all bookings
+    </p>
 
-<!-- ======================= Cards ================== -->
-<div class="cardBox">
-
-  <div class="card">
-    <div>
-      <div class="numbers" id="total-inventory">0</div>
-      <div class="cardName">Inventory Items</div>
-    </div>
-    <div class="iconBx">
-      <ion-icon name="cube-outline"></ion-icon>
-    </div>
+    <a href="add.html" class="btn">
+      + Add Booking
+    </a>
   </div>
 
-  <div class="card">
-    <div>
-      <div class="numbers" id="active-bookings">0</div>
-      <div class="cardName">Active Bookings</div>
-    </div>
-    <div class="iconBx">
-      <ion-icon name="calendar-outline"></ion-icon>
-    </div>
+  <!-- Filters -->
+  <div class="filters">
+    <select id="filterStatus">
+      <option value="">All Status</option>
+      <option value="active">Active</option>
+      <option value="done">Returned</option>
+    </select>
+
+    <input type="date" id="filterDate">
   </div>
 
-  <div class="card">
-    <div>
-      <div class="numbers" id="returned-bookings">0</div>
-      <div class="cardName">Returned</div>
-    </div>
-    <div class="iconBx">
-      <ion-icon name="checkmark-done-outline"></ion-icon>
-    </div>
-  </div>
-
-  <div class="card">
-    <div>
-      <div class="numbers" id="overdue-bookings">0</div>
-      <div class="cardName">Overdue</div>
-    </div>
-    <div class="iconBx">
-      <ion-icon name="alert-circle-outline"></ion-icon>
-    </div>
-  </div>
-
-</div>
-
-<!-- ================ Order Details List ================= -->
-     <div class="details">
-<div class="recentOrders">
-  <div class="cardHeader">
-    <h2>Recent Bookings</h2>
-    <a href="bookings.html" class="btn">View All</a>
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <td>Item</td>
-        <td>Customer</td>
-        <td>Qty</td>
-        <td>Status</td>
-      </tr>
-    </thead>
-    <tbody id="recent-bookings">
-      <tr>
-        <td colspan="4" style="text-align:center; opacity:0.6;">
-          No bookings yet
-        </td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-
-<!-- ================= New Customers ================ -->
-      <div class="recentCustomers">
-       <div class="cardHeader">
-        <h2>Recent Customers</h2>
-       </div>
-       <table>
-<tbody id="recent-customers">
-  <tr>
-    <td colspan="2" style="text-align:center; opacity:0.6;">
-      No customers yet
-    </td>
-  </tr>
-</tbody>
-       </table>
+  <!-- Bookings Table -->
+  <div class="details">
+    <div class="recentOrders">
+      <div class="cardHeader">
+        <h2>All Bookings</h2>
       </div>
-     </div>
-    </section>
+
+      <table>
+        <thead>
+          <tr>
+            <td>Client</td>
+            <td>Date</td>
+            <td>Items</td>
+            <td>Status</td>
+            <td>Action</td>
+          </tr>
+        </thead>
+
+        <tbody id="bookingsTable">
+          <tr>
+            <td colspan="5" style="text-align:center;">
+              Loading bookings...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</section>
+
    </div><!-- =============== Bottom Navigation (Mobile) ================ -->
    <nav class="bottom-nav">
     <ul>
      <li class="active"><a href="dashboard.html"> <span class="icon">
         <ion-icon name="home-outline"></ion-icon> </span> <span class="title">Dashboard</span> </a></li>
-     <li><a href="bookings.html"> <span class="icon">
+     <li><a href="booking.html"> <span class="icon">
         <ion-icon name="calendar-outline"></ion-icon> </span> <span class="title">Bookings</span> </a></li>
      <li><a href="add.html"> <span class="icon">
         <ion-icon name="add-circle-outline"></ion-icon> </span> <span class="title">Add</span> </a></li>
@@ -989,6 +946,6 @@
         }
     </script>
     <script type="module" src="assets/js/firebase.js"></script>
-    <script type="module" src="assets/js/dashboard.js"></script>
+    <script type="module" src="assets/js/bookings.js"></script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b34487a56f0b78a',t:'MTc2NjYyMzE4NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
