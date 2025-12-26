@@ -28,5 +28,5 @@ RentBook is a web application that allows users to set up and manage their renta
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/rentbook.git
+git clone https://github.com/francisfortune/rentbook.git
 cd rentbook
