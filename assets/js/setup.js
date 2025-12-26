@@ -1,12 +1,13 @@
-// setup.js
-import { auth, db } from "./firebase.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+// setup.js - Updated to use service layer
+import { auth } from "./firebase.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { createBusiness } from "./services/businessService.js";
+import { addInventoryItem } from "./services/inventoryService.js";
 
 // Redirect to login if user not signed in
 onAuthStateChanged(auth, user => {
   if (!user) {
-    window.location.href = "login.html";
+    window.location.href = "log-in.html";
   }
 });
 
@@ -36,7 +37,8 @@ function setupRadioButtons() {
   });
 }
 
-function nextStep() {
+// Make functions globally accessible
+window.nextStep = function () {
   if (!validateStep(currentStep)) return;
 
   if (currentStep < totalSteps) {
@@ -48,7 +50,7 @@ function nextStep() {
   }
 }
 
-function prevStep() {
+window.prevStep = function () {
   if (currentStep > 1) {
     document.querySelector(`.form-step[data-step="${currentStep}"]`).classList.remove('active');
     currentStep--;
@@ -125,7 +127,7 @@ function showToast(message) {
   }, 2500);
 }
 
-function addInventoryItem() {
+window.addInventoryItem = function () {
   const div = document.createElement("div");
   div.className = "inventory-item";
   div.innerHTML = `
@@ -135,12 +137,12 @@ function addInventoryItem() {
       <input type="text" class="item-name" required>
     </div>
     <div class="form-group">
-      <label>Quantity *</label>
+      <label>Total Quantity *</label>
       <input type="number" class="item-qty" min="1" required>
     </div>
     <div class="form-group">
-      <label>Price</label>
-      <input type="number" class="item-price" min="0">
+      <label>Warning Threshold</label>
+      <input type="number" class="item-threshold" min="0" value="10">
     </div>
   `;
   document.getElementById("inventoryList").appendChild(div);
@@ -157,45 +159,33 @@ document.getElementById("setupForm").addEventListener("submit", async e => {
   btn.textContent = "Setting up...";
 
   try {
-    // 1️⃣ Create Business
-    const businessRef = await addDoc(collection(db, "businesses"), {
+    // 1️⃣ Create Business using service
+    const businessData = {
       name: document.getElementById("businessName").value,
       type: document.querySelector("input[name='businessType']:checked").value,
       city: document.getElementById("city").value,
       state: document.getElementById("state").value,
       rentalModel: document.querySelector("input[name='rentalModel']:checked").value,
-      returnDuration: document.querySelector("input[name='returnDuration']:checked").value,
-      ownerId: user.uid,
-      createdAt: serverTimestamp()
-    });
+      returnDuration: document.querySelector("input[name='returnDuration']:checked").value
+    };
 
-    const businessId = businessRef.id;
+    const businessId = await createBusiness(user.uid, businessData);
 
-    // 2️⃣ Create Business Membership
-    await addDoc(collection(db, "businessMembers"), {
-      businessId,
-      userId: user.uid,
-      role: "owner",
-      createdAt: serverTimestamp()
-    });
-
-    // 3️⃣ Add Inventory Items
+    // 2️⃣ Add Inventory Items using service
     const items = document.querySelectorAll(".inventory-item");
     for (const item of items) {
       const name = item.querySelector(".item-name").value;
       const qty = Number(item.querySelector(".item-qty").value);
-      const price = Number(item.querySelector(".item-price").value || 0);
+      const threshold = Number(item.querySelector(".item-threshold")?.value || 10);
 
-      await addDoc(collection(db, "inventory"), {
-        businessId,
-        name,
-        quantity: qty,
-        price,
-        createdAt: serverTimestamp()
+      await addInventoryItem(businessId, {
+        name: name,
+        totalQuantity: qty,
+        warningThreshold: threshold
       });
     }
 
-    // 4️⃣ Show success screen
+    // 3️⃣ Show success screen
     document.querySelector('#setupForm').style.display = 'none';
     document.querySelector('.success-screen').classList.add('active');
     document.querySelector('.progress-container').style.display = 'none';
@@ -209,7 +199,7 @@ document.getElementById("setupForm").addEventListener("submit", async e => {
 });
 
 // Go to dashboard
-function goToDashboard() {
+window.goToDashboard = function () {
   showToast('Redirecting to dashboard...');
   setTimeout(() => {
     window.location.href = 'dashboard.html';

@@ -1,0 +1,138 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isOwner(businessId) {
+      let business = get(/databases/$(database)/documents/businesses/$(businessId)).data;
+      return request.auth.uid == business.ownerId;
+    }
+    
+    function isMember(businessId) {
+      let userData = getUserData();
+      return userData.businessId == businessId;
+    }
+    
+    function hasPermission(businessId, permission) {
+      // Owners have all permissions
+      if (isOwner(businessId)) {
+        return true;
+      }
+      
+      // Check staff permissions
+      let staffQuery = getAfter(/databases/$(database)/documents/businesses/$(businessId)/staff/$(request.auth.uid));
+      return staffQuery != null && staffQuery.data.permissions[permission] == true;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Users can read their own document
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Users can create their own document during signup
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Users can update their own document
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+      
+      // No one can delete user documents
+      allow delete: if false;
+    }
+    
+    // Businesses collection
+    match /businesses/{businessId} {
+      // Members can read their business
+      allow read: if isAuthenticated() && isMember(businessId);
+      
+      // Only authenticated users can create a business (during setup)
+      allow create: if isAuthenticated();
+      
+      // Only owners can update business settings
+      allow update: if isAuthenticated() && isOwner(businessId);
+      
+      // Only owners can delete business
+      allow delete: if isAuthenticated() && isOwner(businessId);
+      
+      // Inventory subcollection
+      match /inventory/{itemId} {
+        // All members can read inventory
+        allow read: if isAuthenticated() && isMember(businessId);
+        
+        // Staff with editInventory permission can create/update/delete
+        allow create, update, delete: if isAuthenticated() && 
+          (isOwner(businessId) || hasPermission(businessId, "editInventory"));
+      }
+      
+      // Bookings subcollection
+      match /bookings/{bookingId} {
+        // All members can read bookings
+        allow read: if isAuthenticated() && isMember(businessId);
+        
+        // Staff with addBookings permission can create
+        allow create: if isAuthenticated() && 
+          (isOwner(businessId) || hasPermission(businessId, "addBookings"));
+        
+        // Staff with editBookings permission can update
+        allow update: if isAuthenticated() && 
+          (isOwner(businessId) || hasPermission(businessId, "editBookings"));
+        
+        // Only owners can delete bookings
+        allow delete: if isAuthenticated() && isOwner(businessId);
+      }
+      
+      // Staff subcollection
+      match /staff/{staffId} {
+        // All members can read staff list
+        allow read: if isAuthenticated() && isMember(businessId);
+        
+        // Only owners can manage staff
+        allow create, update, delete: if isAuthenticated() && isOwner(businessId);
+      }
+      
+      // External Rentals subcollection
+      match /externalRentals/{rentalId} {
+        // All members can read
+        allow read: if isAuthenticated() && isMember(businessId);
+        
+        // Staff with manageRentals permission can create/update/delete
+        allow create, update, delete: if isAuthenticated() && 
+          (isOwner(businessId) || hasPermission(businessId, "manageRentals"));
+      }
+      
+      // Borrowed Items subcollection
+      match /borrowedItems/{borrowId} {
+        // All members can read
+        allow read: if isAuthenticated() && isMember(businessId);
+        
+        // Staff with manageRentals permission can create/update/delete
+        allow create, update, delete: if isAuthenticated() && 
+          (isOwner(businessId) || hasPermission(businessId, "manageRentals"));
+      }
+      
+      // Reminders subcollection
+      match /reminders/{reminderId} {
+        // All members can read reminders
+        allow read: if isAuthenticated() && isMember(businessId);
+        
+        // All members can create and update reminders
+        allow create, update: if isAuthenticated() && isMember(businessId);
+        
+        // Only owners can delete reminders
+        allow delete: if isAuthenticated() && isOwner(businessId);
+      }
+    }
+    
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
