@@ -1,142 +1,142 @@
-
 import { auth, db } from "./firebase.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { collection, addDoc, query, where, getDocs, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  onSnapshot,
+  query,
+  where,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { onAuthStateChanged } from
+  "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
+/* =========================
+   BUSINESS LOOKUP
+========================= */
+async function getBusinessId(email) {
+  const q = query(
+    collection(db, "businessMembers"),
+    where("email", "==", email)
+  );
+  const snap = await getDocs(q);
+  if (snap.empty) throw new Error("No business");
+  return snap.docs[0].data().businessId;
+}
 
+/* =========================
+   DOM
+========================= */
+const totalItemsEl = document.getElementById("totalItems");
+const availableItemsEl = document.getElementById("availableItems");
+const outItemsEl = document.getElementById("outItems");
+const inventoryList = document.getElementById("inventoryList");
+const calcItem = document.getElementById("calcItem");
+const calcQty = document.getElementById("calcQty");
+const calcResult = document.getElementById("calcResult");
+
+/* =========================
+   RENDER
+========================= */
+function renderInventory(items) {
+  inventoryList.innerHTML = "";
+  calcItem.innerHTML = "";
+
+  let totalQty = 0;
+  let availableQty = 0;
+
+  items.forEach(item => {
+    totalQty += item.totalQuantity;
+    availableQty += item.availableQuantity;
+
+    inventoryList.innerHTML += `
+      <div class="inventory-item">
+        <strong>${item.name}</strong><br>
+        Total: ${item.totalQuantity}<br>
+        Available: ${item.availableQuantity}<br>
+        ₦${item.price} / unit
+      </div>
+    `;
+
+    calcItem.innerHTML += `
+      <option value="${item.availableQuantity}">
+        ${item.name}
+      </option>
+    `;
+  });
+
+  totalItemsEl.innerText = items.length;
+  availableItemsEl.innerText = availableQty;
+  outItemsEl.innerText = totalQty - availableQty;
+}
+
+/* =========================
+   AUTH + LIVE DATA
+========================= */
 onAuthStateChanged(auth, async (user) => {
-  if (!user) return window.location.href = "login.html";
-  const userId = user.uid;
-
-  const inventoryList = document.getElementById("inventoryList");
-  const calcItem = document.getElementById("calcItem");
-  const checkBtn = document.getElementById("checkBtn");
-  const calcQty = document.getElementById("calcQty");
-  const calcResult = document.getElementById("calcResult");
-  const totalItemsEl = document.getElementById("totalItems");
-  const availableItemsEl = document.getElementById("availableItems");
-  const outItemsEl = document.getElementById("outItems");
-
-  const staffForm = document.getElementById("staffForm");
-  const staffList = document.getElementById("staffList");
-
-  // Fetch Inventory
-  async function loadInventory() {
-    const q = query(collection(db, "inventory"), where("businessId", "==", userId));
-    const snapshot = await getDocs(q);
-
-    let totalItems = 0;
-    let totalAvailable = 0;
-    let totalOut = 0;
-    inventoryList.innerHTML = "";
-    calcItem.innerHTML = "";
-
-    snapshot.docs.forEach(docSnap => {
-      const data = docSnap.data();
-      const outQty = (data.totalQuantity - data.availableQuantity) || 0;
-
-      totalItems += data.totalQuantity || 0;
-      totalAvailable += data.availableQuantity || 0;
-      totalOut += outQty;
-
-      // Inventory item card
-      const div = document.createElement("div");
-      div.className = "inventory-item";
-      div.innerHTML = `
-        <div>
-          <strong>${data.name}</strong>
-          <p>Total: ${data.totalQuantity}</p>
-        </div>
-        <div class="stats">
-          <span class="available">Available: ${data.availableQuantity}</span>
-          <span class="out">Out: ${outQty}</span>
-        </div>
-      `;
-      inventoryList.appendChild(div);
-
-      // Add to calculator dropdown
-      const option = document.createElement("option");
-      option.value = data.name.toLowerCase();
-      option.textContent = data.name;
-      calcItem.appendChild(option);
-    });
-
-    totalItemsEl.textContent = totalItems;
-    availableItemsEl.textContent = totalAvailable;
-    outItemsEl.textContent = totalOut;
+  if (!user) {
+    window.location.href = "signup.html";
+    return;
   }
 
-  await loadInventory();
+  try {
+    const businessId = await getBusinessId(user.email);
+    const invRef = collection(db, "businesses", businessId, "inventory");
 
-  // Inventory Calculator
-  checkBtn.addEventListener("click", () => {
-    const selectedItem = calcItem.value;
-    const qty = Number(calcQty.value);
-    if (!qty) {
-      calcResult.textContent = "Enter a quantity.";
-      calcResult.style.color = "black";
-      return;
-    }
-
-    const q = query(collection(db, "inventory"), where("businessId", "==", userId));
-    getDocs(q).then(snapshot => {
-      const item = snapshot.docs.find(docSnap => docSnap.data().name.toLowerCase() === selectedItem);
-      if (!item) {
-        calcResult.textContent = "Item not found.";
-        calcResult.style.color = "red";
+    onSnapshot(invRef, (snap) => {
+      if (snap.empty) {
+        inventoryList.innerHTML = "<p>No inventory items yet</p>";
+        totalItemsEl.innerText = "0";
+        availableItemsEl.innerText = "0";
+        outItemsEl.innerText = "0";
         return;
       }
-      const data = item.data();
-      if (qty <= data.availableQuantity) {
-        calcResult.textContent = "✅ You have enough items available.";
-        calcResult.style.color = "green";
-      } else {
-        const short = qty - data.availableQuantity;
-        calcResult.textContent = `⚠️ Short by ${short}. Rent from another rental or reduce quantity.`;
-        calcResult.style.color = "#d00000";
-      }
-    });
-  });
 
-  // Staff Management
-  staffForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const name = document.getElementById("staffName").value;
-    const role = document.getElementById("staffRole").value;
-    const phone = document.getElementById("staffPhone").value;
-
-    await addDoc(collection(db, "businesses", userId, "staff"), {
-      name, role, phone, createdAt: new Date()
+      const items = snap.docs.map(d => d.data());
+      renderInventory(items);
     });
 
-    staffForm.reset();
-    loadStaff();
-  });
+    /* ADD ITEM */
+    document
+      .getElementById("addItemForm")
+      .addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-  async function loadStaff() {
-    const q = query(collection(db, "businesses", userId, "staff"));
-    const snapshot = await getDocs(q);
-    staffList.innerHTML = "";
-    snapshot.docs.forEach(docSnap => {
-      const data = docSnap.data();
-      const div = document.createElement("div");
-      div.className = "staff-item";
-      div.innerHTML = `
-        <strong>${data.name}</strong> - ${data.role} - ${data.phone}
-        <button data-id="${docSnap.id}" class="removeBtn">Remove</button>
-      `;
-      staffList.appendChild(div);
-    });
+        await addDoc(invRef, {
+          name: itemName.value.trim(),
+          totalQuantity: Number(itemQty.value),
+          availableQuantity: Number(itemQty.value),
+          price: Number(itemPrice.value),
+          createdAt: serverTimestamp()
+        });
 
-    // Remove staff
-    document.querySelectorAll(".removeBtn").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const staffId = btn.dataset.id;
-        await deleteDoc(doc(db, "businesses", userId, "staff", staffId));
-        loadStaff();
+        e.target.reset();
       });
-    });
+
+  } catch (err) {
+    console.error(err);
+    window.location.href = "setup.html";
+  }
+});
+
+/* =========================
+   AVAILABILITY CHECK
+========================= */
+document.getElementById("checkBtn").onclick = () => {
+  const available = Number(calcItem.value);
+  const needed = Number(calcQty.value);
+
+  if (!needed) {
+    calcResult.innerText = "Enter quantity";
+    calcResult.style.color = "orange";
+    return;
   }
 
-  await loadStaff();
-});
+  if (needed <= available) {
+    calcResult.innerText = "Available ✅";
+    calcResult.style.color = "green";
+  } else {
+    calcResult.innerText = "Not enough stock ❌";
+    calcResult.style.color = "red";
+  }
+};

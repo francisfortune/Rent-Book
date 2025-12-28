@@ -1,19 +1,18 @@
-// assets/js/auth.js
 import { auth, db } from "./firebase.js";
 
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 import {
-  doc,
-  setDoc,
   collection,
   query,
   where,
   getDocs,
+  updateDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -31,19 +30,16 @@ function setLoading(btn, loading) {
 }
 
 /* =========================
-   BUSINESS MEMBERSHIP CHECK
+   FIND BUSINESS MEMBER BY EMAIL
 ========================= */
-async function getBusinessIdByEmail(email) {
+async function getMembershipByEmail(email) {
   const q = query(
     collection(db, "businessMembers"),
     where("email", "==", email)
   );
-
   const snap = await getDocs(q);
-
   if (snap.empty) return null;
-
-  return snap.docs[0].data().businessId;
+  return { id: snap.docs[0].id, ...snap.docs[0].data() };
 }
 
 /* =========================
@@ -58,34 +54,13 @@ if (registerForm) {
     const btn = registerForm.querySelector("button");
     setLoading(btn, true);
 
-    const name = document.getElementById("registerName").value.trim();
-    const email = document.getElementById("registerEmail").value.trim();
-    const password = document.getElementById("registerPassword").value;
+    const email = registerForm.registerEmail.value.trim();
+    const password = registerForm.registerPassword.value;
 
     try {
-      // 1️⃣ Create Auth user
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
-
-      // 2️⃣ Create Firestore user doc
-      await setDoc(doc(db, "users", cred.user.uid), {
-        uid: cred.user.uid,
-        name,
-        email,
-        createdAt: serverTimestamp()
-      });
-
-      // 3️⃣ Check business membership
-      const businessId = await getBusinessIdByEmail(email);
-
-      // 4️⃣ Redirect
-      if (businessId) {
-        window.location.href = "dashboard.html";
-      } else {
-        window.location.href = "setup.html";
-      }
-
+      await createUserWithEmailAndPassword(auth, email, password);
+      // redirect handled by auth listener
     } catch (err) {
-      console.error(err);
       showMessage(err.message);
     } finally {
       setLoading(btn, false);
@@ -105,22 +80,13 @@ if (loginForm) {
     const btn = loginForm.querySelector("button");
     setLoading(btn, true);
 
-    const email = document.getElementById("loginEmail").value.trim();
-    const password = document.getElementById("loginPassword").value;
+    const email = loginForm.loginEmail.value.trim();
+    const password = loginForm.loginPassword.value;
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-
-      const businessId = await getBusinessIdByEmail(email);
-
-      if (businessId) {
-        window.location.href = "dashboard.html";
-      } else {
-        window.location.href = "setup.html";
-      }
-
-    } catch (err) {
-      console.error(err);
+      // redirect handled by auth listener
+    } catch {
       showMessage("Invalid login details");
     } finally {
       setLoading(btn, false);
@@ -129,16 +95,41 @@ if (loginForm) {
 }
 
 /* =========================
+   AUTH STATE — ACCEPT INVITE
+========================= */
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return;
+
+  const membership = await getMembershipByEmail(user.email);
+
+  if (!membership) {
+    // New user, no invite
+    window.location.href = "setup.html";
+    return;
+  }
+
+  // Accept invite if pending
+  if (membership.status === "pending") {
+    await updateDoc(
+      collection(db, "businessMembers").doc(membership.id),
+      {
+        status: "accepted",
+        uid: user.uid,
+        joinedAt: serverTimestamp()
+      }
+    );
+  }
+
+  window.location.href = "dashboard.html";
+});
+
+/* =========================
    PASSWORD RESET
 ========================= */
 window.resetPassword = async function () {
-  const email = document.getElementById("loginEmail").value.trim();
+  const email = document.getElementById("loginEmail")?.value.trim();
   if (!email) return showMessage("Enter your email first");
 
-  try {
-    await sendPasswordResetEmail(auth, email);
-    showMessage("Password reset email sent");
-  } catch (err) {
-    showMessage(err.message);
-  }
+  await sendPasswordResetEmail(auth, email);
+  showMessage("Password reset email sent");
 };

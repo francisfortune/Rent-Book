@@ -13,7 +13,7 @@ import {
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 /* =========================
-   GUARD: AUTH + NO BUSINESS
+   GUARD: ENSURE USER HAS NO BUSINESS
 ========================= */
 async function ensureNoExistingBusiness(email) {
   const q = query(
@@ -22,39 +22,55 @@ async function ensureNoExistingBusiness(email) {
   );
 
   const snap = await getDocs(q);
-  return snap.empty; // true = safe to create
+  return snap.empty;
+}
+
+/* =========================
+   CREATE INVENTORY
+========================= */
+async function createInitialInventory(businessId) {
+  const inventoryItems = document.querySelectorAll(".inventory-item");
+
+  for (const item of inventoryItems) {
+    const name = item.querySelector(".item-name")?.value.trim();
+    const qty = Number(item.querySelector(".item-qty")?.value || 0);
+    const price = Number(item.querySelector(".item-price")?.value || 0);
+
+    if (!name || qty <= 0) continue;
+
+    await addDoc(collection(db, "inventory"), {
+      businessId,
+      name,
+      quantity: qty,
+      price,
+      createdAt: serverTimestamp()
+    });
+  }
 }
 
 /* =========================
    SETUP SUBMIT
-========================= */
-async function handleSetupSubmit(user) {
+========================= */async function handleSetupSubmit(user) {
   const btn = document.getElementById("submit-btn");
   btn.disabled = true;
   btn.textContent = "Setting up...";
 
   try {
-    const businessName =
-      document.getElementById("businessName")?.value.trim();
+    const businessName = document.getElementById("businessName").value.trim();
 
-    if (!businessName) {
-      alert("Business name is required");
-      btn.disabled = false;
-      btn.textContent = "Complete Setup";
-      return;
-    }
+    // 1️⃣ Create business
+    const businessRef = await addDoc(collection(db, "businesses"), {
+      name: businessName,
+      ownerId: user.uid,
+      currency: "NGN",
+      location: "Enugu",
+      settings: {
+        inventoryEditableByStaff: false
+      },
+      createdAt: serverTimestamp()
+    });
 
-    // 1️⃣ Create Business
-    const businessRef = await addDoc(
-      collection(db, "businesses"),
-      {
-        name: businessName,
-        ownerId: user.uid,
-        createdAt: serverTimestamp()
-      }
-    );
-
-    // 2️⃣ Attach Owner as Member
+    // 2️⃣ Attach owner
     await addDoc(collection(db, "businessMembers"), {
       businessId: businessRef.id,
       uid: user.uid,
@@ -63,35 +79,54 @@ async function handleSetupSubmit(user) {
       addedAt: serverTimestamp()
     });
 
-    // 3️⃣ Redirect
+    // 3️⃣ SAVE INVENTORY (NESTED)
+    const items = document.querySelectorAll(".inventory-item");
+
+    for (const item of items) {
+      const name = item.querySelector(".item-name").value.trim();
+      const qty = Number(item.querySelector(".item-qty").value);
+      const price =
+        Number(item.querySelector(".item-price").value) || 0;
+
+      if (!name || !qty) continue;
+
+      await addDoc(
+        collection(db, "businesses", businessRef.id, "inventory"),
+        {
+          name,
+          quantity: qty,
+          price,
+          createdAt: serverTimestamp()
+        }
+      );
+    }
+
     window.location.href = "dashboard.html";
 
   } catch (err) {
     console.error("Setup failed:", err);
-    alert("Setup failed. Please try again.");
+    alert("Setup failed. Check Firestore rules.");
     btn.disabled = false;
     btn.textContent = "Complete Setup";
   }
 }
 
 /* =========================
-   AUTH STATE LISTENER
+   AUTH GUARD
 ========================= */
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    window.location.href = "login.html";
+    window.location.href = "signup.html";
     return;
   }
 
   const allowed = await ensureNoExistingBusiness(user.email);
 
   if (!allowed) {
-    // Already has a business → stop loop
     window.location.href = "dashboard.html";
     return;
   }
 
-  // Bind submit only AFTER checks
   const form = document.getElementById("setupForm");
   if (form) {
     form.addEventListener("submit", (e) => {

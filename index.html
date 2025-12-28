@@ -5,10 +5,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RentBook – Smart Rental &amp; Inventory Management</title>
- <meta name="google-site-verification" content="mEu-LsKgwCFuNhuu8bmYhGs2I7J_l8LGkSx9QQjBuhQ" />
+
+    <meta name="description" content="RentBook is now 100% free! Manage rentals, inventory, and bookings effortlessly with our all-in-one SaaS dashboard. Perfect for rental businesses and stores.">
+    <meta name="keywords" content="Free rental management, Free inventory tracking, RentBook SaaS, Booking system, Free rental software">
+    
+    <meta property="og:title" content="RentBook – Free Rental & Inventory Management SaaS">
+    <meta property="og:description" content="RentBook is now free! Manage rentals, inventory, and bookings effortlessly with our all-in-one SaaS dashboard.">
+    <meta property="twitter:title" content="RentBook – Free Rental & Inventory Management SaaS">
+    <meta property="twitter:description" content="RentBook is now free! Manage rentals, inventory, and bookings effortlessly with our all-in-one SaaS dashboard.">    
+
     <script src="/_sdk/element_sdk.js"></script>
      <!-- FAVICON -->
     <link rel="icon" type="image/x-icon" href="assets/logo.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap");
 
@@ -525,7 +534,7 @@
             }
 
             .benefit__visual {
-                height: 350px;
+                height: 650px;
                 font-size: 3rem;
             }
 
@@ -574,6 +583,77 @@
                 border-bottom-width: 11px;
             }
         }
+        .download-popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.download-popup.hidden {
+  display: none;
+}
+
+.popup-card {
+  background: #ffffff;
+  width: 90%;
+  max-width: 360px;
+  padding: 25px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+  animation: popIn 0.3s ease;
+}
+
+.popup-card h3 {
+  font-size: 1.4rem;
+  margin-bottom: 10px;
+}
+
+.popup-card p {
+  font-size: 0.95rem;
+  color: #555;
+  margin-bottom: 20px;
+}
+
+.popup-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.download-btn {
+  background: purple;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: #e5e7eb;
+  color: #333;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
     </style>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
     <style>
@@ -599,13 +679,15 @@
             <p>RentBook helps rental businesses and stores track items, bookings, customers, and availability in real
                 time — all from one simple dashboard.</p>
             <div class="hero__buttons"><a href="signup.html" class="btn-primary">Start Free</a>
-                 <a href="#" class="btn-secondary">Watch Demo</a>
+                <a href="#" id="openDemo" class="btn-secondary">Watch Demo</a>
+                 <p class="text-gray-500 mt-2 italic">Join <strong>500+ rental businesses</strong> already using RentBook.</p>
             </div>
         </div>
         <div class="hero__image">
-            <img src="assets/dashboard.png" alt="">
+            <img src="assets/header.png" alt="">
         </div>
-    </section><!-- FEATURES -->
+    </section>
+    <!-- FEATURES -->
     <section class="features">
         <div class="features__container">
             <div class="feature"><i class="ri-box-3-line"></i>
@@ -664,33 +746,155 @@
                     </div>
                 </div>
                 <div class="benefit__image">
-                    <div class="benefit__visual"><i class="ri-line-chart-line"></i>
+                    <div class="benefit__visual" style="background: transparent;">
+                        <img src="assets/dashboard.png" alt="">
                     </div>
                 </div>
             </div>
         </div>
-    </section><!-- VIDEO -->
-    <section class="video">
-        <h2>How RentBook Works</h2>
-        <p>Watch how to manage your rentals in minutes</p>
-        <div class="video__box">
-            <div class="video__placeholder">
-                <div class="play-button"></div>
-                <h3>Product Demo Video</h3>
-                <p>Click to watch the full walkthrough</p>
-            </div>
+    </section>
+    <!-- Video Section -->
+<section class="video">
+    <h2>How RentBook Works</h2>
+    <p>Watch how to manage your rentals in minutes</p>
+    <div id="videoBox" class="video__box cursor-pointer">
+        <div class="video__placeholder">
+            <div class="play-button"></div>
+            <h3>Product Demo Video</h3>
+            <p>Click to watch the full walkthrough</p>
         </div>
-    </section><!-- CTA -->
-    <section class="cta">
-        <h2>Start Managing Smarter</h2>
-        <p>Create your RentBook account and take control today.</p><a href="signup.html" class="btn-primary">Create Free
-            Account</a>
-    </section><!-- FOOTER -->
+    </div>
+</section>
+
+    <!-- CONTACT US SECTION -->
+    <section id="contact" class="max-w-7xl mx-auto py-20 px-6">
+        <div class="text-center mb-12">
+            <h2 class="text-3xl md:text-4xl font-bold">Get in Touch</h2>
+            <p class="text-gray-600 mt-4">Have questions? Our support team is here to help.</p>
+        </div>
+        <form class="max-w-3xl mx-auto grid grid-cols-1 gap-6">
+            <input type="text" placeholder="Your Name" class="p-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-600 focus:outline-none">
+            <input type="email" placeholder="Your Email" class="p-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-600 focus:outline-none">
+            <textarea placeholder="Your Message" rows="5" class="p-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-600 focus:outline-none"></textarea>
+            <button type="submit" style="background-color: purple;" class="text-white px-6 py-3 rounded-full shadow-md hover:shadow-lg hover:-translate-y-1 transition font-semibold">Send Message</button>
+        </form>
+    </section>
+
+    <!-- CTA SECTION -->
+    <section class="py-20 px-6 text-center text-white" style="background-color: purple;">
+        <h2 class="text-4xl md:text-5xl font-bold mb-6">Ready to Simplify Your Rentals?</h2>
+        <p class="text-lg md:text-xl mb-8">Create your account today and start saving time & money.</p>
+        <a href="signup.html" class="bg-white px-8 py-4 rounded-full font-bold shadow-lg hover:shadow-xl hover:-translate-y-1 transition text-lg md:text-xl" style="color: purple;">Create Free Account</a>
+    </section>
+<div id="demoModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden">
+    <div class="relative w-full max-w-4xl mx-4">
+        <button id="closeModal" class="absolute top-2 right-2 text-white text-3xl font-bold">&times;</button>
+        <div class="aspect-w-16 aspect-h-9">
+            <iframe id="demoVideo" class="w-full h-full rounded-lg shadow-lg" 
+                src="https://youtu.be/V6ouUmcpRI8" 
+                title="RentBook Demo Video" frameborder="0" allowfullscreen allow="autoplay"></iframe>
+        </div>
+    </div>
+</div>
+<!-- FOOTER -->
     <footer>
         © 2025 RentBook. All rights reserved.
     </footer>
+
+    <!-- Download App Popup -->
+<div id="download-popup" class="download-popup hidden">
+  <div class="popup-card">
+    <h3> Get the Rent Book App</h3>
+    <p>Manage bookings, inventory, and customers faster on our app.</p>
+
+    <div class="popup-actions">
+      <a
+        href="assets/app/RentBook.apk"
+        download
+        class="download-btn"
+      >
+        Download App
+      </a>
+
+      <button id="close-popup" class="close-btn">
+        Maybe later
+      </button>
+    </div>
+  </div>
+</div>
+
+    <script>
+    const openBtn = document.getElementById('openDemo');
+    const videoBox = document.getElementById('videoBox');
+    const modal = document.getElementById('demoModal');
+    const closeBtn = document.getElementById('closeModal');
+    const iframe = document.getElementById('demoVideo');
+
+    function openModal() {
+        modal.classList.remove('hidden');
+        // Autoplay video
+        iframe.src += "?autoplay=1";
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+        // Stop video playback
+        iframe.src = iframe.src.replace("?autoplay=1", "");
+    }
+
+    openBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        openModal();
+    });
+
+    videoBox.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+
+    // Close modal when clicking outside the video
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+</script>
+
+<!-- Tailwind Aspect Ratio Plugin -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+        theme: {
+            extend: {},
+        },
+        plugins: [
+            function ({ addUtilities }) {
+                addUtilities({
+                    '.aspect-w-16': { 'aspect-ratio': '16/9' },
+                    '.aspect-h-9': { 'aspect-ratio': '16/9' },
+                })
+            }
+        ]
+    }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const popup = document.getElementById("download-popup");
+    const closeBtn = document.getElementById("close-popup");
+
+    // show only once per user
+    const hasSeenPopup = localStorage.getItem("rentbook_download_popup");
+
+    if (!hasSeenPopup) {
+      setTimeout(() => {
+        popup.classList.remove("hidden");
+      }, 2000); // 2 seconds
+    }
+
+    closeBtn.addEventListener("click", () => {
+      popup.classList.add("hidden");
+      localStorage.setItem("rentbook_download_popup", "true");
+    });
+  });
+
+</script>
+
     <script>(function () { function c() { var b = a.contentDocument || a.contentWindow.document; if (b) { var d = b.createElement('script'); d.innerHTML = "window.__CF$cv$params={r:'9b34560d11de8560',t:'MTc2NjYyMzc0MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);"; b.getElementsByTagName('head')[0].appendChild(d) } } if (document.body) { var a = document.createElement('iframe'); a.height = 1; a.width = 1; a.style.position = 'absolute'; a.style.top = 0; a.style.left = 0; a.style.border = 'none'; a.style.visibility = 'hidden'; document.body.appendChild(a); if ('loading' !== document.readyState) c(); else if (window.addEventListener) document.addEventListener('DOMContentLoaded', c); else { var e = document.onreadystatechange || function () { }; document.onreadystatechange = function (b) { e(b); 'loading' !== document.readyState && (document.onreadystatechange = e, c()) } } } })();</script>
 </body>
-
 
 </html>

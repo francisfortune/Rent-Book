@@ -4,6 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard | Rent Book</title>
+
+  <meta name="description" content="Access your free RentBook dashboard to monitor rentals, bookings, inventory, and customer activity in real-time.">
+  <meta name="keywords" content="Free RentBook dashboard, rental tracking, inventory dashboard, SaaS free dashboard">
+  
+  <meta property="og:title" content="Dashboard – Free RentBook SaaS">
+  <meta property="og:description" content="Access your free RentBook dashboard to monitor rentals, bookings, inventory, and customer activity in real-time.">
+  <meta property="twitter:title" content="Dashboard – Free RentBook SaaS">
+  <meta property="twitter:description" content="Access your free RentBook dashboard to monitor rentals, bookings, inventory, and customer activity in real-time.">
+  
+
   <script src="/_sdk/element_sdk.js"></script>
   <!-- FAVICON -->
      <link rel="icon" type="image/x-icon" href="assets/imgs/logo.ico">
@@ -225,7 +235,7 @@
 
         /* ================ Dashboard Content ================ */
         .dashboard {
-            padding: 40px;
+            padding: 60px;
             /* padding-top: 90px; */
             overflow-y: auto;
             height: 100%;
@@ -443,6 +453,9 @@
                 left: -280px;
             }
 
+            #brand-name-mobile{
+  visibility: hidden;
+}
             .navigation.active {
                 width: 280px;
                 left: 0;
@@ -727,7 +740,7 @@
     "
   /> 
         </div>
-        </span> <span class="title brand" id="brand-name">Rent Book</span> </a></li>
+        </span> <span class="title brand">Rent Book</span> </a></li>
      <li class="hovered"><a href="dashboard.html"> <span class="icon">
         <ion-icon name="home-outline"></ion-icon> </span> <span class="title">Dashboard</span> </a></li>
      <li><a href="bookings.html"> <span class="icon">
@@ -745,11 +758,12 @@
      <div class="toggle"><ion-icon name="menu-outline"></ion-icon>
      </div>
      <div class="page-title">
-      <h2 class="page-name" id="brand-name-mobile"></h2>
+      <h2 class="page-name" id="brand-name"></h2>
      </div>
 <div class="mobile-brand">
-  <h1 style="color: black;">Rent<span style="color: purple;">Book</span></h1>
-  <span id="brand-name-mobile">Loading...</span>
+    
+  <h1 style="color: black;">Rent<span style="color: purple;"> Book</span></h1>
+
 </div>
 
 <div class="user">
@@ -778,10 +792,9 @@
     <section class="dashboard"><!-- Welcome Section -->
      <div class="welcome-section">
   <h1 class="welcome-text" id="welcome-text">
-    Welcome 
   </h1>
   <p class="welcome-subtitle" id="welcome-subtitle">
-    Here’s a quick overview of your rental business today
+    overview of your rental business today
   </p>
 </div>
 
@@ -860,7 +873,7 @@
 <!-- ================= New Customers ================ -->
       <div class="recentCustomers">
        <div class="cardHeader">
-        <h2>Recent Customers</h2>
+        <h2>Inventory</h2>
        </div>
        <table>
 <tbody id="recent-customers">
@@ -990,5 +1003,7 @@
     </script>
     <script type="module" src="assets/js/firebase.js"></script>
     <script type="module" src="assets/js/dashboard.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b34487a56f0b78a',t:'MTc2NjYyMzE4NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b34487a56f0b78a',t:'MTc2NjYyMzE4NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+
+</body>
 </html>

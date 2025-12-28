@@ -1,73 +1,182 @@
 import { auth, db } from "./firebase.js";
 import {
   collection,
-  getDocs,
   query,
-  orderBy
+  where,
+  getDocs,
+  orderBy,
+  onSnapshot,
+  doc,
+  updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
 import { onAuthStateChanged } from
-"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-import { doc, getDoc } from
-"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+/* =========================
+   BUSINESS LOOKUP
+========================= */
+async function getBusinessIdByEmail(email) {
+  const q = query(
+    collection(db, "businessMembers"),
+    where("email", "==", email)
+  );
+  const snap = await getDocs(q);
+  if (snap.empty) throw new Error("No business");
+  return snap.docs[0].data().businessId;
+}
+function setUserAvatar(businessName) {
+  const avatar = document.getElementById("user-avatar");
+  if (!avatar || !businessName) return;
 
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = "login.html";
-    return;
-  }
+  avatar.textContent = businessName.charAt(0).toUpperCase();
+}
 
-  const userSnap = await getDoc(doc(db, "users", user.uid));
-  const businessId = userSnap.data().businessId;
 
-  loadBookings(businessId);
-});
-
-async function loadBookings(businessId) {
-  const bookingsRef = collection(
-    db,
-    "businesses",
-    businessId,
-    "bookings"
+/* =========================
+   INVENTORY RESTORE (ON RETURN)
+========================= */
+async function restoreInventory(businessId, items) {
+  const invSnap = await getDocs(
+    collection(db, "businesses", businessId, "inventory")
   );
 
-  const q = query(bookingsRef, orderBy("createdAt", "desc"));
-  const snap = await getDocs(q);
+  for (const item of items) {
+    const match = invSnap.docs.find(d =>
+      d.data().name.toLowerCase() === item.name.toLowerCase()
+    );
 
-  const table = document.getElementById("bookingsTable");
-  table.innerHTML = "";
+    if (!match) continue;
 
-  if (snap.empty) {
-    table.innerHTML = `
-      <tr>
-        <td colspan="5" style="text-align:center;">
-          No bookings yet
-        </td>
-      </tr>
-    `;
-    return;
+    await updateDoc(match.ref, {
+      availableQuantity:
+        match.data().availableQuantity + item.qty
+    });
   }
+}
 
-  snap.forEach(docSnap => {
-    const b = docSnap.data();
+/* =========================
+   RETURN BOOKING
+========================= */
+window.returnBooking = async function (bookingId, businessId, items) {
+  if (!confirm("Mark this booking as returned?")) return;
 
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${b.clientName}</td>
-      <td>${b.date}</td>
-      <td>${b.items?.length || 0}</td>
+  await updateDoc(
+    doc(db, "businesses", businessId, "bookings", bookingId),
+    { status: "returned" }
+  );
+
+  await restoreInventory(businessId, items);
+};
+
+/* =========================
+   OPEN MODAL
+========================= */
+window.openBooking = function (booking) {
+  modalTitle.textContent = booking.client.name;
+
+  modalContent.innerHTML = `
+    <p><b>Phone:</b> ${booking.client.phone || "-"}</p>
+    <p><b>Event Date:</b> ${booking.event.date}</p>
+    <p><b>Return Date:</b> ${booking.event.returnDate}</p>
+    <p><b>Location:</b> ${booking.event.location || "-"}</p>
+
+    <hr>
+
+    <h4>Items</h4>
+    <ul>
+      ${booking.items.map(i =>
+        `<li>${i.name} × ${i.qty} — ₦${i.total}</li>`
+      ).join("")}
+    </ul>
+
+    <hr>
+
+    <p><b>Total:</b> ₦${booking.payment.total}</p>
+    <p><b>Status:</b> ${booking.status}</p>
+  `;
+
+  bookingModal.style.display = "flex";
+};
+window.closeModal = function () {
+  document.getElementById("bookingModal").style.display = "none";
+};
+/* =========================
+   LOAD BOOKINGS
+========================= */
+function renderRow(b, id, businessId) {
+  return `
+    <tr>
+      <td>${b.client.name}</td>
+      <td>${b.event.date}</td>
+      <td>${b.items.length}</td>
       <td>
         <span class="status ${b.status}">
           ${b.status}
         </span>
       </td>
       <td>
-        <a href="edit-booking.html?id=${docSnap.id}">
-          Edit
-        </a>
+        <button class="btn"
+          onclick='openBooking(${JSON.stringify(b)})'>
+          View
+        </button>
+
+        ${
+          b.status === "active"
+            ? `<button class="btn danger"
+                onclick='returnBooking("${id}", "${businessId}", ${JSON.stringify(b.items)})'>
+                Return
+              </button>`
+            : ""
+        }
       </td>
-    `;
-    table.appendChild(tr);
-  });
+    </tr>
+  `;
 }
+
+/* =========================
+   AUTH GUARD + LIVE DATA
+========================= */
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    window.location.href = "signup.html";
+    return;
+  }
+
+  try {
+    const businessId = await getBusinessIdByEmail(user.email);
+    const tbody = document.getElementById("bookingsTable");
+
+    const q = query(
+      collection(db, "businesses", businessId, "bookings"),
+      orderBy("createdAt", "desc")
+    );
+
+    onSnapshot(q, (snap) => {
+      tbody.innerHTML = "";
+
+      if (snap.empty) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5"
+              style="text-align:center; opacity:0.6;">
+              No bookings yet
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      snap.forEach(d => {
+        tbody.innerHTML += renderRow(
+          d.data(),
+          d.id,
+          businessId
+        );
+      });
+    });
+
+  } catch (err) {
+    console.error("Booking load failed:", err);
+    window.location.href = "setup.html";
+  }
+});

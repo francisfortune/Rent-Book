@@ -4,6 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Setup Your Business | RentBook</title>
+
+<meta name="description" content="Quickly set up your free RentBook account, configure inventory, bookings, and preferences to start managing rentals efficiently.">
+<meta name="keywords" content="Free RentBook setup, SaaS onboarding, rental management setup, inventory configuration">
+
+<meta property="og:title" content="Setup – Free RentBook SaaS">
+<meta property="og:description" content="Quickly set up your free RentBook account, configure inventory, bookings, and preferences to start managing rentals efficiently.">
+<meta property="twitter:title" content="Setup – Free RentBook SaaS">
+<meta property="twitter:description" content="Quickly set up your free RentBook account, configure inventory, bookings, and preferences to start managing rentals efficiently.">
+  
+
        <!-- FAVICON -->
     <link rel="icon" type="image/x-icon" href="assets/logo.ico">
   <script src="/_sdk/element_sdk.js"></script>
@@ -747,30 +757,7 @@ function addInventoryItem() {
 
 
         // Form submission
-        document.getElementById('setupForm').addEventListener('submit', function(e) {
-            e.preventDefault();
 
-            if (!validateStep(currentStep)) {
-                return;
-            }
-
-            // Collect form data
-            const formData = {
-                businessName: document.getElementById('businessName').value,
-                businessType: document.querySelector('input[name="businessType"]:checked').value,
-                city: document.getElementById('city').value,
-                state: document.getElementById('state').value,
-                rentalModel: document.querySelector('input[name="rentalModel"]:checked').value,
-                returnDuration: document.querySelector('input[name="returnDuration"]:checked').value
-            };
-
-            console.log('Setup Data:', formData);
-
-            // Show success screen
-            document.querySelector('.form-content form').style.display = 'none';
-            document.querySelector('.success-screen').classList.add('active');
-            document.querySelector('.progress-container').style.display = 'none';
-        });
 
         function goToDashboard() {
             showToast('Redirecting to dashboard...');

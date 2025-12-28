@@ -1,80 +1,178 @@
 import { auth, db } from "./firebase.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  where,
+  getDocs,
+  doc,
+  updateDoc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { onAuthStateChanged } from
+  "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-document.addEventListener("DOMContentLoaded", () => {
+/* =========================
+   BUSINESS LOOKUP
+========================= */
+async function getBusinessIdByEmail(email) {
+  const q = query(
+    collection(db, "businessMembers"),
+    where("email", "==", email)
+  );
+  const snap = await getDocs(q);
+  if (snap.empty) throw new Error("No business");
+  return snap.docs[0].data().businessId;
+}
 
-  const bookingForm = document.getElementById("bookingForm");
-  const itemsWrapper = document.getElementById("itemsWrapper");
-  const addItemBtn = document.getElementById("addItemBtn");
-  const successMsg = document.getElementById("successMsg");
+/* =========================
+   TOTAL CALCULATION
+========================= */
+function recalcTotal() {
+  let total = 0;
 
-  // Add more items dynamically
-  addItemBtn.addEventListener("click", () => {
-    const row = document.createElement("div");
-    row.className = "item-row";
-    row.innerHTML = `
-      <input type="text" class="item-name" placeholder="Item (e.g Chairs)" required>
-      <input type="number" class="item-qty" placeholder="Quantity" required>
-    `;
-    itemsWrapper.appendChild(row);
+  document.querySelectorAll(".item-row").forEach(row => {
+    const qty = Number(row.querySelector(".item-qty")?.value || 0);
+    const price = Number(row.querySelector(".item-price")?.value || 0);
+    total += qty * price;
   });
 
-  // Handle form submission
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-      window.location.href = "login.html";
-      return;
-    }
+  document.getElementById("totalAmount").value = total;
+}
 
-    const userId = user.uid;
+/* =========================
+   ADD ITEM ROW
+========================= */
+window.addItemRow = function () {
+  const container = document.getElementById("itemsContainer");
 
-    bookingForm.addEventListener("submit", async (e) => {
+  const row = document.createElement("div");
+  row.className = "item-row";
+
+  row.innerHTML = `
+    <input class="item-name" placeholder="Item name" required>
+    <input class="item-qty" type="number" min="1" value="1">
+    <input class="item-price" type="number" min="0">
+    <button type="button">✕</button>
+  `;
+
+  row.querySelector("button").onclick = () => {
+    row.remove();
+    recalcTotal();
+  };
+
+  row.querySelectorAll("input").forEach(input =>
+    input.addEventListener("input", recalcTotal)
+  );
+
+  container.appendChild(row);
+};
+
+/* =========================
+   INVENTORY DEDUCTION
+========================= */
+async function deductInventory(businessId, items) {
+  const invSnap = await getDocs(
+    collection(db, "businesses", businessId, "inventory")
+  );
+
+  for (const item of items) {
+    const match = invSnap.docs.find(d =>
+      d.data().name.toLowerCase() === item.name.toLowerCase()
+    );
+
+    if (!match) continue;
+
+    const current = match.data().availableQuantity;
+
+    await updateDoc(match.ref, {
+      availableQuantity: Math.max(0, current - item.qty)
+    });
+  }
+}
+
+/* =========================
+   AUTH + SUBMIT
+========================= */
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const businessId = await getBusinessIdByEmail(user.email);
+
+  // brand avatar
+  document.getElementById("user-avatar").textContent =
+    user.email.charAt(0).toUpperCase();
+
+  document
+    .getElementById("addBookingForm")
+    .addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const name = document.getElementById("bookingName").value;
-      const date = document.getElementById("bookingDate").value;
-
-      const items = [];
-      itemsWrapper.querySelectorAll(".item-row").forEach(row => {
-        const itemName = row.querySelector(".item-name").value.trim();
-        const itemQty = Number(row.querySelector(".item-qty").value);
-        if (itemName && itemQty) {
-          items.push({ name: itemName, quantity: itemQty });
-        }
-      });
-
-      const tasksText = document.getElementById("bookingTasks").value;
-      const tasks = tasksText ? tasksText.split("\n").map(t => t.trim()).filter(t => t) : [];
-
-      if (!name || !date || items.length === 0) {
-        alert("Please fill in all required fields.");
+      /* ===== VALIDATION ===== */
+      if (new Date(returnDate.value) < new Date(eventDate.value)) {
+        alert("Return date cannot be before event date");
         return;
       }
 
-      try {
-        await addDoc(collection(db, "bookings"), {
-          businessId: userId,
-          name,
-          date,
-          items,
-          tasks,
-          rentalTransfers: [], // optional, can be added later
-          createdAt: new Date()
-        });
+      const items = [];
+      document.querySelectorAll(".item-row").forEach(row => {
+        const name = row.querySelector(".item-name").value.trim();
+        const qty = Number(row.querySelector(".item-qty").value);
+        const price = Number(row.querySelector(".item-price").value);
 
-        successMsg.style.display = "block";
-        bookingForm.reset();
-        itemsWrapper.innerHTML = `
-          <div class="item-row">
-            <input type="text" class="item-name" placeholder="Item (e.g Chairs)" required>
-            <input type="number" class="item-qty" placeholder="Quantity" required>
-          </div>
-        `;
-      } catch (error) {
-        console.error("Error adding booking:", error);
-        alert("Failed to add booking. Check console for details.");
+        if (!name || qty <= 0) return;
+
+        items.push({
+          name,
+          qty,
+          price,
+          total: qty * price
+        });
+      });
+
+      if (!items.length) {
+        alert("Add at least one item");
+        return;
       }
+
+      const bookingData = {
+        client: {
+          name: clientName.value.trim(),
+          phone: clientPhone.value.trim(),
+          email: clientEmail.value.trim() || ""
+        },
+        event: {
+          type: eventType.value,
+          date: eventDate.value,
+          returnDate: returnDate.value,
+          location: eventLocation.value || ""
+        },
+        items,
+        payment: {
+          total: Number(totalAmount.value),
+          paid: Number(amountPaid.value || 0),
+          method: paymentMethod.value
+        },
+        status: "active",
+        createdBy: {
+          uid: user.uid,
+          email: user.email
+        },
+        createdAt: serverTimestamp()
+      };
+
+      /* ===== SAVE BOOKING ===== */
+      await addDoc(
+        collection(db, "businesses", businessId, "bookings"),
+        bookingData
+      );
+
+      /* ===== DEDUCT INVENTORY ===== */
+      await deductInventory(businessId, items);
+
+      window.location.href = "bookings.html";
     });
-  });
 });
