@@ -937,7 +937,11 @@
 
                 <!-- INVENTORY LIST -->
                 <div class="inventory-box">
-                    <h3>Your Inventory</h3>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="m-0 text-purple-700">Your Inventory</h3>
+                        <input type="text" id="inventorySearch" placeholder="Search items..."
+                            class="p-2 border rounded-lg text-sm w-40 outline-none focus:ring-1 focus:ring-purple-500">
+                    </div>
                     <div id="inventoryList" class="inventory-list"></div>
                 </div>
 

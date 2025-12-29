@@ -28,6 +28,8 @@ async function getBusinessIdByEmail(email) {
 /* =========================
    TOTAL CALCULATION
 ========================= */
+let inventoryItems = [];
+
 function recalcTotal() {
   let total = 0;
 
@@ -47,23 +49,41 @@ window.addItemRow = function () {
   const container = document.getElementById("itemsContainer");
 
   const row = document.createElement("div");
-  row.className = "item-row";
+  row.className = "item-row flex gap-2 items-center mb-2";
 
   row.innerHTML = `
-    <input class="item-name" placeholder="Item name" required>
-    <input class="item-qty" type="number" min="1" value="1">
-    <input class="item-price" type="number" min="0">
-    <button type="button">✕</button>
+    <select class="item-name flex-[2] p-2 border rounded-lg outline-none" required>
+      <option value="">Select an Item</option>
+      ${inventoryItems.map(item => `
+        <option value="${item.name}" data-price="${item.price}" data-avail="${item.availableQuantity}">
+          ${item.name} (${item.availableQuantity} avail)
+        </option>
+      `).join("")}
+    </select>
+    <input class="item-qty w-20 p-2 border rounded-lg outline-none" type="number" min="1" value="1" required>
+    <input class="item-price w-24 p-2 border rounded-lg bg-gray-50 outline-none" type="number" readonly placeholder="Price">
+    <button type="button" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all">✕</button>
   `;
 
-  row.querySelector("button").onclick = () => {
+  const select = row.querySelector(".item-name");
+  const qtyInput = row.querySelector(".item-qty");
+  const priceInput = row.querySelector(".item-price");
+  const removeBtn = row.querySelector("button");
+
+  select.onchange = (e) => {
+    const opt = e.target.selectedOptions[0];
+    if (opt) {
+      priceInput.value = opt.dataset.price;
+      recalcTotal();
+    }
+  };
+
+  qtyInput.oninput = recalcTotal;
+
+  removeBtn.onclick = () => {
     row.remove();
     recalcTotal();
   };
-
-  row.querySelectorAll("input").forEach(input =>
-    input.addEventListener("input", recalcTotal)
-  );
 
   container.appendChild(row);
 };
@@ -101,6 +121,13 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   const businessId = await getBusinessIdByEmail(user.email);
+
+  // 1. Fetch Inventory for dropdowns
+  const invSnap = await getDocs(collection(db, "businesses", businessId, "inventory"));
+  inventoryItems = invSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  // 2. Add first row automatically
+  window.addItemRow();
 
   // brand avatar
   document.getElementById("user-avatar").textContent =

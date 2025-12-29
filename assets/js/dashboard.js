@@ -132,7 +132,7 @@ function listenToBookingStats(businessId) {
 /* =========================
    RECENT BOOKINGS (THIS WEEK)
 ========================= */
-async function loadRecentBookings(businessId) {
+function listenToRecentBookings(businessId) {
   const tbody = document.getElementById("recent-bookings");
   if (!tbody) return;
 
@@ -142,79 +142,84 @@ async function loadRecentBookings(businessId) {
     limit(10)
   );
 
-  const snap = await getDocs(q);
-  tbody.innerHTML = "";
+  onSnapshot(q, (snap) => {
+    tbody.innerHTML = "";
+    let hasEvent = false;
 
-  let hasEvent = false;
+    snap.forEach(docSnap => {
+      const b = docSnap.data();
+      if (!isWithinThisWeek(b.event?.date)) return;
 
-  snap.forEach(docSnap => {
-    const b = docSnap.data();
-    if (!isWithinThisWeek(b.event?.date)) return;
+      hasEvent = true;
 
-    hasEvent = true;
+      tbody.innerHTML += `
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="py-3 font-medium text-gray-800">${b.items?.[0]?.name || "-"}</td>
+          <td class="py-3 text-gray-600">${b.client?.name || "-"}</td>
+          <td class="py-3 text-gray-600">${b.items?.reduce((t, i) => t + i.qty, 0) || 0}</td>
+          <td class="py-3">
+            <span class="status ${b.status} text-xs uppercase tracking-wider">${b.status}</span>
+          </td>
+        </tr>
+      `;
+    });
 
-    tbody.innerHTML += `
-      <tr>
-        <td>${b.items?.[0]?.name || "-"}</td>
-        <td>${b.client?.name || "-"}</td>
-        <td>${b.items?.reduce((t,i)=>t+i.qty,0) || 0}</td>
-        <td>
-          <span class="status inProgress">active</span>
-        </td>
-      </tr>
-    `;
+    if (!hasEvent) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="4" style="text-align:center; opacity:.6; padding: 20px;">
+            No events scheduled for this week
+          </td>
+        </tr>
+      `;
+    }
   });
-
-  if (!hasEvent) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="4" style="text-align:center; opacity:.6;">
-          No events for this week
-        </td>
-      </tr>
-    `;
-  }
 }
 
 /* =========================
    RECENT INVENTORY (RIGHT CARD)
 ========================= */
-async function loadRecentInventory(businessId) {
+function listenToRecentInventory(businessId) {
   const tbody = document.getElementById("recent-customers");
   if (!tbody) return;
 
   const q = query(
     collection(db, "businesses", businessId, "inventory"),
     orderBy("createdAt", "desc"),
-    limit(5)
+    limit(8)
   );
 
-  const snap = await getDocs(q);
-  tbody.innerHTML = "";
+  onSnapshot(q, (snap) => {
+    tbody.innerHTML = "";
 
-  if (snap.empty) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="2" style="text-align:center; opacity:.6;">
-          No items yet
-        </td>
-      </tr>
-    `;
-    return;
-  }
+    if (snap.empty) {
+      tbody.innerHTML = `<tr><td style="text-align:center; opacity:.6; padding: 20px;">No inventory items yet</td></tr>`;
+      return;
+    }
 
-  snap.forEach(docSnap => {
-    const i = docSnap.data();
-    tbody.innerHTML += `
-      <tr>
-        <td>
-          <h4>
-            ${i.name}<br>
-            <span>₦${i.price || 0} per unit</span>
-          </h4>
-        </td>
-      </tr>
-    `;
+    snap.forEach(docSnap => {
+      const i = docSnap.data();
+      const isLow = i.availableQuantity <= 5;
+
+      tbody.innerHTML += `
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="py-3 px-4">
+            <div class="flex justify-between items-center">
+              <div>
+                <h4 class="font-bold text-gray-800">${i.name}</h4>
+                <p class="text-xs text-gray-500">₦${i.price || 0} per unit</p>
+              </div>
+              <div class="text-right">
+                <span class="text-sm font-semibold ${isLow ? 'text-red-600' : 'text-purple-600'}">
+                  ${i.availableQuantity} left
+                </span>
+                ${isLow ? '<br><span class="text-[10px] bg-red-100 text-red-600 px-1 rounded uppercase font-bold">Low Stock</span>' : ''}
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
   });
 }
 
@@ -240,8 +245,8 @@ onAuthStateChanged(auth, async user => {
     await loadDashboardUI(businessId);
     listenToInventoryCount(businessId);
     listenToBookingStats(businessId);
-    await loadRecentBookings(businessId);
-    await loadRecentInventory(businessId);
+    listenToRecentBookings(businessId);
+    listenToRecentInventory(businessId);
   } catch (err) {
     console.error("Dashboard error:", err);
     alert("Failed to load dashboard");

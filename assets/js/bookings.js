@@ -7,6 +7,7 @@ import {
   orderBy,
   onSnapshot,
   doc,
+  deleteDoc,
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { onAuthStateChanged } from
@@ -68,31 +69,57 @@ window.returnBooking = async function (bookingId, businessId, items) {
   await restoreInventory(businessId, items);
 };
 
+window.deleteBooking = async function (bookingId, businessId) {
+  if (!confirm("Are you sure you want to delete this booking? This will NOT restore inventory automatically. Continue?")) return;
+
+  await deleteDoc(doc(db, "businesses", businessId, "bookings", bookingId));
+  closeModal();
+};
+
 /* =========================
    OPEN MODAL
 ========================= */
-window.openBooking = function (booking) {
+window.openBooking = function (booking, id, businessId) {
   modalTitle.textContent = booking.client.name;
 
   modalContent.innerHTML = `
-    <p><b>Phone:</b> ${booking.client.phone || "-"}</p>
-    <p><b>Event Date:</b> ${booking.event.date}</p>
-    <p><b>Return Date:</b> ${booking.event.returnDate}</p>
-    <p><b>Location:</b> ${booking.event.location || "-"}</p>
+    <div class="space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <p><b>Phone:</b><br> ${booking.client.phone || "-"}</p>
+        <p><b>Event Date:</b><br> ${booking.event.date}</p>
+        <p><b>Return Date:</b><br> ${booking.event.returnDate}</p>
+        <p><b>Location:</b><br> ${booking.event.location || "-"}</p>
+      </div>
 
-    <hr>
+      <hr class="my-4">
 
-    <h4>Items</h4>
-    <ul>
-      ${booking.items.map(i =>
-        `<li>${i.name} × ${i.qty} — ₦${i.total}</li>`
-      ).join("")}
-    </ul>
+      <h4 class="font-bold mb-2">Items</h4>
+      <ul class="list-disc pl-5">
+        ${booking.items.map(i =>
+    `<li>${i.name} × ${i.qty} — ₦${i.total}</li>`
+  ).join("")}
+      </ul>
 
-    <hr>
+      <hr class="my-4">
 
-    <p><b>Total:</b> ₦${booking.payment.total}</p>
-    <p><b>Status:</b> ${booking.status}</p>
+      <div class="flex justify-between items-center">
+        <p><b>Total:</b> ₦${booking.payment.total}</p>
+        <span class="status ${booking.status}">${booking.status}</span>
+      </div>
+
+      <div class="mt-6 flex gap-3">
+        <button class="flex-1 py-2 bg-red-50 text-red-600 rounded-lg font-medium border border-red-100 hover:bg-red-100 transition-all" 
+          onclick='deleteBooking("${id}", "${businessId}")'>
+          Delete Booking
+        </button>
+        ${booking.status === 'active' ? `
+          <button class="flex-[2] py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-all"
+            onclick='returnBooking("${id}", "${businessId}", ${JSON.stringify(booking.items)})'>
+            Mark as Returned
+          </button>
+        ` : ''}
+      </div>
+    </div>
   `;
 
   bookingModal.style.display = "flex";
@@ -105,29 +132,20 @@ window.closeModal = function () {
 ========================= */
 function renderRow(b, id, businessId) {
   return `
-    <tr>
-      <td>${b.client.name}</td>
-      <td>${b.event.date}</td>
-      <td>${b.items.length}</td>
+    <tr class="hover:bg-gray-50 transition-colors">
+      <td class="font-medium text-gray-800">${b.client.name}</td>
+      <td class="text-gray-600">${b.event.date}</td>
+      <td class="text-gray-600">${b.items.length} items</td>
       <td>
-        <span class="status ${b.status}">
+        <span class="status ${b.status} text-xs uppercase tracking-wider">
           ${b.status}
         </span>
       </td>
       <td>
-        <button class="btn"
-          onclick='openBooking(${JSON.stringify(b)})'>
-          View
+        <button class="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
+          onclick='openBooking(${JSON.stringify(b)}, "${id}", "${businessId}")'>
+          <ion-icon name="eye-outline" size="small"></ion-icon>
         </button>
-
-        ${
-          b.status === "active"
-            ? `<button class="btn danger"
-                onclick='returnBooking("${id}", "${businessId}", ${JSON.stringify(b.items)})'>
-                Return
-              </button>`
-            : ""
-        }
       </td>
     </tr>
   `;
@@ -152,27 +170,38 @@ onAuthStateChanged(auth, async (user) => {
     );
 
     onSnapshot(q, (snap) => {
-      tbody.innerHTML = "";
+      const allBookings = snap.docs.map(d => ({ id: d.id, data: d.data() }));
 
-      if (snap.empty) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="5"
-              style="text-align:center; opacity:0.6;">
-              No bookings yet
-            </td>
-          </tr>
-        `;
-        return;
+      function filterAndRender() {
+        const status = document.getElementById("filterStatus").value;
+        const date = document.getElementById("filterDate").value;
+        const search = document.getElementById("searchInput").value.toLowerCase();
+
+        tbody.innerHTML = "";
+
+        const filtered = allBookings.filter(({ data }) => {
+          const matchStatus = !status || data.status === status;
+          const matchDate = !date || data.event.date === date;
+          const matchSearch = !search || data.client.name.toLowerCase().includes(search);
+          return matchStatus && matchDate && matchSearch;
+        });
+
+        if (filtered.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; opacity:0.6; padding: 40px;">No matching bookings found</td></tr>`;
+          return;
+        }
+
+        filtered.forEach(({ id, data }) => {
+          tbody.innerHTML += renderRow(data, id, businessId);
+        });
       }
 
-      snap.forEach(d => {
-        tbody.innerHTML += renderRow(
-          d.data(),
-          d.id,
-          businessId
-        );
-      });
+      // Re-filter when inputs change
+      document.getElementById("filterStatus").onchange = filterAndRender;
+      document.getElementById("filterDate").onchange = filterAndRender;
+      document.getElementById("searchInput").oninput = filterAndRender;
+
+      filterAndRender();
     });
 
   } catch (err) {

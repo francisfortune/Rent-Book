@@ -37,6 +37,7 @@ const inventoryList = document.getElementById("inventoryList");
 const calcItem = document.getElementById("calcItem");
 const calcQty = document.getElementById("calcQty");
 const calcResult = document.getElementById("calcResult");
+const inventorySearch = document.getElementById("inventorySearch");
 
 // Edit Modal Elements
 const editModal = document.getElementById("editModal");
@@ -52,17 +53,24 @@ const deleteItemBtn = document.getElementById("deleteItemBtn");
 /* =========================
    RENDER
 ========================= */
-function renderInventory(items) {
+function renderInventory(filteredItems, allItems) {
   inventoryList.innerHTML = "";
   calcItem.innerHTML = "";
 
   let totalQty = 0;
   let availableQty = 0;
 
-  items.forEach(item => {
+  // Stats always use ALL items
+  allItems.forEach(item => {
     totalQty += item.totalQuantity;
     availableQty += item.availableQuantity;
 
+    // Add to calculator dropdown
+    calcItem.innerHTML += `<option value="${item.availableQuantity}">${item.name}</option>`;
+  });
+
+  // Render only filtered
+  filteredItems.forEach(item => {
     const itemDiv = document.createElement('div');
     itemDiv.className = 'inventory-item flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100 mb-3';
     itemDiv.innerHTML = `
@@ -76,20 +84,12 @@ function renderInventory(items) {
       </button>
     `;
 
-    // Store data on the button for easy access
     const btn = itemDiv.querySelector('.edit-btn');
     btn.onclick = () => openEditModal(item);
-
     inventoryList.appendChild(itemDiv);
-
-    calcItem.innerHTML += `
-      <option value="${item.availableQuantity}">
-        ${item.name}
-      </option>
-    `;
   });
 
-  totalItemsEl.innerText = items.length;
+  totalItemsEl.innerText = allItems.length;
   availableItemsEl.innerText = availableQty;
   outItemsEl.innerText = totalQty - availableQty;
 }
@@ -108,16 +108,32 @@ onAuthStateChanged(auth, async (user) => {
     const invRef = collection(db, "businesses", businessId, "inventory");
 
     onSnapshot(invRef, (snap) => {
-      if (snap.empty) {
-        inventoryList.innerHTML = "<p class='text-center py-8 text-gray-500'>No inventory items yet. Add your first item above!</p>";
-        totalItemsEl.innerText = "0";
-        availableItemsEl.innerText = "0";
-        outItemsEl.innerText = "0";
-        return;
+      const allItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      function filterAndRender() {
+        const query = inventorySearch.value.toLowerCase();
+        const filtered = allItems.filter(item =>
+          item.name.toLowerCase().includes(query)
+        );
+
+        if (filtered.length === 0 && query) {
+          inventoryList.innerHTML = "<p class='text-center py-8 text-gray-500'>No items match your search.</p>";
+          return;
+        }
+
+        if (allItems.length === 0) {
+          inventoryList.innerHTML = "<p class='text-center py-8 text-gray-500'>No inventory items yet. Add your first item above!</p>";
+          totalItemsEl.innerText = "0";
+          availableItemsEl.innerText = "0";
+          outItemsEl.innerText = "0";
+          return;
+        }
+
+        renderInventory(filtered, allItems);
       }
 
-      const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderInventory(items);
+      inventorySearch.oninput = filterAndRender;
+      filterAndRender();
     });
 
     /* EDIT MODAL LOGIC */
