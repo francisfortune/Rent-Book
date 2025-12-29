@@ -3,8 +3,11 @@ import { auth, db } from "./firebase.js";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signOut,
   sendPasswordResetEmail,
-  onAuthStateChanged
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 import {
@@ -12,6 +15,9 @@ import {
   query,
   where,
   getDocs,
+  getDoc,
+  setDoc,
+  doc,
   updateDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -95,6 +101,43 @@ if (loginForm) {
 }
 
 /* =========================
+   GOOGLE AUTH
+========================= */
+async function handleGoogleAuth() {
+  try {
+    const provider = new GoogleAuthProvider();
+    const userCredential = await signInWithPopup(auth, provider);
+    const user = userCredential.user;
+
+    // Check if user document exists
+    const userDocRef = doc(db, "users", user.uid);
+    const userSnapshot = await getDoc(userDocRef);
+
+    if (!userSnapshot.exists()) {
+      // Create user document for new signups
+      await setDoc(userDocRef, {
+        uid: user.uid,
+        email: user.email,
+        name: user.displayName || 'Google User',
+        role: "owner",
+        businessId: null,
+        createdAt: serverTimestamp()
+      });
+    }
+    // Auth listener will handle the redirect
+  } catch (err) {
+    console.error("Google Auth Error:", err);
+    showMessage(err.message || "Google Login failed");
+  }
+}
+
+const googleLogin = document.getElementById("googleLogin");
+const googleSignUp = document.getElementById("googleSignUp");
+
+if (googleLogin) googleLogin.addEventListener("click", handleGoogleAuth);
+if (googleSignUp) googleSignUp.addEventListener("click", handleGoogleAuth);
+
+/* =========================
    AUTH STATE — ACCEPT INVITE
 ========================= */
 onAuthStateChanged(auth, async (user) => {
@@ -111,7 +154,7 @@ onAuthStateChanged(auth, async (user) => {
   // Accept invite if pending
   if (membership.status === "pending") {
     await updateDoc(
-      collection(db, "businessMembers").doc(membership.id),
+      doc(db, "businessMembers", membership.id),
       {
         status: "accepted",
         uid: user.uid,

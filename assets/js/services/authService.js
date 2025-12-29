@@ -7,7 +7,9 @@ import {
   signInWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
-  onAuthStateChanged
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 import {
@@ -64,7 +66,7 @@ export async function loginUser(email, password) {
 
     // 2. Get user document
     const userDoc = await getDoc(doc(db, "users", user.uid));
-    
+
     if (!userDoc.exists()) {
       throw new Error("User data not found. Please contact support.");
     }
@@ -81,6 +83,51 @@ export async function loginUser(email, password) {
     };
   } catch (error) {
     console.error("Login error:", error);
+    throw new Error(getAuthErrorMessage(error.code));
+  }
+}
+
+/**
+ * Login/Signup with Google
+ * @returns {Promise<{user, userData, needsSetup}>}
+ */
+export async function loginWithGoogle() {
+  try {
+    const provider = new GoogleAuthProvider();
+    const userCredential = await signInWithPopup(auth, provider);
+    const user = userCredential.user;
+
+    // Check if user document exists
+    const userDocRef = doc(db, "users", user.uid);
+    const userSnapshot = await getDoc(userDocRef);
+
+    let userData;
+    let needsSetup;
+
+    if (!userSnapshot.exists()) {
+      // First time Google signup - create user document
+      userData = {
+        uid: user.uid,
+        email: user.email,
+        name: user.displayName || 'Google User',
+        role: "owner",
+        businessId: null,
+        createdAt: serverTimestamp()
+      };
+      await setDoc(userDocRef, userData);
+      needsSetup = true;
+    } else {
+      userData = userSnapshot.data();
+      needsSetup = !userData.businessId;
+    }
+
+    return {
+      user,
+      userData,
+      needsSetup
+    };
+  } catch (error) {
+    console.error("Google login error:", error);
     throw new Error(getAuthErrorMessage(error.code));
   }
 }

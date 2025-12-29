@@ -4,6 +4,8 @@ import {
   collection,
   addDoc,
   getDocs,
+  getDoc,
+  doc,
   query,
   where,
   serverTimestamp
@@ -24,12 +26,12 @@ async function getBusinessId(email) {
   return snap.docs[0].data().businessId;
 }
 function setUserAvatar(businessName) {
-    const avatar = document.getElementById("user-avatar");
-    if (!avatar || !businessName) return;
-  
-    avatar.textContent = businessName.charAt(0).toUpperCase();
-  }
-  
+  const avatar = document.getElementById("user-avatar");
+  if (!avatar || !businessName) return;
+
+  avatar.textContent = businessName.charAt(0).toUpperCase();
+}
+
 
 /* =========================
    AUTH GUARD
@@ -47,6 +49,10 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   const membersRef = collection(db, "businessMembers");
+  const invitePartnerForm = document.getElementById("invitePartnerForm");
+  const partnerEmail = document.getElementById("partnerEmail");
+  const partnerRole = document.getElementById("partnerRole");
+  const partnersList = document.getElementById("partnersList");
 
   /* =========================
      INVITE PARTNER
@@ -55,8 +61,20 @@ onAuthStateChanged(auth, async (user) => {
     e.preventDefault();
 
     const email = partnerEmail.value.trim().toLowerCase();
+    const role = partnerRole.value;
 
-    // Prevent duplicate invite
+    // 1. Check if user exists on the platform
+    const userQuery = query(collection(db, "users"), where("email", "==", email));
+    const userSnap = await getDocs(userQuery);
+
+    if (userSnap.empty) {
+      alert("This user is not registered on Rent Book. They must create an account first.");
+      return;
+    }
+
+    const inviteeData = userSnap.docs[0].data();
+
+    // 2. Prevent duplicate invite in this business
     const exists = await getDocs(
       query(membersRef,
         where("email", "==", email),
@@ -65,15 +83,26 @@ onAuthStateChanged(auth, async (user) => {
     );
 
     if (!exists.empty) {
-      alert("User already invited");
+      alert("This partner is already added to your business.");
       return;
     }
 
+    // 3. Define permissions and add partner
+    const permissions = {
+      admin: { inventory: true, bookings: true, settings: true, reports: true },
+      staff: { inventory: true, bookings: true, settings: false, reports: false },
+      viewer: { inventory: false, bookings: false, settings: false, reports: false, viewOnly: true }
+    };
+
     await addDoc(membersRef, {
       email,
-      role: partnerRole.value,
+      uid: inviteeData.uid,
+      name: inviteeData.name || "User",
+      role: role,
+      permissions: permissions[role],
       businessId,
       invitedBy: user.email,
+      status: "accepted", // Since they already exist, we can auto-accept or keep as pending
       createdAt: serverTimestamp()
     });
 
