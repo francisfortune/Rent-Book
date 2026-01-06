@@ -13,6 +13,10 @@ import {
   getFirestore
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+import {
+  getStorage
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
 /* =========================
    FIREBASE CONFIG
 ========================= */
@@ -44,6 +48,12 @@ setPersistence(auth, browserLocalPersistence)
 const db = getFirestore(app);
 
 /* =========================
+   STORAGE
+========================= */
+const storage = getStorage(app);
+
+/* =========================
    EXPORTS
 ========================= */
-export { auth, db };
+export { auth, db, storage };
+

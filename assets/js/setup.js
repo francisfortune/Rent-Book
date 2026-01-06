@@ -94,7 +94,8 @@ async function createInitialInventory(businessId) {
         collection(db, "businesses", businessRef.id, "inventory"),
         {
           name,
-          quantity: qty,
+          totalQuantity: qty,
+          availableQuantity: qty,
           price,
           createdAt: serverTimestamp()
         }

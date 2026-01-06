@@ -82,6 +82,13 @@ window.deleteBooking = async function (bookingId, businessId) {
 window.openBooking = function (booking, id, businessId) {
   modalTitle.textContent = booking.client.name;
 
+  // Calculate balance remaining
+  const totalAmount = booking.payment?.total || 0;
+  const amountPaid = booking.payment?.paid || 0;
+  const balanceRemaining = totalAmount - amountPaid;
+  const paymentStatus = balanceRemaining <= 0 ? 'Fully Paid' : `₦${balanceRemaining.toLocaleString()} remaining`;
+  const paymentStatusClass = balanceRemaining <= 0 ? 'text-green-600' : 'text-orange-600';
+
   modalContent.innerHTML = `
     <div class="space-y-4">
       <div class="grid grid-cols-2 gap-4">
@@ -96,15 +103,48 @@ window.openBooking = function (booking, id, businessId) {
       <h4 class="font-bold mb-2">Items</h4>
       <ul class="list-disc pl-5">
         ${booking.items.map(i =>
-    `<li>${i.name} × ${i.qty} — ₦${i.total}</li>`
+    `<li>${i.name} × ${i.qty} — ₦${i.total?.toLocaleString() || 0}</li>`
   ).join("")}
       </ul>
 
       <hr class="my-4">
 
+      <!-- Payment Tracking Section -->
+      <div class="bg-gray-50 rounded-xl p-4 space-y-3">
+        <h4 class="font-bold text-gray-800">Payment Details</h4>
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="bg-white rounded-lg p-3 shadow-sm">
+            <p class="text-xs text-gray-500 uppercase tracking-wide">Total</p>
+            <p class="text-lg font-bold text-gray-800">₦${totalAmount.toLocaleString()}</p>
+          </div>
+          <div class="bg-white rounded-lg p-3 shadow-sm">
+            <p class="text-xs text-gray-500 uppercase tracking-wide">Paid</p>
+            <p class="text-lg font-bold text-green-600">₦${amountPaid.toLocaleString()}</p>
+          </div>
+          <div class="bg-white rounded-lg p-3 shadow-sm">
+            <p class="text-xs text-gray-500 uppercase tracking-wide">Balance</p>
+            <p class="text-lg font-bold ${paymentStatusClass}">₦${balanceRemaining.toLocaleString()}</p>
+          </div>
+        </div>
+        <div class="text-center">
+          <span class="inline-block px-3 py-1 rounded-full text-sm font-medium ${balanceRemaining <= 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}">
+            ${paymentStatus}
+          </span>
+        </div>
+      </div>
+
+      ${booking.receiptImage ? `
+        <div class="mt-4">
+          <h4 class="font-bold mb-2">Receipt</h4>
+          <img src="${booking.receiptImage}" alt="Receipt" class="w-full max-h-64 object-contain rounded-lg border cursor-pointer" onclick="window.open('${booking.receiptImage}', '_blank')">
+        </div>
+      ` : ''}
+
+      <hr class="my-4">
+
       <div class="flex justify-between items-center">
-        <p><b>Total:</b> ₦${booking.payment.total}</p>
         <span class="status ${booking.status}">${booking.status}</span>
+        <span class="text-sm text-gray-500">Payment: ${booking.payment?.method || 'N/A'}</span>
       </div>
 
       <div class="mt-6 flex gap-3">

@@ -1,4 +1,4 @@
-import { auth, db } from "./firebase.js";
+import { auth, db, storage } from "./firebase.js";
 import {
   collection,
   addDoc,
@@ -11,6 +11,11 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { onAuthStateChanged } from
   "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 /* =========================
    BUSINESS LOOKUP
@@ -112,6 +117,21 @@ async function deductInventory(businessId, items) {
 }
 
 /* =========================
+   RECEIPT IMAGE UPLOAD
+========================= */
+async function uploadReceiptImage(businessId, file) {
+  if (!file) return null;
+
+  const timestamp = Date.now();
+  const fileName = `receipts/${businessId}/${timestamp}_${file.name}`;
+  const storageRef = ref(storage, fileName);
+
+  await uploadBytes(storageRef, file);
+  const downloadURL = await getDownloadURL(storageRef);
+  return downloadURL;
+}
+
+/* =========================
    AUTH + SUBMIT
 ========================= */
 onAuthStateChanged(auth, async (user) => {
@@ -133,73 +153,121 @@ onAuthStateChanged(auth, async (user) => {
   document.getElementById("user-avatar").textContent =
     user.email.charAt(0).toUpperCase();
 
+  // 3. Receipt image preview handler
+  const receiptInput = document.getElementById("receiptImage");
+  const receiptPreview = document.getElementById("receiptPreview");
+  const receiptThumbnail = document.getElementById("receiptThumbnail");
+  const receiptText = document.getElementById("receiptText");
+
+  if (receiptInput) {
+    receiptInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          receiptThumbnail.src = e.target.result;
+          receiptPreview.style.display = "block";
+          receiptText.textContent = "Tap to change receipt";
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
   document
     .getElementById("addBookingForm")
     .addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      /* ===== VALIDATION ===== */
-      if (new Date(returnDate.value) < new Date(eventDate.value)) {
-        alert("Return date cannot be before event date");
-        return;
-      }
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Saving...";
 
-      const items = [];
-      document.querySelectorAll(".item-row").forEach(row => {
-        const name = row.querySelector(".item-name").value.trim();
-        const qty = Number(row.querySelector(".item-qty").value);
-        const price = Number(row.querySelector(".item-price").value);
+      try {
+        /* ===== VALIDATION ===== */
+        if (new Date(returnDate.value) < new Date(eventDate.value)) {
+          alert("Return date cannot be before event date");
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+          return;
+        }
 
-        if (!name || qty <= 0) return;
+        const items = [];
+        document.querySelectorAll(".item-row").forEach(row => {
+          const name = row.querySelector(".item-name").value.trim();
+          const qty = Number(row.querySelector(".item-qty").value);
+          const price = Number(row.querySelector(".item-price").value);
 
-        items.push({
-          name,
-          qty,
-          price,
-          total: qty * price
+          if (!name || qty <= 0) return;
+
+          items.push({
+            name,
+            qty,
+            price,
+            total: qty * price
+          });
         });
-      });
 
-      if (!items.length) {
-        alert("Add at least one item");
-        return;
+        if (!items.length) {
+          alert("Add at least one item");
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+          return;
+        }
+
+        /* ===== UPLOAD RECEIPT IMAGE ===== */
+        let receiptImageUrl = null;
+        const receiptFile = receiptInput?.files[0];
+        if (receiptFile) {
+          submitBtn.textContent = "Uploading receipt...";
+          receiptImageUrl = await uploadReceiptImage(businessId, receiptFile);
+        }
+
+        const bookingData = {
+          client: {
+            name: clientName.value.trim(),
+            phone: clientPhone.value.trim(),
+            email: clientEmail.value.trim() || ""
+          },
+          event: {
+            type: eventType.value,
+            date: eventDate.value,
+            returnDate: returnDate.value,
+            location: eventLocation.value || ""
+          },
+          items,
+          payment: {
+            total: Number(totalAmount.value),
+            paid: Number(amountPaid.value || 0),
+            method: paymentMethod.value
+          },
+          receiptImage: receiptImageUrl,
+          notes: document.getElementById("notes")?.value || "",
+          status: "active",
+          createdBy: {
+            uid: user.uid,
+            email: user.email
+          },
+          createdAt: serverTimestamp()
+        };
+
+        /* ===== SAVE BOOKING ===== */
+        await addDoc(
+          collection(db, "businesses", businessId, "bookings"),
+          bookingData
+        );
+
+        /* ===== DEDUCT INVENTORY ===== */
+        await deductInventory(businessId, items);
+
+        window.location.href = "bookings.html";
+      } catch (error) {
+        console.error("Error saving booking:", error);
+        alert("Failed to save booking. Please try again.");
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
       }
-
-      const bookingData = {
-        client: {
-          name: clientName.value.trim(),
-          phone: clientPhone.value.trim(),
-          email: clientEmail.value.trim() || ""
-        },
-        event: {
-          type: eventType.value,
-          date: eventDate.value,
-          returnDate: returnDate.value,
-          location: eventLocation.value || ""
-        },
-        items,
-        payment: {
-          total: Number(totalAmount.value),
-          paid: Number(amountPaid.value || 0),
-          method: paymentMethod.value
-        },
-        status: "active",
-        createdBy: {
-          uid: user.uid,
-          email: user.email
-        },
-        createdAt: serverTimestamp()
-      };
-
-      /* ===== SAVE BOOKING ===== */
-      await addDoc(
-        collection(db, "businesses", businessId, "bookings"),
-        bookingData
-      );
-
-      /* ===== DEDUCT INVENTORY ===== */
-      await deductInventory(businessId, items);
-
-      window.location.href = "bookings.html";
     });
 });
+
