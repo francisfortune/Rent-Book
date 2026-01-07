@@ -788,18 +788,6 @@
             animation: pop .25s ease;
         }
 
-        @keyframes pop {
-            from {
-                transform: scale(.9);
-                opacity: 0;
-            }
-
-            to {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-
         .modal-header {
             display: flex;
             justify-content: space-between;
@@ -831,6 +819,31 @@
                 overflow-y: auto;
             }
         }
+      .modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 2000;
+
+  display: none;               /* 👈 hidden by default */
+  align-items: center;
+  justify-content: center;
+
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* Modal Box */
+.modal {
+  background: white;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;          /* 👈 critical */
+  overflow-y: auto;          /* 👈 THIS is what you asked for */
+  border-radius: 16px;
+  padding: 20px;
+}
+
     </style>
     <style>
         @view-transition {
@@ -961,7 +974,7 @@
             </section>
 
             <div class="modal-overlay" id="bookingModal">
-                <div class="modal-card">
+                <div class="modal-card" style="margin-top: 70px;">
 
                     <div class="modal-header">
                         <h3 id="modalTitle">Booking</h3>
