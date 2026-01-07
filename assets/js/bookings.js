@@ -36,6 +36,9 @@ function setUserAvatar(businessName) {
 /* =========================
    INVENTORY RESTORE (ON RETURN)
 ========================= */
+/* =========================
+   INVENTORY RESTORE (FIXED)
+========================= */
 async function restoreInventory(businessId, items) {
   const invSnap = await getDocs(
     collection(db, "businesses", businessId, "inventory")
@@ -48,9 +51,14 @@ async function restoreInventory(businessId, items) {
 
     if (!match) continue;
 
+    // ✅ Restore ONLY what came from your inventory
+    const restorableQty = Math.max(0, item.qty - (item.shortage || 0));
+
+    if (restorableQty === 0) continue;
+
     await updateDoc(match.ref, {
       availableQuantity:
-        match.data().availableQuantity + item.qty
+        match.data().availableQuantity + restorableQty
     });
   }
 }
@@ -225,7 +233,9 @@ bookingModal.addEventListener("click", (e) => {
    LOAD BOOKINGS
 ========================= */
 function renderRow(b, id, businessId) {
-  const overbooked = b.items?.some(i => i.shortage > 0);
+ const overbooked =
+  b.status === "active" &&
+  b.items?.some(i => i.shortage > 0);
 
   return `
     <tr class="hover:bg-gray-50 transition-colors">

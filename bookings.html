@@ -768,26 +768,32 @@
             }
         }
 
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, .55);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-            padding: 15px;
-        }
+/* FIXED OVERLAY */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 2000;
 
-        .modal-card {
-            background: white;
-            width: 100%;
-            max-width: 500px;
-            border-radius: 16px;
-            overflow: hidden;
-            animation: pop .25s ease;
-        }
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
+  padding: 16px;
+}
+/* FIXED MODAL CARD */
+.modal-card {
+  background: white;
+  width: 100%;
+  max-width: 520px;
+
+  max-height: 90vh;        /* 👈 prevents overflow */
+  display: flex;
+  flex-direction: column; /* 👈 allows header + body layout */
+
+  border-radius: 16px;
+  overflow: hidden;       /* 👈 prevents header from disappearing */
+}
         .modal-header {
             display: flex;
             justify-content: space-between;
@@ -844,6 +850,16 @@
   padding: 20px;
   position: fixed;
 }
+/* SCROLLABLE MODAL BODY */
+.modal-body {
+  padding: 16px;
+  overflow-y: auto;       /* 👈 THIS fixes long notes */
+  flex: 1;                /* 👈 fills remaining space */
+}
+.modal-header {
+  flex-shrink: 0;         /* 👈 header never scrolls away */
+}
+
 
     </style>
     <style>

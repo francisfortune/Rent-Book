@@ -34,12 +34,16 @@ const totalItemsEl = document.getElementById("totalItems");
 const availableItemsEl = document.getElementById("availableItems");
 const outItemsEl = document.getElementById("outItems");
 const inventoryList = document.getElementById("inventoryList");
+const inventorySearch = document.getElementById("inventorySearch");
+
 const calcItem = document.getElementById("calcItem");
 const calcQty = document.getElementById("calcQty");
 const calcResult = document.getElementById("calcResult");
-const inventorySearch = document.getElementById("inventorySearch");
 
-// Edit Modal Elements
+// Overbooked panel
+const overbookedList = document.getElementById("overbookedList");
+
+// Edit modal
 const editModal = document.getElementById("editModal");
 const editItemForm = document.getElementById("editItemForm");
 const editItemId = document.getElementById("editItemId");
@@ -51,7 +55,7 @@ const closeEditModal = document.getElementById("closeEditModal");
 const deleteItemBtn = document.getElementById("deleteItemBtn");
 
 /* =========================
-   RENDER
+   RENDER INVENTORY
 ========================= */
 function renderInventory(filteredItems, allItems) {
   inventoryList.innerHTML = "";
@@ -59,45 +63,109 @@ function renderInventory(filteredItems, allItems) {
 
   let totalQty = 0;
   let availableQty = 0;
+  let outQty = 0;
 
-  // Stats always use ALL items
   allItems.forEach(item => {
-    totalQty += item.totalQuantity;
-    availableQty += item.availableQuantity;
+const totalItems = allItems.length;
+const availableItems = allItems.filter(i => i.availableQuantity > 0).length;
+const outItems = allItems.filter(i => i.availableQuantity === 0).length;
 
-    // Add to calculator dropdown
-    calcItem.innerHTML += `<option value="${item.availableQuantity}">${item.name}</option>`;
+totalItemsEl.textContent = totalItems;
+availableItemsEl.textContent = availableItems;
+outItemsEl.textContent = outItems;
+
+    calcItem.innerHTML += `
+      <option value="${item.availableQuantity}">
+        ${item.name}
+      </option>`;
   });
 
-  // Render only filtered
   filteredItems.forEach(item => {
-    const itemDiv = document.createElement('div');
-    itemDiv.className = 'inventory-item flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100 mb-3';
-    itemDiv.innerHTML = `
+    const div = document.createElement("div");
+    div.className =
+      "inventory-item flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100";
+
+    div.innerHTML = `
       <div>
-        <strong class="text-gray-800 text-lg">${item.name}</strong><br>
-        <span class="text-gray-500 text-sm">Total: ${item.totalQuantity} | Available: <span class="${item.availableQuantity <= 5 ? 'text-red-500 font-bold' : ''}">${item.availableQuantity}</span></span><br>
-        <span class="text-purple-600 font-medium">₦${item.price} / unit</span>
+        <strong class="text-lg">${item.name}</strong><br>
+        <span class="text-sm text-gray-500">
+          Total: ${item.totalQuantity} |
+          Available:
+          <span class="${item.availableQuantity <= 5 ? "text-red-600 font-bold" : ""}">
+            ${item.availableQuantity}
+          </span>
+        </span><br>
+        <span class="text-purple-600">₦${item.price} / unit</span>
       </div>
-      <button class="edit-btn p-2 bg-white rounded-full shadow-sm hover:shadow-md transition-all text-purple-600" data-id="${item.id}">
+      <button class="edit-btn text-purple-600">
         <ion-icon name="create-outline"></ion-icon>
       </button>
     `;
 
-    const btn = itemDiv.querySelector('.edit-btn');
-    btn.onclick = () => openEditModal(item);
-    inventoryList.appendChild(itemDiv);
+    div.querySelector(".edit-btn").onclick = () => openEditModal(item);
+    inventoryList.appendChild(div);
   });
 
-  totalItemsEl.innerText = allItems.length;
-  availableItemsEl.innerText = availableQty;
-  outItemsEl.innerText = totalQty - availableQty;
+  totalItemsEl.textContent = totalQty;
+  availableItemsEl.textContent = availableQty;
+  outItemsEl.textContent = outQty;
+}
+
+/* =========================
+   OVERBOOKED PANEL
+========================= */
+function listenToOverbooked(businessId) {
+  const ref = collection(db, "businesses", businessId, "bookings");
+
+  onSnapshot(ref, snap => {
+    if (!overbookedList) return;
+
+    overbookedList.innerHTML = "";
+
+    const overbooked = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(b =>
+        b.status === "active" &&
+        b.items?.some(i => i.shortage > 0)
+      );
+
+    if (!overbooked.length) {
+      overbookedList.innerHTML =
+        `<p class="text-gray-500">No overbooked items 🎉</p>`;
+      return;
+    }
+
+    overbooked.forEach(b => {
+      const borrowed = b.items
+        .filter(i => i.shortage > 0)
+        .map(i => `${i.shortage} × ${i.name}`)
+        .join(", ");
+
+      const div = document.createElement("div");
+      div.className =
+        "p-3 bg-orange-50 border border-orange-200 rounded-lg cursor-pointer hover:bg-orange-100";
+
+      div.innerHTML = `
+        <p class="font-semibold">${b.client?.name}</p>
+        <p class="text-xs text-gray-600">${b.event?.date}</p>
+        <p class="text-orange-700 text-sm">
+          Borrowed: ${borrowed}
+        </p>
+      `;
+
+      div.onclick = () => {
+        window.location.href = `bookings.html#${b.id}`;
+      };
+
+      overbookedList.appendChild(div);
+    });
+  });
 }
 
 /* =========================
    AUTH + LIVE DATA
 ========================= */
-onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, async user => {
   if (!user) {
     window.location.href = "signup.html";
     return;
@@ -107,25 +175,32 @@ onAuthStateChanged(auth, async (user) => {
     const businessId = await getBusinessId(user.email);
     const invRef = collection(db, "businesses", businessId, "inventory");
 
-    onSnapshot(invRef, (snap) => {
-      const allItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    onSnapshot(invRef, snap => {
+      const allItems = snap.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          totalQuantity: Math.max(0, Number(data.totalQuantity || 0)),
+          availableQuantity: Math.min(
+            Math.max(0, Number(data.availableQuantity || 0)),
+            Number(data.totalQuantity || 0)
+          )
+        };
+      });
 
       function filterAndRender() {
-        const query = inventorySearch.value.toLowerCase();
-        const filtered = allItems.filter(item =>
-          item.name.toLowerCase().includes(query)
+        const q = inventorySearch.value.toLowerCase();
+        const filtered = allItems.filter(i =>
+          i.name.toLowerCase().includes(q)
         );
 
-        if (filtered.length === 0 && query) {
-          inventoryList.innerHTML = "<p class='text-center py-8 text-gray-500'>No items match your search.</p>";
-          return;
-        }
-
-        if (allItems.length === 0) {
-          inventoryList.innerHTML = "<p class='text-center py-8 text-gray-500'>No inventory items yet. Add your first item above!</p>";
-          totalItemsEl.innerText = "0";
-          availableItemsEl.innerText = "0";
-          outItemsEl.innerText = "0";
+        if (!allItems.length) {
+          inventoryList.innerHTML =
+            "<p class='text-center text-gray-500'>No inventory items yet</p>";
+          totalItemsEl.textContent = "0";
+          availableItemsEl.textContent = "0";
+          outItemsEl.textContent = "0";
           return;
         }
 
@@ -136,46 +211,11 @@ onAuthStateChanged(auth, async (user) => {
       filterAndRender();
     });
 
-    /* EDIT MODAL LOGIC */
-    function openEditModal(item) {
-      editItemId.value = item.id;
-      editItemName.value = item.name;
-      editItemQty.value = item.totalQuantity;
-      editItemAvail.value = item.availableQuantity;
-      editItemPrice.value = item.price;
-      editModal.classList.remove('hidden');
-    }
-
-    closeEditModal.onclick = () => editModal.classList.add('hidden');
-
-    editItemForm.onsubmit = async (e) => {
-      e.preventDefault();
-      const id = editItemId.value;
-      const itemRef = doc(db, "businesses", businessId, "inventory", id);
-
-      await updateDoc(itemRef, {
-        name: editItemName.value.trim(),
-        totalQuantity: Number(editItemQty.value),
-        availableQuantity: Number(editItemAvail.value),
-        price: Number(editItemPrice.value),
-        updatedAt: serverTimestamp()
-      });
-
-      editModal.classList.add('hidden');
-    };
-
-    deleteItemBtn.onclick = async () => {
-      if (confirm("Are you sure you want to delete this item?")) {
-        const id = editItemId.value;
-        await deleteDoc(doc(db, "businesses", businessId, "inventory", id));
-        editModal.classList.add('hidden');
-      }
-    };
+    listenToOverbooked(businessId);
 
     /* ADD ITEM */
-    document
-      .getElementById("addItemForm")
-      .addEventListener("submit", async (e) => {
+    document.getElementById("addItemForm")
+      .addEventListener("submit", async e => {
         e.preventDefault();
 
         await addDoc(invRef, {
@@ -188,6 +228,42 @@ onAuthStateChanged(auth, async (user) => {
 
         e.target.reset();
       });
+
+    /* EDIT MODAL */
+    function openEditModal(item) {
+      editItemId.value = item.id;
+      editItemName.value = item.name;
+      editItemQty.value = item.totalQuantity;
+      editItemAvail.value = item.availableQuantity;
+      editItemPrice.value = item.price;
+      editModal.classList.remove("hidden");
+    }
+
+    closeEditModal.onclick = () =>
+      editModal.classList.add("hidden");
+
+    editItemForm.onsubmit = async e => {
+      e.preventDefault();
+      const ref = doc(db, "businesses", businessId, "inventory", editItemId.value);
+
+      await updateDoc(ref, {
+        name: editItemName.value.trim(),
+        totalQuantity: Number(editItemQty.value),
+        availableQuantity: Number(editItemAvail.value),
+        price: Number(editItemPrice.value),
+        updatedAt: serverTimestamp()
+      });
+
+      editModal.classList.add("hidden");
+    };
+
+    deleteItemBtn.onclick = async () => {
+      if (!confirm("Delete this item?")) return;
+      await deleteDoc(
+        doc(db, "businesses", businessId, "inventory", editItemId.value)
+      );
+      editModal.classList.add("hidden");
+    };
 
   } catch (err) {
     console.error(err);
@@ -203,16 +279,16 @@ document.getElementById("checkBtn").onclick = () => {
   const needed = Number(calcQty.value);
 
   if (!needed) {
-    calcResult.innerText = "Enter quantity";
+    calcResult.textContent = "Enter quantity";
     calcResult.style.color = "orange";
     return;
   }
 
   if (needed <= available) {
-    calcResult.innerText = "Available ✅";
+    calcResult.textContent = "Available ✅";
     calcResult.style.color = "green";
   } else {
-    calcResult.innerText = "Not enough stock ❌";
+    calcResult.textContent = "Not enough stock ❌";
     calcResult.style.color = "red";
   }
 };

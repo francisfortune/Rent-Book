@@ -95,9 +95,12 @@ function listenToBookingStats(businessId) {
 for (const d of snap.docs) {
   const b = d.data();
 
-  if (b.items?.some(i => Number(i.shortage) > 0)) {
-    overbooked++;
-  }
+ if (
+  b.status === "active" &&
+  b.items?.some(i => Number(i.shortage) > 0)
+) {
+  overbooked++;
+}
 
 
       /* 🔧 AUTO-REPAIR */
