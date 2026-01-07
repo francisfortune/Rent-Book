@@ -111,7 +111,8 @@ async function deductInventory(businessId, items) {
     const current = match.data().availableQuantity;
 
     await updateDoc(match.ref, {
-      availableQuantity: Math.max(0, current - item.qty)
+availableQuantity: Math.max(0, current - Math.min(item.qty, current))
+
     });
   }
 }
@@ -200,14 +201,38 @@ onAuthStateChanged(auth, async (user) => {
           const price = Number(row.querySelector(".item-price").value);
 
           if (!name || qty <= 0) return;
+// find inventory item
+const inventoryItem = inventoryItems.find(
+  i => i.name.toLowerCase() === name.toLowerCase()
+);
 
-          items.push({
-            name,
-            qty,
-            price,
-            total: qty * price
-          });
+const availableAtBooking = inventoryItem?.availableQuantity || 0;
+const shortage = Math.max(0, qty - availableAtBooking);
+
+items.push({
+  name,
+  qty,
+  price,
+  total: qty * price,
+  availableAtBooking,
+  shortage // 🔥 THIS IS THE KEY
+});
+
         });
+
+        const overbookedItems = items.filter(i => i.shortage > 0);
+if (overbookedItems.length) {
+  const msg = overbookedItems
+    .map(i => `${i.name}: borrow ${i.shortage}`)
+    .join("\n");
+
+  if (!confirm(`⚠ Overbooking detected:\n${msg}\n\nContinue anyway?`)) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+    return;
+  }
+}
+
 
         if (!items.length) {
           alert("Add at least one item");

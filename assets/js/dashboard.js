@@ -89,10 +89,16 @@ function listenToBookingStats(businessId) {
     let active = 0;
     let returned = 0;
     let overdue = 0;
+    let overbooked = 0;
     const now = new Date();
 
-    for (const d of snap.docs) {
-      const b = d.data();
+for (const d of snap.docs) {
+  const b = d.data();
+
+  if (b.items?.some(i => Number(i.shortage) > 0)) {
+    overbooked++;
+  }
+
 
       /* 🔧 AUTO-REPAIR */
       if (!b.status) {
@@ -122,6 +128,10 @@ function listenToBookingStats(businessId) {
       else if (b.status === "returned") returned++;
       else if (b.status === "overdue") overdue++;
     }
+
+    const el = document.getElementById("overbooked-bookings");
+if (el) el.textContent = overbooked;
+
 
     safeSetText("active-bookings", active);
     safeSetText("returned-bookings", returned);
