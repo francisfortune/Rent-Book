@@ -265,3 +265,4 @@ onAuthStateChanged(auth, async user => {
     alert("Failed to load dashboard");
   }
 });
+

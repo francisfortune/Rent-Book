@@ -56,34 +56,36 @@ const deleteItemBtn = document.getElementById("deleteItemBtn");
 
 /* =========================
    RENDER INVENTORY
-========================= */
-function renderInventory(filteredItems, allItems) {
+========================= */function renderInventory(filteredItems, allItems) {
   inventoryList.innerHTML = "";
   calcItem.innerHTML = "";
 
-  let totalQty = 0;
-  let availableQty = 0;
-  let outQty = 0;
+  let totalAvailableQty = 0;
+  let totalOutQty = 0;
 
+  /* ===== CALCULATE TOTALS ===== */
   allItems.forEach(item => {
-const totalItems = allItems.length;
-const availableItems = allItems.filter(i => i.availableQuantity > 0).length;
-const outItems = allItems.filter(i => i.availableQuantity === 0).length;
+    totalAvailableQty += item.availableQuantity;
+    totalOutQty += (item.totalQuantity - item.availableQuantity);
 
-totalItemsEl.textContent = totalItems;
-availableItemsEl.textContent = availableItems;
-outItemsEl.textContent = outItems;
-
+    // Calculator dropdown
     calcItem.innerHTML += `
       <option value="${item.availableQuantity}">
-        ${item.name}
-      </option>`;
+        ${item.name} (${item.availableQuantity} avail)
+      </option>
+    `;
   });
 
+  /* ===== DASHBOARD CARDS ===== */
+  totalItemsEl.textContent = allItems.length;       // item count
+  availableItemsEl.textContent = totalAvailableQty; // total available qty
+  outItemsEl.textContent = totalOutQty;              // total out qty
+
+  /* ===== INVENTORY LIST ===== */
   filteredItems.forEach(item => {
     const div = document.createElement("div");
     div.className =
-      "inventory-item flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100";
+      "inventory-item flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100 mb-3";
 
     div.innerHTML = `
       <div>
@@ -105,11 +107,9 @@ outItemsEl.textContent = outItems;
     div.querySelector(".edit-btn").onclick = () => openEditModal(item);
     inventoryList.appendChild(div);
   });
-
-  totalItemsEl.textContent = totalQty;
-  availableItemsEl.textContent = availableQty;
-  outItemsEl.textContent = outQty;
 }
+
+
 
 /* =========================
    OVERBOOKED PANEL
@@ -272,23 +272,27 @@ onAuthStateChanged(auth, async user => {
 });
 
 /* =========================
-   AVAILABILITY CHECK
+   AVAILABILITY CHECK (IMPROVED)
 ========================= */
 document.getElementById("checkBtn").onclick = () => {
   const available = Number(calcItem.value);
   const needed = Number(calcQty.value);
 
-  if (!needed) {
-    calcResult.textContent = "Enter quantity";
+  if (!needed || needed <= 0) {
+    calcResult.textContent = "Enter a valid quantity";
     calcResult.style.color = "orange";
     return;
   }
 
   if (needed <= available) {
-    calcResult.textContent = "Available ✅";
+    const remaining = available - needed;
+    calcResult.textContent =
+      `Available ✅ (${remaining} will remain)`;
     calcResult.style.color = "green";
   } else {
-    calcResult.textContent = "Not enough stock ❌";
+    const shortage = needed - available;
+    calcResult.textContent =
+      `Not enough ❌ (short by ${shortage})`;
     calcResult.style.color = "red";
   }
 };
