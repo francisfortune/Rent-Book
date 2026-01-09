@@ -66,7 +66,7 @@ window.addItemRow = function () {
       `).join("")}
     </select>
     <input class="item-qty w-20 p-2 border rounded-lg outline-none" type="number" min="1" value="1" required>
-    <input class="item-price w-24 p-2 border rounded-lg bg-gray-50 outline-none" type="number" readonly placeholder="Price">
+    <input class="item-price w-24 p-2 border rounded-lg outline-none" type="number" placeholder="Price">
     <button type="button" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all">✕</button>
   `;
 
@@ -75,20 +75,24 @@ window.addItemRow = function () {
   const priceInput = row.querySelector(".item-price");
   const removeBtn = row.querySelector("button");
 
-  select.onchange = (e) => {
+  // When user selects an item, populate default price but allow editing
+  select.addEventListener("change", (e) => {
     const opt = e.target.selectedOptions[0];
     if (opt) {
-      priceInput.value = opt.dataset.price;
-      recalcTotal();
+      priceInput.value = opt.dataset.price || ""; // system price
+    } else {
+      priceInput.value = "";
     }
-  };
+    recalcTotal();
+  });
 
-  qtyInput.oninput = recalcTotal;
+  qtyInput.addEventListener("input", recalcTotal);
+  priceInput.addEventListener("input", recalcTotal); // total recalculation if user edits price
 
-  removeBtn.onclick = () => {
+  removeBtn.addEventListener("click", () => {
     row.remove();
     recalcTotal();
-  };
+  });
 
   container.appendChild(row);
 };
@@ -295,4 +299,5 @@ if (overbookedItems.length) {
       }
     });
 });
+
 
