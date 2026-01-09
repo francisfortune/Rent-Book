@@ -10,8 +10,10 @@ import {
   where,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { signOut, onAuthStateChanged } from
-  "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 /* =========================
    BUSINESS LOOKUP
@@ -25,13 +27,6 @@ async function getBusinessId(email) {
   if (snap.empty) return null;
   return snap.docs[0].data().businessId;
 }
-function setUserAvatar(businessName) {
-  const avatar = document.getElementById("user-avatar");
-  if (!avatar || !businessName) return;
-
-  avatar.textContent = businessName.charAt(0).toUpperCase();
-}
-
 
 /* =========================
    AUTH GUARD
@@ -63,20 +58,23 @@ onAuthStateChanged(auth, async (user) => {
     const email = partnerEmail.value.trim().toLowerCase();
     const role = partnerRole.value;
 
-    // 1. Check if user exists on the platform
+    // 🔴 OLD: Only allowed registered users
+    /*
     const userQuery = query(collection(db, "users"), where("email", "==", email));
     const userSnap = await getDocs(userQuery);
 
     if (userSnap.empty) {
-      alert("This user is not registered on Rent Book. They must create an account first.");
+      alert("This user is not registered on Rent Book.");
       return;
     }
 
     const inviteeData = userSnap.docs[0].data();
+    */
 
-    // 2. Prevent duplicate invite in this business
+    // ✅ NEW: Prevent duplicate invite
     const exists = await getDocs(
-      query(membersRef,
+      query(
+        membersRef,
         where("email", "==", email),
         where("businessId", "==", businessId)
       )
@@ -87,22 +85,54 @@ onAuthStateChanged(auth, async (user) => {
       return;
     }
 
-    // 3. Define permissions and add partner
+    // ✅ NEW: Check if user exists (optional)
+    const userSnap = await getDocs(
+      query(collection(db, "users"), where("email", "==", email))
+    );
+
+    let uid = null;
+    let name = "Pending User";
+    let status = "pending";
+
+    if (!userSnap.empty) {
+      const userData = userSnap.docs[0].data();
+      uid = userData.uid;
+      name = userData.name || "User";
+      status = "accepted";
+    }
+
+    // 🔴 OLD permissions (kept)
     const permissions = {
       admin: { inventory: true, bookings: true, settings: true, reports: true },
       staff: { inventory: true, bookings: true, settings: false, reports: false },
       viewer: { inventory: false, bookings: false, settings: false, reports: false, viewOnly: true }
     };
 
+    // 🔴 OLD addDoc replaced by conditional invite
+    /*
     await addDoc(membersRef, {
       email,
       uid: inviteeData.uid,
       name: inviteeData.name || "User",
-      role: role,
+      role,
       permissions: permissions[role],
       businessId,
       invitedBy: user.email,
-      status: "accepted", // Since they already exist, we can auto-accept or keep as pending
+      status: "accepted",
+      createdAt: serverTimestamp()
+    });
+    */
+
+    // ✅ NEW: Works for registered + unregistered users
+    await addDoc(membersRef, {
+      email,
+      uid, // null if not registered
+      name,
+      role,
+      permissions: permissions[role],
+      businessId,
+      invitedBy: user.email,
+      status,
       createdAt: serverTimestamp()
     });
 
@@ -123,22 +153,4 @@ onAuthStateChanged(auth, async (user) => {
     snap.forEach(d => {
       const p = d.data();
       partnersList.innerHTML += `
-        <div class="partner-row">
-          ${p.email} — <strong>${p.role}</strong>
-        </div>
-      `;
-    });
-  }
-
-  loadPartners();
-
-  /* =========================
-     LOGOUT
-  ========================= */
-  document
-    .querySelector(".logout-btn")
-    .addEventListener("click", async () => {
-      await signOut(auth);
-      window.location.href = "signup.html";
-    });
-});
+        <div class="partne
