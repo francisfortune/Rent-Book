@@ -833,6 +833,86 @@
             font-weight: 700;
             color: purple;
         }
+        /* ================= FIX MOBILE OVERFLOW (ADD PAGE) ================= */
+
+/* Prevent body + main height conflicts */
+html, body {
+    height: auto;
+    overflow-x: hidden;
+}
+
+/* Let main grow naturally */
+.main {
+    min-height: 100vh;
+    height: auto;
+}
+
+/* Dashboard should scroll naturally */
+.dashboard {
+    height: auto;
+    overflow: visible;
+}
+
+/* Ensure form never causes horizontal overflow */
+.add-booking-form,
+.form-card,
+.items-list {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* Item row fix */
+.item-row {
+    width: 100%;
+    max-width: 100%;
+    align-items: stretch;
+}
+
+/* Inputs should never exceed container */
+.item-row input,
+.form-group input,
+.form-group select,
+.form-group textarea {
+    min-width: 0;
+    width: 100%;
+}
+
+/* MOBILE-SPECIFIC FIXES */
+@media (max-width: 768px) {
+
+    /* Stack item row cleanly */
+    .item-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .item-row button {
+        width: 100%;
+    }
+
+    /* Prevent bottom-nav overlap */
+    .dashboard {
+        padding-bottom: 120px;
+    }
+
+    .main {
+        padding-bottom: 80px;
+    }
+}
+
+/* Extra small phones */
+@media (max-width: 480px) {
+    .dashboard {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .form-card {
+        padding: 15px;
+    }
+}
+
     </style>
     <style>
         @view-transition {
@@ -1165,3 +1245,4 @@
 
 
 </html>
+
