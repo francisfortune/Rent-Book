@@ -52,98 +52,89 @@ onAuthStateChanged(auth, async (user) => {
   /* =========================
      INVITE PARTNER
   ========================= */
-  invitePartnerForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  if (invitePartnerForm) {
+    invitePartnerForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-    const email = partnerEmail.value.trim().toLowerCase();
-    const role = partnerRole.value;
+      const email = partnerEmail.value.trim().toLowerCase();
+      const role = partnerRole.value;
 
-    // 🔴 OLD: Only allowed registered users
-    /*
-    const userQuery = query(collection(db, "users"), where("email", "==", email));
-    const userSnap = await getDocs(userQuery);
+      /* ==========================================
+         ✅ NEW FIX: PREVENT MULTI-BUSINESS INVITES
+      ========================================== */
+      const globalMemberSnap = await getDocs(
+        query(membersRef, where("email", "==", email))
+      );
 
-    if (userSnap.empty) {
-      alert("This user is not registered on Rent Book.");
-      return;
-    }
+      if (!globalMemberSnap.empty) {
+        const existingMember = globalMemberSnap.docs[0].data();
 
-    const inviteeData = userSnap.docs[0].data();
-    */
+        if (existingMember.businessId !== businessId) {
+          alert("This email is already linked to another business.");
+          return;
+        }
+      }
+      /* ===== END FIX ===== */
 
-    // ✅ NEW: Prevent duplicate invite
-    const exists = await getDocs(
-      query(
-        membersRef,
-        where("email", "==", email),
-        where("businessId", "==", businessId)
-      )
-    );
+      // ✅ EXISTING: Prevent duplicate invite in SAME business
+      const exists = await getDocs(
+        query(
+          membersRef,
+          where("email", "==", email),
+          where("businessId", "==", businessId)
+        )
+      );
 
-    if (!exists.empty) {
-      alert("This partner is already added to your business.");
-      return;
-    }
+      if (!exists.empty) {
+        alert("This partner is already added to your business.");
+        return;
+      }
 
-    // ✅ NEW: Check if user exists (optional)
-    const userSnap = await getDocs(
-      query(collection(db, "users"), where("email", "==", email))
-    );
+      // ✅ Check if user exists (optional)
+      const userSnap = await getDocs(
+        query(collection(db, "users"), where("email", "==", email))
+      );
 
-    let uid = null;
-    let name = "Pending User";
-    let status = "pending";
+      let uid = null;
+      let name = "Pending User";
+      let status = "pending";
 
-    if (!userSnap.empty) {
-      const userData = userSnap.docs[0].data();
-      uid = userData.uid;
-      name = userData.name || "User";
-      status = "accepted";
-    }
+      if (!userSnap.empty) {
+        const userData = userSnap.docs[0].data();
+        uid = userData.uid;
+        name = userData.name || "User";
+        status = "accepted";
+      }
 
-    // 🔴 OLD permissions (kept)
-    const permissions = {
-      admin: { inventory: true, bookings: true, settings: true, reports: true },
-      staff: { inventory: true, bookings: true, settings: false, reports: false },
-      viewer: { inventory: false, bookings: false, settings: false, reports: false, viewOnly: true }
-    };
+      const permissions = {
+        admin: { inventory: true, bookings: true, settings: true, reports: true },
+        staff: { inventory: true, bookings: true, settings: false, reports: false },
+        viewer: { inventory: false, bookings: false, settings: false, reports: false, viewOnly: true }
+      };
 
-    // 🔴 OLD addDoc replaced by conditional invite
-    /*
-    await addDoc(membersRef, {
-      email,
-      uid: inviteeData.uid,
-      name: inviteeData.name || "User",
-      role,
-      permissions: permissions[role],
-      businessId,
-      invitedBy: user.email,
-      status: "accepted",
-      createdAt: serverTimestamp()
+      await addDoc(membersRef, {
+        email,
+        uid,
+        name,
+        role,
+        permissions: permissions[role],
+        businessId,
+        invitedBy: user.email,
+        status,
+        createdAt: serverTimestamp()
+      });
+
+      invitePartnerForm.reset();
+      loadPartners();
     });
-    */
-
-    // ✅ NEW: Works for registered + unregistered users
-    await addDoc(membersRef, {
-      email,
-      uid, // null if not registered
-      name,
-      role,
-      permissions: permissions[role],
-      businessId,
-      invitedBy: user.email,
-      status,
-      createdAt: serverTimestamp()
-    });
-
-    invitePartnerForm.reset();
-    loadPartners();
-  });
+  }
 
   /* =========================
      LOAD PARTNERS
   ========================= */
   async function loadPartners() {
+    if (!partnersList) return;
+
     const snap = await getDocs(
       query(membersRef, where("businessId", "==", businessId))
     );
@@ -153,4 +144,25 @@ onAuthStateChanged(auth, async (user) => {
     snap.forEach(d => {
       const p = d.data();
       partnersList.innerHTML += `
-        <div class="partne
+        <div class="partner-row">
+          ${p.email} — <strong>${p.role}</strong>
+          ${p.status === "pending" ? "(Pending)" : ""}
+        </div>
+      `;
+    });
+  }
+
+  loadPartners();
+
+  /* =========================
+     LOGOUT (SAFE – NOT BROKEN)
+  ========================= */
+  const logoutBtn = document.querySelector(".logout-btn");
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+      window.location.href = "signup.html";
+    });
+  }
+});
