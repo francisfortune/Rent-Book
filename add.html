@@ -833,6 +833,66 @@
             font-weight: 700;
             color: purple;
         }
+
+        .item-row {
+  display: flex;
+  flex-wrap: wrap; /* allow wrapping on small screens */
+  gap: 8px;
+  align-items: center;
+}
+
+.item-name {
+  flex: 1 1 200px; /* grow, shrink, min-width 200px */
+  min-width: 150px; /* ensures usability on tiny screens */
+}
+
+.item-qty,
+.item-price {
+  flex: 0 1 80px; /* shrink but keep small width */
+}
+
+.item-row button {
+  flex: 0 0 40px;
+}
+.item-row {
+  display: flex;
+  flex-wrap: wrap; 
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.item-name {
+  flex: 1 1 200px; 
+  min-width: 150px;
+  padding: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  outline: none;
+}
+
+.item-qty,
+.item-price {
+  flex: 0 1 80px;
+  padding: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  outline: none;
+}
+
+.item-row button {
+  flex: 0 0 40px;
+  height: 40px;
+  background: #fed7d7;
+  color: #742a2a;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+
+        
+
     </style>
     <style>
         @view-transition {

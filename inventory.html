@@ -242,7 +242,7 @@
 
         /* ================ Dashboard Content ================ */
         .dashboard {
- padding: 60px;
+ padding: 20px;
     overflow-y: visible;
     height: auto;
         }
@@ -838,6 +838,33 @@
 
     .dashboard {
         padding-bottom: 90px; /* only for bottom-nav */
+    }
+}
+
+/* REMOVE LEFT & RIGHT PADDING ON SMALL SCREENS */
+@media (max-width: 768px) {
+    .inventory-wrapper {
+        padding-left: 20px;
+        padding-right: 20px;
+        padding-top: 80px;   /* keeps spacing below topbar */
+        padding-bottom: 20px;
+        margin: 0;
+        max-width: 100%;
+    }
+
+    .inventory-box,
+    .inv-card {
+        border-radius: 20px; /* optional: edge-to-edge feel */
+    }
+}
+
+@media (max-width: 768px) {
+    .inventory-summary {
+        display: block;
+    }
+
+    .inventory-summary .inv-card {
+        margin-bottom: 15px; /* spacing between cards */
     }
 }
 
