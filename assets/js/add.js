@@ -57,7 +57,7 @@ window.addItemRow = function () {
   row.className = "item-row flex gap-2 items-center mb-2";
 
   row.innerHTML = `
-    <select class="item-name flex-[2] p-2 border rounded-lg outline-none" required>
+<select class="item-name flex-[2] p-2 border rounded-lg outline-none" required>
       <option value="">Select an Item</option>
       ${inventoryItems.map(item => `
         <option value="${item.name}" data-price="${item.price}" data-avail="${item.availableQuantity}">
@@ -75,6 +75,7 @@ window.addItemRow = function () {
   const priceInput = row.querySelector(".item-price");
   const removeBtn = row.querySelector("button");
 
+  
   // When user selects an item, populate default price but allow editing
   select.addEventListener("change", (e) => {
     const opt = e.target.selectedOptions[0];
@@ -300,4 +301,149 @@ if (overbookedItems.length) {
     });
 });
 
+function updateSelectOptions() {
+  const selectedItems = Array.from(document.querySelectorAll(".item-name"))
+    .map(s => s.value)
+    .filter(v => v); // remove empty
 
+  document.querySelectorAll(".item-name").forEach(select => {
+    Array.from(select.options).forEach(option => {
+      if (!option.value) return; // keep placeholder
+      // disable option if selected elsewhere
+      option.disabled = selectedItems.includes(option.value) && select.value !== option.value;
+    });
+  });
+}
+
+// ===== DYNAMIC BUY ME A COFFEE BUTTON WITH FLOATING ANIMATION =====
+(function() {
+  const bmcLink = "https://www.buymeacoffee.com/francisfortune"; // your profile link
+
+  // Create Buy Me a Coffee button
+  const coffeeBtn = document.createElement("button");
+  coffeeBtn.id = "buyCoffeeBtn";
+  coffeeBtn.innerHTML = "☕ Support Me";
+  coffeeBtn.style.position = "fixed";
+  coffeeBtn.style.bottom = "80px"; // leave space for bottom nav
+  coffeeBtn.style.right = "20px";
+  coffeeBtn.style.background = "Purple";
+  coffeeBtn.style.color = "#ffffff";
+  coffeeBtn.style.padding = "0.7rem 1.5rem";
+  coffeeBtn.style.fontWeight = "700";
+  coffeeBtn.style.borderRadius = "50px";
+  coffeeBtn.style.border = "none";
+  coffeeBtn.style.cursor = "pointer";
+  coffeeBtn.style.boxShadow = "0 8px 16px rgba(0,0,0,0.3)";
+  coffeeBtn.style.zIndex = "9999";
+  coffeeBtn.style.display = "flex";
+  coffeeBtn.style.alignItems = "center";
+  coffeeBtn.style.justifyContent = "center";
+  coffeeBtn.style.transition = "transform 0.3s, box-shadow 0.3s";
+  coffeeBtn.style.fontSize = "1.3rem";
+
+  // Hover effect
+  coffeeBtn.onmouseover = () => {
+    coffeeBtn.style.transform = "translateY(-6px)";
+    coffeeBtn.style.boxShadow = "0 12px 24px rgba(0,0,0,0.35)";
+  };
+  coffeeBtn.onmouseout = () => {
+    coffeeBtn.style.transform = "translateY(0)";
+    coffeeBtn.style.boxShadow = "0 8px 16px rgba(0,0,0,0.3)";
+  };
+
+  // Floating animation CSS
+  const style = document.createElement("style");
+  style.innerHTML = `
+    @keyframes floatButton {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-8px); }
+      100% { transform: translateY(0px); }
+    }
+    #buyCoffeeBtn {
+      animation: floatButton 3s ease-in-out infinite;
+    }
+    /* Optional: Product Hunt button styles if used */
+    #productHuntBtn {
+      animation: floatButton 3s ease-in-out infinite;
+      background: linear-gradient(135deg, #DA552F, #FF6F4C);
+      color: #fff;
+      font-weight: 700;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+      padding: 0.7rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.3s, box-shadow 0.3s;
+      z-index: 9999;
+      position: fixed;
+      bottom: 20px; /* will adjust dynamically */
+      right: 20px;
+    }
+    #productHuntBtn:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.35);
+    }
+  `;
+  document.head.appendChild(style);
+
+  // Responsive function
+  function updateBtnSize() {
+    const bottomMargin = 20; // default bottom spacing
+    if (window.innerWidth < 768) {
+      coffeeBtn.style.padding = "0.5rem 1.3rem";
+      coffeeBtn.style.fontSize = "1.4rem";
+      coffeeBtn.style.bottom = "130px"; // extra space for bottom nav
+      coffeeBtn.style.right = "15px";
+      // If Product Hunt button is used
+      const phBtn = document.getElementById("productHuntBtn");
+      if (phBtn) phBtn.style.bottom = "40px"; // below coffee button
+    } else {
+      coffeeBtn.style.padding = "0.7rem 1.5rem";
+      coffeeBtn.style.fontSize = "1rem";
+      coffeeBtn.style.bottom = "80px";
+      coffeeBtn.style.right = "20px";
+      const phBtn = document.getElementById("productHuntBtn");
+      if (phBtn) phBtn.style.bottom = "20px";
+    }
+  }
+  window.addEventListener("resize", updateBtnSize);
+  updateBtnSize();
+
+  // Append Buy Me a Coffee button
+  document.body.appendChild(coffeeBtn);
+
+  // Popup portal
+  coffeeBtn.addEventListener("click", () => {
+    const popupWidth = 500;
+    const popupHeight = 700;
+    const left = (window.innerWidth / 2) - (popupWidth / 2);
+    const top = (window.innerHeight / 2) - (popupHeight / 2);
+
+    window.open(
+      bmcLink,
+      "BuyMeACoffee",
+      `width=${popupWidth},height=${popupHeight},top=${top},left=${left},resizable=yes,scrollbars=yes`
+    );
+  });
+
+  // Tooltip/Bio
+  coffeeBtn.title = `
+Hi! I'm Francis Fortune.
+I’m passionate about motivating young teens to explore technology, learn new skills, and create innovative solutions.
+.
+`;
+
+  // ===== PRODUCT HUNT BUTTON (COMMENTED OUT FOR NOW) =====
+  /*
+  const phLink = "https://www.producthunt.com/posts/your-product";
+  const phBtn = document.createElement("button");
+  phBtn.id = "productHuntBtn";
+  phBtn.innerHTML = "🚀 Product Hunt";
+  phBtn.onclick = () => window.open(phLink, "_blank");
+  document.body.appendChild(phBtn);
+  updateBtnSize();
+  */
+})();

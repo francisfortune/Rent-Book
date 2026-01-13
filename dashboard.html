@@ -917,6 +917,13 @@
                     </div>
                 </div>
             </section>
+
+    <!-- Add to Home Screen Button -->
+<button id="addHomeBtn" 
+        class="hidden fixed bottom-20 right-5 bg-purple-600 text-white px-5 py-3 rounded-full font-bold shadow-lg z-50 hover:shadow-xl transition-transform transform hover:-translate-y-1">
+  Add Rent to Home Screen
+</button>
+
         </div><!-- =============== Bottom Navigation (Mobile) ================ -->
         <nav class="bottom-nav">
             <ul>
@@ -938,6 +945,8 @@
             </ul>
         </nav>
     </div><!-- =========== Scripts =========  -->
+
+
     <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
     <script>
@@ -1035,6 +1044,11 @@
                 mapToEditPanelValues
             });
         }
+        
+
+
+
+        
     </script>
     <script type="module" src="assets/js/firebase.js"></script>
     <script type="module" src="assets/js/dashboard.js"></script>
