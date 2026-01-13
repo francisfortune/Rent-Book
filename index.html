@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rent Book – Smart Rental &amp; Inventory Management</title>
+    <title>RentBook – Smart Rental &amp; Inventory Management</title>
 
     <meta name="description"
         content="RentBook is now 100% free! Manage rentals, inventory, and bookings effortlessly with our all-in-one SaaS dashboard. Perfect for rental businesses and stores.">
@@ -676,6 +676,38 @@
                 opacity: 1;
             }
         }
+
+#installBtn {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #800080, #b000b5);
+  color: #fff;
+  padding: 15px 34px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  z-index: 9999;
+  box-shadow: 0 10px 25px rgba(128,0,128,0.4);
+  letter-spacing: 0.3px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#installBtn:hover {
+  transform: translateX(-50%) scale(1.05);
+  box-shadow: 0 14px 30px rgba(128,0,128,0.55);
+}
+
+#installBtn:active {
+  transform: translateX(-50%) scale(0.97);
+}
+
+
     </style>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
     <style>
@@ -808,6 +840,9 @@
         </form>
     </section>
 
+<button id="installBtn">Get RentBook App</button>
+
+
     <!-- CTA SECTION -->
     <section class="py-20 px-6 text-center text-white" style="background-color: purple;">
         <h2 class="text-4xl md:text-5xl font-bold mb-6">Ready to Simplify Your Rentals?</h2>
@@ -829,6 +864,81 @@
     <footer>
         © 2025 RentBook. All rights reserved.
     </footer>
+
+<script>
+const installBtn = document.getElementById('installBtn');
+let deferredPrompt = null;
+
+// Show button after 1 second
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    installBtn.style.opacity = '1';
+    installBtn.style.pointerEvents = 'auto';
+  }, 1000);
+});
+
+// Update button text
+function updateText() {
+  if (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  ) {
+    installBtn.textContent = 'Open RentBook';
+  } else {
+    installBtn.textContent = 'Get RentBook App';
+  }
+}
+
+// Capture install prompt
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+});
+
+// Click behavior
+installBtn.addEventListener('click', async () => {
+
+  // Already installed → open
+  if (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  ) {
+    window.focus();
+    return;
+  }
+
+  // Install available
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const result = await deferredPrompt.userChoice;
+
+    if (result.outcome === 'accepted') {
+      installBtn.textContent = 'Open RentBook';
+    }
+
+    deferredPrompt = null;
+    return;
+  }
+
+  // Install not available → alert
+  alert(
+    'RentBook cannot be installed right now.\n\n' +
+    'Make sure:\n' +
+    '• You are using HTTPS or localhost\n' +
+    '• Service Worker is registered\n' +
+    '• App is not already installed'
+  );
+});
+
+// When installed
+window.addEventListener('appinstalled', () => {
+  installBtn.textContent = 'Open RentBook';
+});
+
+// Initial state
+updateText();
+</script>
+    
 
     <script>
         const openBtn = document.getElementById('openDemo');
@@ -1033,11 +1143,11 @@ I’m passionate about motivating young teens to explore technology, learn new s
 })();
 
 
+
     </script>
     <script src="assets/js/pwa.js"></script>
     <script>(function () { function c() { var b = a.contentDocument || a.contentWindow.document; if (b) { var d = b.createElement('script'); d.innerHTML = "window.__CF$cv$params={r:'9b34560d11de8560',t:'MTc2NjYyMzc0MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);"; b.getElementsByTagName('head')[0].appendChild(d) } } if (document.body) { var a = document.createElement('iframe'); a.height = 1; a.width = 1; a.style.position = 'absolute'; a.style.top = 0; a.style.left = 0; a.style.border = 'none'; a.style.visibility = 'hidden'; document.body.appendChild(a); if ('loading' !== document.readyState) c(); else if (window.addEventListener) document.addEventListener('DOMContentLoaded', c); else { var e = document.onreadystatechange || function () { }; document.onreadystatechange = function (b) { e(b); 'loading' !== document.readyState && (document.onreadystatechange = e, c()) } } } })();</script>
 </body>
-
 
 
 </html>
