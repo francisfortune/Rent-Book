@@ -10,9 +10,7 @@
         content="RentBook is now 100% free! Manage rentals, inventory, and bookings effortlessly with our all-in-one SaaS dashboard. Perfect for rental businesses and stores.">
     <meta name="keywords"
         content="Free rental management, Free inventory tracking, RentBook SaaS, Booking system, Free rental software">
-<meta name="description" content="Rent Book helps landlords and tenants manage rent, payments, and records easily." />
 
-  <meta name="robots" content="index, follow" />
     <meta property="og:title" content="RentBook – Free Rental & Inventory Management SaaS">
     <meta property="og:description"
         content="RentBook is now free! Manage rentals, inventory, and bookings effortlessly with our all-in-one SaaS dashboard.">
@@ -842,6 +840,8 @@
         </form>
     </section>
 
+<button id="installBtn">Get RentBook App</button>
+
 
     <!-- CTA SECTION -->
     <section class="py-20 px-6 text-center text-white" style="background-color: purple;">
@@ -864,6 +864,81 @@
     <footer>
         © 2025 RentBook. All rights reserved.
     </footer>
+
+<script>
+const installBtn = document.getElementById('installBtn');
+let deferredPrompt = null;
+
+// Show button after 1 second
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    installBtn.style.opacity = '1';
+    installBtn.style.pointerEvents = 'auto';
+  }, 1000);
+});
+
+// Update button text
+function updateText() {
+  if (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  ) {
+    installBtn.textContent = 'Open RentBook';
+  } else {
+    installBtn.textContent = 'Get RentBook App';
+  }
+}
+
+// Capture install prompt
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+});
+
+// Click behavior
+installBtn.addEventListener('click', async () => {
+
+  // Already installed → open
+  if (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  ) {
+    window.focus();
+    return;
+  }
+
+  // Install available
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const result = await deferredPrompt.userChoice;
+
+    if (result.outcome === 'accepted') {
+      installBtn.textContent = 'Open RentBook';
+    }
+
+    deferredPrompt = null;
+    return;
+  }
+
+  // Install not available → alert
+  alert(
+    'RentBook cannot be installed right now.\n\n' +
+    'Make sure:\n' +
+    '• You are using HTTPS or localhost\n' +
+    '• Service Worker is registered\n' +
+    '• App is not already installed'
+  );
+});
+
+// When installed
+window.addEventListener('appinstalled', () => {
+  installBtn.textContent = 'Open RentBook';
+});
+
+// Initial state
+updateText();
+</script>
+    
 
     <script>
         const openBtn = document.getElementById('openDemo');
@@ -1075,7 +1150,4 @@ I’m passionate about motivating young teens to explore technology, learn new s
 </body>
 
 
-
 </html>
-
-
