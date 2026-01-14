@@ -677,34 +677,77 @@
             }
         }
 
-#installBtn {
+/* ===== INSTALL POPUP ===== */
+.install-overlay {
   position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(135deg, #800080, #b000b5);
-  color: #fff;
-  padding: 15px 24px;
-  font-size: 1.1rem;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.install-overlay.hidden {
+  display: none;
+}
+
+.install-card {
+  background: #ffffff;
+  width: 90%;
+  max-width: 380px;
+  padding: 28px;
+  border-radius: 18px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  animation: scaleIn 0.3s ease;
+}
+
+.install-card h3 {
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+}
+
+.install-card p {
+  font-size: 1rem;
+  color: #555;
+  margin-bottom: 22px;
+}
+
+.install-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.install-btn {
+  background: purple;
+  color: white;
+  padding: 12px 18px;
+  border-radius: 10px;
   font-weight: 700;
   border: none;
-  border-radius: 49px;
   cursor: pointer;
-  z-index: 9999;
-  box-shadow: 0 10px 25px rgba(128,0,128,0.4);
-  letter-spacing: 0.3px;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-  opacity: 0;
-  pointer-events: none;
 }
 
-#installBtn:hover {
-  transform: translateX(-50%) scale(1.05);
-  box-shadow: 0 14px 30px rgba(128,0,128,0.55);
+.close-btn {
+  background: #e5e7eb;
+  color: #333;
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
 }
 
-#installBtn:active {
-  transform: translateX(-50%) scale(0.97);
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 
@@ -840,8 +883,6 @@
         </form>
     </section>
 
-<button id="installBtn">Get RentBook App</button>
-
 
     <!-- CTA SECTION -->
     <section class="py-20 px-6 text-center text-white" style="background-color: purple;">
@@ -865,28 +906,43 @@
         © 2025 RentBook. All rights reserved.
     </footer>
 
+
+
+    <!-- INSTALL APP POPUP -->
+<div id="installPopup" class="install-overlay hidden">
+  <div class="install-card">
+    <h3>Install RentBook App</h3>
+    <p>
+      Add RentBook to your home screen for faster access and an app-like experience.
+    </p>
+
+    <div class="install-actions">
+      <button id="installConfirm" class="install-btn">
+        Install App
+      </button>
+      <button id="installClose" class="close-btn">
+        Maybe later
+      </button>
+    </div>
+  </div>
+</div>
+
+
+
+    
 <script>
-const installBtn = document.getElementById('installBtn');
 let deferredPrompt = null;
 
-// Show button after 1 second
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    installBtn.style.opacity = '1';
-    installBtn.style.pointerEvents = 'auto';
-  }, 1000);
-});
+const popup = document.getElementById('installPopup');
+const installBtn = document.getElementById('installConfirm');
+const closeBtn = document.getElementById('installClose');
 
-// Update button text
-function updateText() {
-  if (
+// Check if app is already installed
+function isInstalled() {
+  return (
     window.matchMedia('(display-mode: standalone)').matches ||
     window.navigator.standalone === true
-  ) {
-    installBtn.textContent = 'Open RentBook';
-  } else {
-    installBtn.textContent = 'Get RentBook App';
-  }
+  );
 }
 
 // Capture install prompt
@@ -895,50 +951,50 @@ window.addEventListener('beforeinstallprompt', (e) => {
   deferredPrompt = e;
 });
 
-// Click behavior
+// Show popup after 1 second (ONLY if not installed)
+window.addEventListener('load', () => {
+  if (!isInstalled()) {
+    setTimeout(() => {
+      popup.classList.remove('hidden');
+    }, 1000);
+  }
+});
+
+// Install click
 installBtn.addEventListener('click', async () => {
-
-  // Already installed → open
-  if (
-    window.matchMedia('(display-mode: standalone)').matches ||
-    window.navigator.standalone === true
-  ) {
-    window.focus();
+  if (!deferredPrompt) {
+    alert('Installation is not available right now.');
     return;
   }
 
-  // Install available
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
-    const result = await deferredPrompt.userChoice;
+  deferredPrompt.prompt();
+  const result = await deferredPrompt.userChoice;
 
-    if (result.outcome === 'accepted') {
-      installBtn.textContent = 'Open RentBook';
-    }
-
-    deferredPrompt = null;
-    return;
+  if (result.outcome === 'accepted') {
+    popup.classList.add('hidden');
   }
 
-  // Install not available → alert
-  alert(
-    'RentBook cannot be installed right now.\n\n' +
-    'Make sure:\n' +
-    '• You are using HTTPS or localhost\n' +
-    '• Service Worker is registered\n' +
-    '• App is not already installed'
-  );
+  deferredPrompt = null;
 });
 
-// When installed
+// Close popup
+closeBtn.addEventListener('click', () => {
+  popup.classList.add('hidden');
+});
+
+// Close when clicking outside modal
+popup.addEventListener('click', (e) => {
+  if (e.target === popup) {
+    popup.classList.add('hidden');
+  }
+});
+
+// When installed → never show again
 window.addEventListener('appinstalled', () => {
-  installBtn.textContent = 'Open RentBook';
+  popup.classList.add('hidden');
 });
-
-// Initial state
-updateText();
 </script>
-    
+
 
     <script>
         const openBtn = document.getElementById('openDemo');
@@ -1152,4 +1208,5 @@ I’m passionate about motivating young teens to explore technology, learn new s
 
 
 </html>
+
 
