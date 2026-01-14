@@ -16,19 +16,19 @@
     ],
     "icons": [
         {
-            "src": "assets/imgs/logo.png",
+            "src": "assets/app.png",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "assets/imgs/logo.png",
+            "src": "assets/app.png",
             "sizes": "192x192",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "assets/imgs/logo.png",
+            "src": "assets/app.png",
             "sizes": "144x144",
             "type": "image/png",
             "purpose": "maskable"
@@ -58,7 +58,7 @@
             "url": "/add.html",
             "icons": [
                 {
-                    "src": "assets/imgs/logo.png",
+                    "src": "assets/app.png",
                     "sizes": "96x96"
                 }
             ]
@@ -70,7 +70,7 @@
             "url": "/bookings.html",
             "icons": [
                 {
-                    "src": "assets/imgs/logo.png",
+                    "src": "assets/app.png",
                     "sizes": "96x96"
                 }
             ]
@@ -82,7 +82,7 @@
             "url": "/inventory.html",
             "icons": [
                 {
-                    "src": "assets/imgs/logo.png",
+                    "src": "assets/app.png",
                     "sizes": "96x96"
                 }
             ]
