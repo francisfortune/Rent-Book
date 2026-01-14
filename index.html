@@ -929,15 +929,14 @@
 
 
 
-    
-<script>
+    <script>
 let deferredPrompt = null;
 
 const popup = document.getElementById('installPopup');
 const installBtn = document.getElementById('installConfirm');
 const closeBtn = document.getElementById('installClose');
 
-// Check if app is already installed
+// ✅ Robust install detection
 function isInstalled() {
   return (
     window.matchMedia('(display-mode: standalone)').matches ||
@@ -951,50 +950,52 @@ window.addEventListener('beforeinstallprompt', (e) => {
   deferredPrompt = e;
 });
 
-// Show popup after 1 second (ONLY if not installed)
+// 🔥 Main logic
 window.addEventListener('load', () => {
-  if (!isInstalled()) {
-    setTimeout(() => {
-      popup.classList.remove('hidden');
-    }, 1000);
+  // If already installed → destroy popup completely
+  if (isInstalled()) {
+    popup.remove();
+    return;
   }
+
+  // Not installed → show popup after 1s
+  setTimeout(() => {
+    popup.classList.remove('hidden');
+  }, 1000);
 });
 
 // Install click
 installBtn.addEventListener('click', async () => {
   if (!deferredPrompt) {
-    alert('Installation is not available right now.');
+    alert('Installation not available yet.');
     return;
   }
 
   deferredPrompt.prompt();
-  const result = await deferredPrompt.userChoice;
+  const { outcome } = await deferredPrompt.userChoice;
 
-  if (result.outcome === 'accepted') {
-    popup.classList.add('hidden');
+  if (outcome === 'accepted') {
+    popup.remove(); // 🔥 remove from DOM
   }
 
   deferredPrompt = null;
 });
 
-// Close popup
+// Close popup (but keep asking next reload)
 closeBtn.addEventListener('click', () => {
   popup.classList.add('hidden');
 });
 
-// Close when clicking outside modal
+// Click outside modal
 popup.addEventListener('click', (e) => {
-  if (e.target === popup) {
-    popup.classList.add('hidden');
-  }
+  if (e.target === popup) popup.classList.add('hidden');
 });
 
-// When installed → never show again
+// App installed event
 window.addEventListener('appinstalled', () => {
-  popup.classList.add('hidden');
+  popup.remove(); // 🔥 permanently gone
 });
 </script>
-
 
     <script>
         const openBtn = document.getElementById('openDemo');
@@ -1208,6 +1209,7 @@ I’m passionate about motivating young teens to explore technology, learn new s
 
 
 </html>
+
 
 
 
