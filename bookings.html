@@ -949,10 +949,13 @@
 
                 <!-- Filters -->
                 <div class="filters">
-                    <select id="filterStatus">
-                        <option value="">All Status</option>
-                        <option value="active">Active</option>
-                        <option value="done">Returned</option>
+                        <select id="filterStatus">
+
+<option value="">All Status</option>
+<option value="active">Active</option>
+<option value="returned">Returned</option>
+<option value="overdue">Overdue</option>
+
                     </select>
 
                     <input type="date" id="filterDate">
@@ -990,20 +993,29 @@
 
             </section>
 
-            <div class="modal-overlay" id="bookingModal">
-                <div class="modal-card" style="margin-top: 70px;">
+         <div class="modal-overlay" id="bookingModal">
+  <div class="modal-card" style="margin-top: 50px;">
+    <div class="modal-header flex justify-between items-center">
 
-                    <div class="modal-header">
-                        <h3 id="modalTitle">Booking</h3>
-                        <button onclick="closeModal()">✕</button>
-                    </div>
+<div class="flex items-center gap-2">
 
-                    <div id="modalContent" class="modal-body"></div>
+<h3 id="modalTitle">Booking</h3>
 
-                </div>
-            </div>
+<button id="editBookingBtn"
+class="p-2 hover:bg-gray-100 rounded-lg hidden">
 
+<ion-icon name="create-outline"></ion-icon>
 
+</button>
+
+</div>
+
+<button onclick="closeModal()">✕</button>
+
+</div>
+    <div id="modalContent" class="modal-body overflow-auto"></div>
+  </div>
+</div>
 
         </div><!-- =============== Bottom Navigation (Mobile) ================ -->
         <nav class="bottom-nav">

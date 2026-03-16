@@ -444,7 +444,7 @@
                 <h1>Login</h1>
 
                 <div class="input-box">
-                    <input type="email" name="" id="loginEmail" placeholder="Email" required>
+                  <input type="email" id="loginEmail" placeholder="Email" required>
                     <i class="fas fa-envelope"></i>
                 </div>
 
@@ -460,7 +460,7 @@
 
                 
                 <div class="forgot-link">
-                    <a href="#">Forgot Password</a>
+                    <a href="#" id="forgotPassword">Forgot Password?</a>
                 </div>
                 <button type="submit" class="btn">Login</button>
 
@@ -523,7 +523,67 @@ function togglePassword(inputId, icon) {
         icon.classList.add("fa-eye");
     }
 }
+document.addEventListener("DOMContentLoaded", () => {
+
+  const resetModal = document.getElementById("resetModal");
+  const forgotPassword = document.getElementById("forgotPassword");
+  const closeReset = document.getElementById("closeReset");
+
+  if (!resetModal || !forgotPassword || !closeReset) {
+    console.error("Reset modal elements not found");
+    return;
+  }
+
+  forgotPassword.addEventListener("click", (e) => {
+    e.preventDefault();
+    resetModal.classList.remove("hidden");
+    resetModal.classList.add("flex");
+  });
+
+  closeReset.addEventListener("click", () => {
+    resetModal.classList.add("hidden");
+  });
+
+});
+
+
     </script>
+
+    <!-- RESET PASSWORD MODAL -->
+<div id="resetModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50">
+
+  <div class="bg-white p-6 rounded-xl w-80 shadow-lg text-center">
+
+    <h2 class="text-xl font-semibold mb-3">Reset Password</h2>
+
+    <p class="text-sm text-gray-500 mb-4">
+      Enter your account email and we’ll send you a reset link.
+    </p>
+
+    <input
+      type="email"
+      id="resetEmail"
+      placeholder="Enter your email"
+      class="w-full p-3 border rounded-lg mb-4"
+    >
+
+    <button
+      id="sendReset"
+      class="w-full bg-purple text-white py-2 rounded-lg mb-2" style="background-color: var(--main);"
+    >
+      Send Reset Link
+    </button>
+
+    <button
+      id="closeReset"
+      class="text-sm text-gray-500"
+    >
+      Cancel
+    </button>
+
+  </div>
+
+</div>
     <script type="module" src="assets/js/auth.js"></script>
 </body>
 
