@@ -1,461 +1,568 @@
 import { auth, db } from "./firebase.js";
 import {
-  collection,
-  query,
-  where,
-  getDocs,
-  orderBy,
-  onSnapshot,
-  doc,
-  deleteDoc,
-  updateDoc
+collection,
+query,
+orderBy,
+onSnapshot,
+doc,
+updateDoc,
+getDocs,
+where,
+deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { onAuthStateChanged } from
-  "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-/* =========================
-   BUSINESS LOOKUP
-========================= */
-async function getBusinessIdByEmail(email) {
-  const q = query(
-    collection(db, "businessMembers"),
-    where("email", "==", email)
-  );
-  const snap = await getDocs(q);
-  if (snap.empty) throw new Error("No business");
-  return snap.docs[0].data().businessId;
-}
-function setUserAvatar(businessName) {
-  const avatar = document.getElementById("user-avatar");
-  if (!avatar || !businessName) return;
+import { onAuthStateChanged }
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-  avatar.textContent = businessName.charAt(0).toUpperCase();
-}
+let currentRole="viewer"
+let currentBusiness=null
+let allBookings=[]
 
 
-/* =========================
-   INVENTORY RESTORE (ON RETURN)
-========================= */
-/* =========================
-   INVENTORY RESTORE (FIXED)
-========================= */
-async function restoreInventory(businessId, items) {
-  const invSnap = await getDocs(
-    collection(db, "businesses", businessId, "inventory")
-  );
+/* ---------------- STATUS SYSTEM ---------------- */
 
-  for (const item of items) {
-    const match = invSnap.docs.find(d =>
-      d.data().name.toLowerCase() === item.name.toLowerCase()
-    );
+function getBookingStatus(b){
 
-    if (!match) continue;
+if(b.status==="returned") return "returned"
 
-    // ✅ Restore ONLY what came from your inventory
-    const restorableQty = Math.max(0, item.qty - (item.shortage || 0));
+const today=new Date()
+const returnDate=b.event?.returnDate ? new Date(b.event.returnDate) : null
 
-    if (restorableQty === 0) continue;
+if(returnDate && returnDate < today) return "overdue"
 
-    await updateDoc(match.ref, {
-      availableQuantity:
-        match.data().availableQuantity + restorableQty
-    });
-  }
+return "active"
+
 }
 
-/* =========================
-   RETURN BOOKING
-========================= */
-/* =========================
-   RETURN BOOKING (FIXED)
-========================= */
-window.returnBooking = async function (bookingId, businessId, items) {
-  // 🔶 Overbooking reminder
-  const hasBorrowedItems = items.some(i => i.shortage > 0);
 
-  if (hasBorrowedItems) {
-    const confirmBorrowReturn = confirm(
-      "This booking was overbooked.\nHave you returned borrowed items to the vendor?"
-    );
-    if (!confirmBorrowReturn) return;
-  }
+/* ---------------- STATUS BADGE ---------------- */
 
-  if (!confirm("Mark this booking as returned?")) return;
+function statusBadge(status){
 
-  // Update booking
-  await updateDoc(
-    doc(db, "businesses", businessId, "bookings", bookingId),
-    { status: "returned" }
-  );
+const map={
+active:"bg-green-100 text-green-700",
+returned:"bg-gray-200 text-gray-700",
+overdue:"bg-red-100 text-red-700"
+}
 
-  // Restore inventory
-  await restoreInventory(businessId, items);
+return `
+<span class="px-3 py-1 rounded-full text-xs font-bold ${map[status]}">
+${status.toUpperCase()}
+</span>
+`
 
-  // Close modal
-  closeModal();
+}
 
-  alert("Booking marked as returned successfully");
-};
 
-// window.deleteBooking = async function (bookingId, businessId) {
-//   if (!confirm("Are you sure you want to delete this booking? This will NOT restore inventory automatically. Continue?")) return;
+/* ---------------- TOTAL ---------------- */
 
-//   await deleteDoc(doc(db, "businesses", businessId, "bookings", bookingId));
-//   closeModal();
-// };
+function calcTotal(items){
 
-/* =========================
-   OPEN MODAL
-========================= */
-window.openBooking = function (booking, id, businessId) {
-  modalTitle.textContent = booking.client.name;
+let total=0
 
-  bookingModal.style.display = "flex";
-document.body.style.overflow = "hidden";
+items.forEach(i=>{
+total+=Number(i.price)*Number(i.qty)
+})
 
-  // Calculate balance remaining
-  const totalAmount = booking.payment?.total || 0;
-  const amountPaid = booking.payment?.paid || 0;
-  const balanceRemaining = totalAmount - amountPaid;
-  const paymentStatus = balanceRemaining <= 0 ? 'Fully Paid' : `₦${balanceRemaining.toLocaleString()} remaining`;
-  const paymentStatusClass = balanceRemaining <= 0 ? 'text-green-600' : 'text-orange-600';
+return total
 
-modalContent.innerHTML = `
+}
+
+
+/* ---------------- OPEN BOOKING ---------------- */
+
+window.openBooking=function(booking,id,businessId){
+
+const modal=document.getElementById("bookingModal")
+const content=document.getElementById("modalContent")
+
+const total=calcTotal(booking.items)
+const paid=booking.paid||0
+const balance=total-paid
+const status=getBookingStatus(booking)
+
+content.innerHTML=`
+
 <div class="space-y-6">
 
-  <!-- CLIENT HEADER -->
-  <div class="flex items-center justify-between">
-    <div>
-      <h3 class="text-lg font-bold">${booking.client.name}</h3>
-      <p class="text-sm text-gray-500">${booking.client.phone || ""}</p>
-    </div>
-    <span class="px-3 py-1 rounded-full text-xs font-semibold ${
-      booking.status === "active"
-        ? "bg-purple-100 text-purple-700"
-        : "bg-green-100 text-green-700"
-    }">
-      ${booking.status}
-    </span>
-  </div>
+<!-- HEADER -->
 
-  <!-- DATES -->
-  <div class="grid grid-cols-2 gap-3 text-sm">
-    <div class="bg-gray-50 p-3 rounded-lg">
-      <p class="text-xs text-gray-500">Event</p>
-      <p class="font-medium">${booking.event.date}</p>
-    </div>
-    <div class="bg-gray-50 p-3 rounded-lg">
-      <p class="text-xs text-gray-500">Return</p>
-      <p class="font-medium">${booking.event.returnDate}</p>
-    </div>
-  </div>
+<div class="bg-gradient-to-r from-purple-700 to-purple-500 text-white p-6 rounded-2xl shadow">
 
-  <!-- ITEMS -->
-  <div>
-    <h4 class="font-semibold mb-2">Items</h4>
-    <div class="space-y-2">
-      ${booking.items.map(i => `
-        <div class="flex justify-between bg-gray-50 p-3 rounded-lg text-sm">
-          <span>${i.name} × ${i.qty}</span>
-          <span>₦${i.total.toLocaleString()}</span>
-        </div>
-      `).join("")}
-    </div>
-  </div>
+<div class="flex justify-between items-center">
 
-  <!-- OVERBOOK ALERT -->
-  ${booking.items.some(i => i.shortage > 0) ? `
-    <div class="p-4 bg-orange-50 border border-orange-200 rounded-xl">
-      <p class="font-semibold text-orange-700 mb-1">Overbooked</p>
-      ${booking.items.filter(i => i.shortage > 0)
-        .map(i => `<p class="text-sm">Borrow ${i.shortage} × ${i.name}</p>`)
-        .join("")}
-    </div>
-  ` : ""}
+<div>
 
-  <!-- PAYMENT -->
-  <div class="grid grid-cols-3 gap-2 text-center">
-    <div class="bg-gray-50 p-3 rounded-lg">
-      <p class="text-xs">Total</p>
-      <p class="font-bold">₦${totalAmount.toLocaleString()}</p>
-    </div>
-    <div class="bg-gray-50 p-3 rounded-lg">
-      <p class="text-xs">Paid</p>
-      <p class="font-bold text-green-600">₦${amountPaid.toLocaleString()}</p>
-    </div>
-    <div class="bg-gray-50 p-3 rounded-lg">
-      <p class="text-xs">Balance</p>
-      <p class="font-bold ${
-        balanceRemaining <= 0 ? "text-green-600" : "text-orange-600"
-      }">
-        ₦${balanceRemaining.toLocaleString()}
-      </p>
-    </div>
-  </div>
+<h2 class="text-2xl font-bold">${booking.client.name}</h2>
 
-  ${booking.notes ? `
-  <hr class="my-4">
-  <div>
-    <h4 class="font-bold mb-1">Notes</h4>
-    <p class="text-gray-700 text-sm whitespace-pre-line">
-      ${booking.notes}
-    </p>
-  </div>
-` : ''}
-
-
-  <!-- ACTION -->
-  ${booking.status === "active" ? `
-    <button
-      class="w-full py-3 bg-purple-600 text-white rounded-xl font-semibold"
-      onclick='returnBooking("${id}", "${businessId}", ${JSON.stringify(booking.items)})'>
-      Mark as Returned
-    </button>
-  ` : ""}
+<p class="opacity-90">${booking.client.phone||""}</p>
+<p class="opacity-80 text-sm">${booking.client.email||""}</p>
 
 </div>
-    </div>
-  `;
 
-  bookingModal.style.display = "flex";
-};
-window.closeModal = function () {
-  bookingModal.style.display = "none";
-  document.body.style.overflow = "";
-};
-bookingModal.addEventListener("click", (e) => {
-  if (e.target === bookingModal) {
-    closeModal();
-  }
-});
+${statusBadge(status)}
 
-/* =========================
-   LOAD BOOKINGS
-========================= */
-function renderRow(b, id, businessId) {
- const overbooked =
-  b.status === "active" &&
-  b.items?.some(i => i.shortage > 0);
+</div>
 
-  return `
-    <tr class="hover:bg-gray-50 transition-colors">
-      <td class="font-medium text-gray-800">
-        ${b.client.name}
-        ${overbooked ? `
-          <span class="ml-2 px-2 py-0.5 text-xs rounded-full bg-orange-100 text-orange-700">
-            Overbooked
-          </span>
-        ` : ``}
-      </td>
+</div>
 
-      <td class="text-gray-600">${b.event.date}</td>
-      <td class="text-gray-600">${b.items.length} items</td>
 
-      <td>
-        <span class="status ${b.status} text-xs uppercase tracking-wider">
-          ${b.status}
-        </span>
-      </td>
+<!-- EVENT -->
 
-      <td>
-        <button class="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
-          onclick='openBooking(${JSON.stringify(b)}, "${id}", "${businessId}")'>
-          <ion-icon name="eye-outline" size="small"></ion-icon>
-        </button>
-      </td>
-    </tr>
-  `;
+<div class="bg-purple-50 p-5 rounded-xl">
+
+<h3 class="font-bold text-purple-700 mb-3">
+Event Details
+</h3>
+
+<div class="grid grid-cols-2 gap-4 text-sm">
+
+<div>
+<label class="text-gray-500">Event Type</label>
+<p class="font-semibold">${booking.event?.type||""}</p>
+</div>
+
+<div>
+<label class="text-gray-500">Location</label>
+<p class="font-semibold">${booking.event?.location||""}</p>
+</div>
+
+<div>
+<label class="text-gray-500">Event Date</label>
+<p class="font-semibold">${booking.event?.date||""}</p>
+</div>
+
+<div>
+<label class="text-gray-500">Return Date</label>
+<p class="font-semibold">${booking.event?.returnDate||""}</p>
+</div>
+
+</div>
+
+</div>
+
+
+<!-- ITEMS -->
+
+<div class="bg-white border rounded-xl p-5 shadow-sm">
+
+<h3 class="text-lg font-bold text-purple-700 mb-4">
+Items
+</h3>
+
+${booking.items.map(i=>`
+
+<div class="flex justify-between items-center border-b py-3">
+
+<div>
+
+<p class="font-bold text-lg text-gray-900">
+${i.name}
+</p>
+
+<p class="text-sm text-gray-500 font-semibold">
+Qty: ${i.qty}
+</p>
+
+</div>
+
+<p class="font-extrabold text-purple-700 text-xl">
+₦${Number(i.price)*Number(i.qty)}
+</p>
+
+</div>
+
+`).join("")}
+
+</div>
+
+
+<!-- PAYMENT -->
+
+<div class="bg-purple-50 p-5 rounded-xl">
+
+<h3 class="font-bold text-purple-700 mb-3">
+Payment
+</h3>
+
+<div class="space-y-1 text-sm">
+
+<p>Total Amount: <b>₦${total}</b></p>
+<p>Amount Paid: <b>₦${paid}</b></p>
+
+<p class="font-bold text-purple-700 text-lg">
+Balance: ₦${balance}
+</p>
+
+</div>
+
+</div>
+
+
+<!-- ACTIONS -->
+
+<div class="space-y-3">
+
+${currentRole!=="viewer" ? `
+
+<button
+class="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-bold"
+onclick='openEditModal(${JSON.stringify(booking)},"${id}","${businessId}")'>
+
+Edit Booking
+
+</button>
+
+`:``}
+
+
+${currentRole!=="viewer" && status!=="returned" ? `
+
+<button
+class="w-full bg-purple-800 hover:bg-purple-900 text-white py-3 rounded-xl font-bold"
+onclick='returnBooking("${id}","${businessId}")'>
+
+Mark Returned
+
+</button>
+
+`:``}
+
+
+${currentRole==="owner" ? `
+
+<button
+class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold"
+onclick='deleteBooking("${id}","${businessId}")'>
+
+Delete Booking
+
+</button>
+
+`:``}
+
+</div>
+
+</div>
+
+`
+
+modal.style.display="flex"
+
 }
 
-/* =========================
-   AUTH GUARD + LIVE DATA
-========================= */
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = "signup.html";
-    return;
-  }
 
-  try {
-    const businessId = await getBusinessIdByEmail(user.email);
-    const tbody = document.getElementById("bookingsTable");
+/* ---------------- EDIT MODAL ---------------- */
 
-    const q = query(
-      collection(db, "businesses", businessId, "bookings"),
-      orderBy("createdAt", "desc")
-    );
+window.openEditModal=function(b,id,businessId){
 
-    onSnapshot(q, (snap) => {
-      const allBookings = snap.docs.map(d => ({ id: d.id, data: d.data() }));
+const content=document.getElementById("modalContent")
 
-      function filterAndRender() {
-        const status = document.getElementById("filterStatus").value;
-        const date = document.getElementById("filterDate").value;
-        const search = document.getElementById("searchInput").value.toLowerCase();
+content.innerHTML=`
 
-        tbody.innerHTML = "";
+<div class="space-y-4">
 
-        const filtered = allBookings.filter(({ data }) => {
-          const matchStatus = !status || data.status === status;
-          const matchDate = !date || data.event.date === date;
-          const matchSearch = !search || data.client.name.toLowerCase().includes(search);
-          return matchStatus && matchDate && matchSearch;
-        });
+<h2 class="text-xl font-bold text-purple-700">
+Edit Booking
+</h2>
 
-        if (filtered.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; opacity:0.6; padding: 40px;">No matching bookings found</td></tr>`;
-          return;
-        }
+<input id="editName" value="${b.client.name}" class="border p-2 w-full rounded">
 
-        filtered.forEach(({ id, data }) => {
-          tbody.innerHTML += renderRow(data, id, businessId);
-        });
-      }
+<input id="editPhone" value="${b.client.phone||""}" class="border p-2 w-full rounded">
 
-      // Re-filter when inputs change
-      document.getElementById("filterStatus").onchange = filterAndRender;
-      document.getElementById("filterDate").onchange = filterAndRender;
-      document.getElementById("searchInput").oninput = filterAndRender;
+<input id="editEmail" value="${b.client.email||""}" class="border p-2 w-full rounded">
 
-      filterAndRender();
-    });
+<input id="editDate" type="date" value="${b.event?.date||""}" class="border p-2 w-full rounded">
 
-  } catch (err) {
-    console.error("Booking load failed:", err);
-    window.location.href = "setup.html";
-  }
-});
+<input id="editReturn" type="date" value="${b.event?.returnDate||""}" class="border p-2 w-full rounded">
+
+<input id="editLocation" value="${b.event?.location||""}" class="border p-2 w-full rounded">
 
 
-// ===== DYNAMIC BUY ME A COFFEE BUTTON WITH FLOATING ANIMATION =====
-(function() {
-  const bmcLink = "https://www.buymeacoffee.com/francisfortune"; // your profile link
+<div class="bg-purple-50 p-3 rounded-xl">
 
-  // Create Buy Me a Coffee button
-  const coffeeBtn = document.createElement("button");
-  coffeeBtn.id = "buyCoffeeBtn";
-  coffeeBtn.innerHTML = "☕ Support Me";
-  coffeeBtn.style.position = "fixed";
-  coffeeBtn.style.bottom = "80px"; // leave space for bottom nav
-  coffeeBtn.style.right = "20px";
-  coffeeBtn.style.background = "Purple";
-  coffeeBtn.style.color = "#ffffff";
-  coffeeBtn.style.padding = "0.7rem 1.5rem";
-  coffeeBtn.style.fontWeight = "700";
-  coffeeBtn.style.borderRadius = "50px";
-  coffeeBtn.style.border = "none";
-  coffeeBtn.style.cursor = "pointer";
-  coffeeBtn.style.boxShadow = "0 8px 16px rgba(0,0,0,0.3)";
-  coffeeBtn.style.zIndex = "9999";
-  coffeeBtn.style.display = "flex";
-  coffeeBtn.style.alignItems = "center";
-  coffeeBtn.style.justifyContent = "center";
-  coffeeBtn.style.transition = "transform 0.3s, box-shadow 0.3s";
-  coffeeBtn.style.fontSize = "1.3rem";
+<h3 class="font-bold text-purple-700 mb-2">
+Items
+</h3>
 
-  // Hover effect
-  coffeeBtn.onmouseover = () => {
-    coffeeBtn.style.transform = "translateY(-6px)";
-    coffeeBtn.style.boxShadow = "0 12px 24px rgba(0,0,0,0.35)";
-  };
-  coffeeBtn.onmouseout = () => {
-    coffeeBtn.style.transform = "translateY(0)";
-    coffeeBtn.style.boxShadow = "0 8px 16px rgba(0,0,0,0.3)";
-  };
+<div id="itemsEditor">
 
-  // Floating animation CSS
-  const style = document.createElement("style");
-  style.innerHTML = `
-    @keyframes floatButton {
-      0% { transform: translateY(0px); }
-      50% { transform: translateY(-8px); }
-      100% { transform: translateY(0px); }
-    }
-    #buyCoffeeBtn {
-      animation: floatButton 3s ease-in-out infinite;
-    }
-    /* Optional: Product Hunt button styles if used */
-    #productHuntBtn {
-      animation: floatButton 3s ease-in-out infinite;
-      background: linear-gradient(135deg, #DA552F, #FF6F4C);
-      color: #fff;
-      font-weight: 700;
-      border-radius: 50px;
-      border: none;
-      cursor: pointer;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-      padding: 0.7rem 1.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.3s, box-shadow 0.3s;
-      z-index: 9999;
-      position: fixed;
-      bottom: 20px; /* will adjust dynamically */
-      right: 20px;
-    }
-    #productHuntBtn:hover {
-      transform: translateY(-6px);
-      box-shadow: 0 12px 24px rgba(0,0,0,0.35);
-    }
-  `;
-  document.head.appendChild(style);
+${b.items.map(i=>`
 
-  // Responsive function
-  function updateBtnSize() {
-    const bottomMargin = 20; // default bottom spacing
-    if (window.innerWidth < 768) {
-      coffeeBtn.style.padding = "0.5rem 1.3rem";
-      coffeeBtn.style.fontSize = "1.4rem";
-      coffeeBtn.style.bottom = "130px"; // extra space for bottom nav
-      coffeeBtn.style.right = "15px";
-      // If Product Hunt button is used
-      const phBtn = document.getElementById("productHuntBtn");
-      if (phBtn) phBtn.style.bottom = "40px"; // below coffee button
-    } else {
-      coffeeBtn.style.padding = "0.7rem 1.5rem";
-      coffeeBtn.style.fontSize = "1rem";
-      coffeeBtn.style.bottom = "80px";
-      coffeeBtn.style.right = "20px";
-      const phBtn = document.getElementById("productHuntBtn");
-      if (phBtn) phBtn.style.bottom = "20px";
-    }
-  }
-  window.addEventListener("resize", updateBtnSize);
-  updateBtnSize();
+<div class="grid grid-cols-3 gap-2 mb-2">
 
-  // Append Buy Me a Coffee button
-  document.body.appendChild(coffeeBtn);
+<input class="border p-2 rounded item-name" value="${i.name}">
+<input class="border p-2 rounded item-price" type="number" value="${i.price}">
+<input class="border p-2 rounded item-qty" type="number" value="${i.qty}">
 
-  // Popup portal
-  coffeeBtn.addEventListener("click", () => {
-    const popupWidth = 500;
-    const popupHeight = 700;
-    const left = (window.innerWidth / 2) - (popupWidth / 2);
-    const top = (window.innerHeight / 2) - (popupHeight / 2);
+</div>
 
-    window.open(
-      bmcLink,
-      "BuyMeACoffee",
-      `width=${popupWidth},height=${popupHeight},top=${top},left=${left},resizable=yes,scrollbars=yes`
-    );
-  });
+`).join("")}
 
-  // Tooltip/Bio
-  coffeeBtn.title = `
-Hi! I'm Francis Fortune.
-I’m passionate about motivating young teens to explore technology, learn new skills, and create innovative solutions.
-.
-`;
+</div>
 
-  // ===== PRODUCT HUNT BUTTON (COMMENTED OUT FOR NOW) =====
-  /*
-  const phLink = "https://www.producthunt.com/posts/your-product";
-  const phBtn = document.createElement("button");
-  phBtn.id = "productHuntBtn";
-  phBtn.innerHTML = "🚀 Product Hunt";
-  phBtn.onclick = () => window.open(phLink, "_blank");
-  document.body.appendChild(phBtn);
-  updateBtnSize();
-  */
-})();
+<button
+class="mt-2 bg-purple-600 text-white px-4 py-2 rounded"
+onclick="addItem()">
+
++ Add Item
+
+</button>
+
+</div>
+
+
+<input
+id="editPaid"
+value="${b.paid||0}"
+type="number"
+placeholder="Enter amount customer has paid"
+class="border-2 border-purple-200 focus:border-purple-500 p-3 w-full rounded-lg outline-none">
+
+
+<textarea id="editNotes"
+class="border p-2 w-full rounded"
+placeholder="Additional notes about this booking">
+
+${b.notes||""}
+
+</textarea>
+
+
+<button
+class="w-full bg-purple-600 text-white py-3 rounded-xl font-bold"
+onclick="saveEdit('${id}','${businessId}')">
+
+Save Changes
+
+</button>
+
+</div>
+
+`
+
+}
+
+
+/* ---------------- ADD ITEM ---------------- */
+
+window.addItem=function(){
+
+const editor=document.getElementById("itemsEditor")
+
+editor.innerHTML+=`
+
+<div class="grid grid-cols-3 gap-2 mb-2">
+
+<input class="border p-2 rounded item-name" placeholder="Item name">
+
+<input class="border p-2 rounded item-price" type="number" placeholder="Price">
+
+<input class="border p-2 rounded item-qty" type="number" placeholder="Qty">
+
+</div>
+
+`
+
+}
+
+
+/* ---------------- SAVE EDIT ---------------- */
+
+window.saveEdit=async function(id,businessId){
+
+const items=[]
+
+document.querySelectorAll("#itemsEditor > div").forEach(row=>{
+
+items.push({
+
+name:row.querySelector(".item-name").value,
+price:Number(row.querySelector(".item-price").value),
+qty:Number(row.querySelector(".item-qty").value)
+
+})
+
+})
+
+await updateDoc(doc(db,"businesses",businessId,"bookings",id),{
+
+"client.name":document.getElementById("editName").value,
+"client.phone":document.getElementById("editPhone").value,
+"client.email":document.getElementById("editEmail").value,
+
+"event.date":document.getElementById("editDate").value,
+"event.returnDate":document.getElementById("editReturn").value,
+"event.location":document.getElementById("editLocation").value,
+
+items:items,
+paid:Number(document.getElementById("editPaid").value),
+notes:document.getElementById("editNotes").value
+
+})
+
+closeModal()
+
+}
+
+
+/* ---------------- RETURN ---------------- */
+
+window.returnBooking=async function(id,businessId){
+
+await updateDoc(doc(db,"businesses",businessId,"bookings",id),{
+status:"returned"
+})
+
+alert("Booking marked as returned")
+
+}
+
+
+/* ---------------- DELETE ---------------- */
+
+window.deleteBooking=async function(id,businessId){
+
+if(!confirm("Delete booking?")) return
+
+await deleteDoc(doc(db,"businesses",businessId,"bookings",id))
+
+closeModal()
+
+}
+
+
+/* ---------------- CLOSE MODAL ---------------- */
+
+window.closeModal=function(){
+document.getElementById("bookingModal").style.display="none"
+}
+
+
+/* ---------------- TABLE ---------------- */
+
+function renderRow(b,id,businessId){
+
+const status=getBookingStatus(b)
+
+const highlight=status==="overdue"?"style='background:#fff5f5'":""
+
+return`
+
+<tr ${highlight}>
+
+<td class="font-semibold">${b.client.name}</td>
+
+<td>${b.event?.date||""}</td>
+
+<td class="font-bold text-purple-700">
+${b.items.length} items
+</td>
+
+<td>${statusBadge(status)}</td>
+
+<td>
+
+<button
+class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded font-bold"
+onclick='openBooking(${JSON.stringify(b)},"${id}","${businessId}")'>
+
+View
+
+</button>
+
+</td>
+
+</tr>
+
+`
+
+}
+
+
+/* ---------------- FILTER ---------------- */
+
+const filterStatusEl=document.getElementById("filterStatus")
+const filterDateEl=document.getElementById("filterDate")
+const searchInputEl=document.getElementById("searchInput")
+
+function renderFilteredBookings(){
+
+const statusFilter=filterStatusEl.value
+const dateFilter=filterDateEl.value
+const search=searchInputEl.value.toLowerCase()
+
+const table=document.getElementById("bookingsTable")
+
+table.innerHTML=""
+
+let filtered=allBookings.filter(b=>{
+
+const status=getBookingStatus(b)
+
+const matchStatus=!statusFilter || status===statusFilter
+const matchDate=!dateFilter || b.event?.date===dateFilter
+const matchSearch=!search || b.client.name.toLowerCase().includes(search)
+
+return matchStatus && matchDate && matchSearch
+
+})
+
+if(!filtered.length){
+
+table.innerHTML=`<tr><td colspan="5">No bookings</td></tr>`
+return
+
+}
+
+filtered.forEach(b=>{
+table.innerHTML+=renderRow(b,b.id,currentBusiness)
+})
+
+}
+
+
+/* ---------------- LOAD BOOKINGS ---------------- */
+
+onAuthStateChanged(auth,async user=>{
+
+if(!user){
+window.location.href="signup.html"
+return
+}
+
+const memberSnap=await getDocs(
+query(collection(db,"businessMembers"),where("email","==",user.email))
+)
+
+const member=memberSnap.docs[0].data()
+
+currentRole=member.role
+currentBusiness=member.businessId
+
+const q=query(
+collection(db,"businesses",currentBusiness,"bookings"),
+orderBy("createdAt","desc")
+)
+
+onSnapshot(q,snap=>{
+
+allBookings=[]
+
+snap.forEach(docSnap=>{
+allBookings.push({
+id:docSnap.id,
+...docSnap.data()
+})
+})
+
+renderFilteredBookings()
+
+})
+
+})
+
+
+filterStatusEl.addEventListener("change",renderFilteredBookings)
+filterDateEl.addEventListener("change",renderFilteredBookings)
+searchInputEl.addEventListener("input",renderFilteredBookings)

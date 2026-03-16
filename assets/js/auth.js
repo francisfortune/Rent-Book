@@ -165,14 +165,91 @@ onAuthStateChanged(auth, async (user) => {
 
   window.location.href = "dashboard.html";
 });
-
 /* =========================
    PASSWORD RESET
 ========================= */
-window.resetPassword = async function () {
-  const email = document.getElementById("loginEmail")?.value.trim();
-  if (!email) return showMessage("Enter your email first");
 
-  await sendPasswordResetEmail(auth, email);
-  showMessage("Password reset email sent");
-};
+/* =========================
+   PASSWORD RESET MODAL
+========================= */
+document.addEventListener("DOMContentLoaded", () => {
+  const resetModal = document.getElementById("resetModal");
+  const forgotPassword = document.getElementById("forgotPassword");
+  const closeReset = document.getElementById("closeReset");
+  const sendResetBtn = document.getElementById("sendReset");
+
+  if (!resetModal || !forgotPassword || !closeReset || !sendResetBtn) {
+    console.error("Reset modal elements not found");
+    return;
+  }
+
+  // Open modal when user clicks "Forgot Password?"
+  forgotPassword.addEventListener("click", (e) => {
+    e.preventDefault();
+    resetModal.classList.remove("hidden");
+    resetModal.classList.add("flex");
+  });
+
+  // Close modal when user clicks "Cancel"
+  closeReset.addEventListener("click", () => {
+    resetModal.classList.add("hidden");
+  });
+
+  // Send password reset email
+  sendResetBtn.addEventListener("click", async () => {
+    const email = document.getElementById("resetEmail").value.trim();
+
+    if (!email) {
+      alert("Please enter your email.");
+      return;
+    }
+
+    try {
+      // Try sending the reset email
+      await sendPasswordResetEmail(auth, email);
+
+      // Success message
+      alert("📧 Reset link sent. Check your email.");
+      resetModal.classList.add("hidden");
+
+    } catch (error) {
+      console.error("Reset error:", error);
+
+      // If the account doesn't exist or is Google-only
+      if (error.code === "auth/user-not-found") {
+        alert("No password set for this account. Try logging in with Google.");
+      } else {
+        alert(error.message);
+      }
+    }
+  });
+});
+
+import { fetchSignInMethodsForEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+sendResetBtn.addEventListener("click", async () => {
+  const email = document.getElementById("resetEmail").value.trim();
+  if (!email) return alert("Please enter your email.");
+
+  try {
+    const methods = await fetchSignInMethodsForEmail(auth, email);
+
+    if (methods.includes("google.com")) {
+      alert("This account uses Google Sign-In. Use the Google login button.");
+      return;
+    }
+
+    if (!methods.includes("password")) {
+      alert("No password set for this account. Try logging in with Google.");
+      return;
+    }
+
+    await sendPasswordResetEmail(auth, email);
+    alert("📧 Reset link sent. Check your email.");
+    resetModal.classList.add("hidden");
+
+  } catch (error) {
+    console.error("Reset error:", error);
+    alert(error.message);
+  }
+});

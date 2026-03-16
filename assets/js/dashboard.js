@@ -188,25 +188,26 @@ function listenToRecentBookings(businessId) {
     }
   });
 }
-
 /* =========================
-   RECENT INVENTORY (RIGHT CARD)
+   REAL-TIME INVENTORY (SORTED NEWEST FIRST)
 ========================= */
-function listenToRecentInventory(businessId) {
+function listenToInventory(businessId) {
   const tbody = document.getElementById("recent-customers");
-  if (!tbody) return;
+  const totalInventoryEl = document.getElementById("total-inventory");
+  if (!tbody || !totalInventoryEl) return;
 
-  const q = query(
-    collection(db, "businesses", businessId, "inventory"),
-    orderBy("createdAt", "desc"),
-    limit(8)
-  );
+  const ref = collection(db, "businesses", businessId, "inventory");
+  const q = query(ref, orderBy("createdAt", "desc")); // sort newest first
 
-  onSnapshot(q, (snap) => {
+  onSnapshot(q, snap => {
+    // Update total inventory count
+    totalInventoryEl.textContent = snap.size;
+
+    // Update table
     tbody.innerHTML = "";
 
     if (snap.empty) {
-      tbody.innerHTML = `<tr><td style="text-align:center; opacity:.6; padding: 20px;">No inventory items yet</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; opacity:.6; padding: 20px;">No inventory items yet</td></tr>`;
       return;
     }
 
@@ -235,7 +236,6 @@ function listenToRecentInventory(businessId) {
     });
   });
 }
-
 /* =========================
    AUTH GUARD
 ========================= */
@@ -259,7 +259,7 @@ onAuthStateChanged(auth, async user => {
     listenToInventoryCount(businessId);
     listenToBookingStats(businessId);
     listenToRecentBookings(businessId);
-    listenToRecentInventory(businessId);
+    listenToInventory(businessId);
   } catch (err) {
     console.error("Dashboard error:", err);
     alert("Failed to load dashboard");
