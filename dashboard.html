@@ -786,10 +786,34 @@
 
                 </div>
 
-                <div class="user">
-                    <div id="user-avatar" style="
-      width: 100%;
-      height: 100%;
+                <!-- Topbar Right Section -->
+<div class="topbar-right" style="
+    display: flex;
+    align-items: center;
+    gap: 20px; /* space between notification and avatar */
+    flex-wrap: wrap;
+">
+
+  <!-- Notification Button -->
+  <div class="notification-wrapper" style="position: relative; cursor: pointer;">
+    <ion-icon name="notifications-outline" id="notifBtn" style="font-size: 2.5rem; color: purple;"></ion-icon>
+    <!-- Red dot -->
+    <span id="notifDot" style="
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 10px;
+        height: 10px;
+        background: red;
+        border-radius: 50%;
+        display: none;
+    "></span>
+  </div>
+
+  <!-- User Avatar -->
+  <div id="user-avatar" style="
+      width: 45px;
+      height: 45px;
       border-radius: 50%;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       display: flex;
@@ -797,13 +821,33 @@
       justify-content: center;
       color: white;
       font-weight: 700;
-      font-size: 1.2rem;
+      font-size: 1rem;
       text-transform: uppercase;
     ">
-                        ?
-                    </div>
-                </div>
+      ?
+  </div>
+</div>
 
+<!-- Notification Modal -->
+<div id="notifModal" style="
+    display: none;
+    position: fixed;
+    top: 60px;
+    right: 20px;
+    width: 320px;
+    max-height: 400px;
+    overflow-y: auto;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    z-index: 1000;
+    padding: 15px;
+">
+  <h3 style="margin-bottom: 10px; color: purple;">Notifications</h3>
+  <div id="notifList">
+    <p style="text-align:center; color: #888;">No notifications yet</p>
+  </div>
+</div>
             </div><!-- ======================= Dashboard Content ========================= -->
 
             <section class="dashboard"><!-- Welcome Section -->
@@ -883,13 +927,13 @@
 
                         <table>
                             <thead>
-                                <tr>
-                                    <td>Item</td>
-                                    <td>Customer</td>
-                                    <td>Qty</td>
-                                    <td>Status</td>
-                                </tr>
-                            </thead>
+  <tr>
+    <th class="py-3">Event Date</th>
+    <th class="py-3">Customer</th>
+    <th class="py-3">Location</th>
+    <th class="py-3">Status</th>
+  </tr>
+</thead>
                             <tbody id="recent-bookings">
                                 <tr>
                                     <td colspan="4" style="text-align:center; opacity:0.6;">
