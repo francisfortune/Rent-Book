@@ -92,16 +92,15 @@ function listenToBookingStats(businessId) {
     let overbooked = 0;
     const now = new Date();
 
-for (const d of snap.docs) {
-  const b = d.data();
+    for (const d of snap.docs) {
+      const b = d.data();
 
- if (
-  b.status === "active" &&
-  b.items?.some(i => Number(i.shortage) > 0)
-) {
-  overbooked++;
-}
-
+      if (
+        b.status === "active" &&
+        b.items?.some(i => Number(i.shortage) > 0)
+      ) {
+        overbooked++;
+      }
 
       /* 🔧 AUTO-REPAIR */
       if (!b.status) {
@@ -133,8 +132,7 @@ for (const d of snap.docs) {
     }
 
     const el = document.getElementById("overbooked-bookings");
-if (el) el.textContent = overbooked;
-
+    if (el) el.textContent = overbooked;
 
     safeSetText("active-bookings", active);
     safeSetText("returned-bookings", returned);
@@ -165,16 +163,16 @@ function listenToRecentBookings(businessId) {
 
       hasEvent = true;
 
-      tbody.innerHTML += `
-        <tr class="hover:bg-gray-50 transition-colors">
-          <td class="py-3 font-medium text-gray-800">${b.items?.[0]?.name || "-"}</td>
-          <td class="py-3 text-gray-600">${b.client?.name || "-"}</td>
-          <td class="py-3 text-gray-600">${b.items?.reduce((t, i) => t + i.qty, 0) || 0}</td>
-          <td class="py-3">
-            <span class="status ${b.status} text-xs uppercase tracking-wider">${b.status}</span>
-          </td>
-        </tr>
-      `;
+     tbody.innerHTML += `
+<tr class="hover:bg-gray-50 transition-colors">
+  <td class="py-3 font-medium text-gray-800">${b.event?.date ? new Date(b.event.date).toLocaleDateString() : "-"}</td>
+  <td class="py-3 text-gray-600">${b.client?.name || "-"}</td>
+  <td class="py-3 text-gray-600">${b.event?.location || "-"}</td>
+  <td class="py-3">
+    <span class="status ${b.status} text-xs uppercase tracking-wider">${b.status}</span>
+  </td>
+</tr>
+`;
     });
 
     if (!hasEvent) {
@@ -188,8 +186,10 @@ function listenToRecentBookings(businessId) {
     }
   });
 }
+
 /* =========================
    REAL-TIME INVENTORY (SORTED NEWEST FIRST)
+   + LOW STOCK HIGHLIGHT
 ========================= */
 function listenToInventory(businessId) {
   const tbody = document.getElementById("recent-customers");
@@ -197,7 +197,7 @@ function listenToInventory(businessId) {
   if (!tbody || !totalInventoryEl) return;
 
   const ref = collection(db, "businesses", businessId, "inventory");
-  const q = query(ref, orderBy("createdAt", "desc")); // sort newest first
+  const q = query(ref, orderBy("createdAt", "desc")); // newest first
 
   onSnapshot(q, snap => {
     // Update total inventory count
@@ -213,7 +213,7 @@ function listenToInventory(businessId) {
 
     snap.forEach(docSnap => {
       const i = docSnap.data();
-      const isLow = i.availableQuantity <= 5;
+      const isLow = i.availableQuantity <= 5; // 🔥 low stock highlight
 
       tbody.innerHTML += `
         <tr class="hover:bg-gray-50 transition-colors">
@@ -236,6 +236,7 @@ function listenToInventory(businessId) {
     });
   });
 }
+
 /* =========================
    AUTH GUARD
 ========================= */
@@ -260,25 +261,62 @@ onAuthStateChanged(auth, async user => {
     listenToBookingStats(businessId);
     listenToRecentBookings(businessId);
     listenToInventory(businessId);
+    
+    // 🔔 Notifications history with modal
+    listenToNotifications(businessId);
   } catch (err) {
     console.error("Dashboard error:", err);
     alert("Failed to load dashboard");
   }
 });
 
-// ===== DYNAMIC BUY ME A COFFEE BUTTON WITH FLOATING ANIMATION =====
-(function() {
-  const bmcLink = "https://www.buymeacoffee.com/francisfortune"; // your profile link
+/* =========================
+   NOTIFICATIONS HISTORY MODAL
+========================= */
+function listenToNotifications(businessId) {
+  const ref = collection(db, "businesses", businessId, "notifications");
+  const dot = document.getElementById("notifDot");
+  const notifList = document.getElementById("notifList");
+  const modal = document.getElementById("notifModal");
 
-  // Create Buy Me a Coffee button
+  if (!dot || !notifList || !modal) return;
+
+  onSnapshot(ref, snapshot => {
+    const notifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    const hasUnread = notifications.some(n => n.read === false);
+    dot.style.display = hasUnread ? "block" : "none";
+
+    if (notifications.length === 0) {
+      notifList.innerHTML = '<p style="text-align:center; color: #888;">No notifications yet</p>';
+    } else {
+      notifList.innerHTML = notifications.map(n => `
+        <div style="padding:8px 10px; border-bottom:1px solid #eee; cursor:pointer; background:${n.read ? '#fff' : '#f9f0ff'};">
+          ${n.message}
+        </div>
+      `).join('');
+    }
+  });
+
+  document.getElementById("notifBtn").addEventListener("click", () => {
+    modal.style.display = modal.style.display === "none" ? "block" : "none";
+  });
+}
+
+/* =========================
+   BUY ME A COFFEE BUTTON
+========================= */
+(function() {
+  const bmcLink = "https://www.buymeacoffee.com/francisfortune";
+
   const coffeeBtn = document.createElement("button");
   coffeeBtn.id = "buyCoffeeBtn";
   coffeeBtn.innerHTML = "☕ Support Me";
   coffeeBtn.style.position = "fixed";
-  coffeeBtn.style.bottom = "80px"; // leave space for bottom nav
+  coffeeBtn.style.bottom = "80px";
   coffeeBtn.style.right = "20px";
   coffeeBtn.style.background = "Purple";
-  coffeeBtn.style.color = "#ffffff";
+  coffeeBtn.style.color = "#fff";
   coffeeBtn.style.padding = "0.7rem 1.5rem";
   coffeeBtn.style.fontWeight = "700";
   coffeeBtn.style.borderRadius = "50px";
@@ -292,7 +330,6 @@ onAuthStateChanged(auth, async user => {
   coffeeBtn.style.transition = "transform 0.3s, box-shadow 0.3s";
   coffeeBtn.style.fontSize = "1.3rem";
 
-  // Hover effect
   coffeeBtn.onmouseover = () => {
     coffeeBtn.style.transform = "translateY(-6px)";
     coffeeBtn.style.boxShadow = "0 12px 24px rgba(0,0,0,0.35)";
@@ -302,7 +339,6 @@ onAuthStateChanged(auth, async user => {
     coffeeBtn.style.boxShadow = "0 8px 16px rgba(0,0,0,0.3)";
   };
 
-  // Floating animation CSS
   const style = document.createElement("style");
   style.innerHTML = `
     @keyframes floatButton {
@@ -313,60 +349,27 @@ onAuthStateChanged(auth, async user => {
     #buyCoffeeBtn {
       animation: floatButton 3s ease-in-out infinite;
     }
-    /* Optional: Product Hunt button styles if used */
-    #productHuntBtn {
-      animation: floatButton 3s ease-in-out infinite;
-      background: linear-gradient(135deg, #DA552F, #FF6F4C);
-      color: #fff;
-      font-weight: 700;
-      border-radius: 50px;
-      border: none;
-      cursor: pointer;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-      padding: 0.7rem 1.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.3s, box-shadow 0.3s;
-      z-index: 9999;
-      position: fixed;
-      bottom: 20px; /* will adjust dynamically */
-      right: 20px;
-    }
-    #productHuntBtn:hover {
-      transform: translateY(-6px);
-      box-shadow: 0 12px 24px rgba(0,0,0,0.35);
-    }
   `;
   document.head.appendChild(style);
 
-  // Responsive function
   function updateBtnSize() {
-    const bottomMargin = 20; // default bottom spacing
     if (window.innerWidth < 768) {
       coffeeBtn.style.padding = "0.5rem 1.3rem";
       coffeeBtn.style.fontSize = "1.4rem";
-      coffeeBtn.style.bottom = "130px"; // extra space for bottom nav
+      coffeeBtn.style.bottom = "130px";
       coffeeBtn.style.right = "15px";
-      // If Product Hunt button is used
-      const phBtn = document.getElementById("productHuntBtn");
-      if (phBtn) phBtn.style.bottom = "40px"; // below coffee button
     } else {
       coffeeBtn.style.padding = "0.7rem 1.5rem";
       coffeeBtn.style.fontSize = "1rem";
       coffeeBtn.style.bottom = "80px";
       coffeeBtn.style.right = "20px";
-      const phBtn = document.getElementById("productHuntBtn");
-      if (phBtn) phBtn.style.bottom = "20px";
     }
   }
   window.addEventListener("resize", updateBtnSize);
   updateBtnSize();
 
-  // Append Buy Me a Coffee button
   document.body.appendChild(coffeeBtn);
 
-  // Popup portal
   coffeeBtn.addEventListener("click", () => {
     const popupWidth = 500;
     const popupHeight = 700;
@@ -380,23 +383,8 @@ onAuthStateChanged(auth, async user => {
     );
   });
 
-  // Tooltip/Bio
   coffeeBtn.title = `
 Hi! I'm Francis Fortune.
 I’m passionate about motivating young teens to explore technology, learn new skills, and create innovative solutions.
-.
 `;
-
-  // ===== PRODUCT HUNT BUTTON (COMMENTED OUT FOR NOW) =====
-  /*
-  const phLink = "https://www.producthunt.com/posts/your-product";
-  const phBtn = document.createElement("button");
-  phBtn.id = "productHuntBtn";
-  phBtn.innerHTML = "🚀 Product Hunt";
-  phBtn.onclick = () => window.open(phLink, "_blank");
-  document.body.appendChild(phBtn);
-  updateBtnSize();
-  */
 })();
-
-

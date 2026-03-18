@@ -156,8 +156,8 @@ onAuthStateChanged(auth, async (user) => {
   window.addItemRow();
 
   // brand avatar
-  document.getElementById("user-avatar").textContent =
-    user.email.charAt(0).toUpperCase();
+  // document.getElementById("user-avatar").textContent =
+  //   user.email.charAt(0).toUpperCase();
 
   // 3. Receipt image preview handler
   const receiptInput = document.getElementById("receiptImage");
@@ -214,13 +214,17 @@ const inventoryItem = inventoryItems.find(
 const availableAtBooking = inventoryItem?.availableQuantity || 0;
 const shortage = Math.max(0, qty - availableAtBooking);
 
+const supplierInput = row.querySelector(".item-supplier");
+
 items.push({
   name,
   qty,
   price,
   total: qty * price,
   availableAtBooking,
-  shortage // 🔥 THIS IS THE KEY
+  shortage,
+  borrowed: shortage > 0 ? shortage : 0,
+  supplier: shortage > 0 ? (supplierInput?.value || "") : ""
 });
 
         });
@@ -447,3 +451,5 @@ I’m passionate about motivating young teens to explore technology, learn new s
   updateBtnSize();
   */
 })();
+
+
