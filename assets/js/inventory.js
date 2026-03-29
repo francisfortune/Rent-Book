@@ -15,6 +15,25 @@ import { onAuthStateChanged } from
   "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 /* =========================
+   NOTIFICATION HELPER
+========================= */
+async function sendInventoryNotification(businessId, message, type = "inventory") {
+  try {
+    const notifRef = collection(db, "businesses", businessId, "notifications");
+    await addDoc(notifRef, {
+      message: message,
+      type: type,
+      triggeredBy: auth.currentUser.email,
+      createdAt: serverTimestamp(),
+      readBy: [],
+      deletedFor: []
+    });
+  } catch (err) {
+    console.error("Notification failed:", err);
+  }
+}
+
+/* =========================
    DOM ELEMENTS
 ========================= */
 const totalItemsEl = document.getElementById("totalItems");
@@ -117,44 +136,75 @@ function renderInventory(filteredItems, allItems) {
 }
 
 /* =========================
-   OVERBOOKED PANEL
+   OVERBOOKED PANEL (SYNCED WITH BOOKINGS.JS)
 ========================= */
 function listenToOverbooked(businessId) {
+  const overbookedList = document.getElementById("overbookedList") || document.getElementById("overbooked-list"); 
+  if (!overbookedList) return;
+
   const ref = collection(db, "businesses", businessId, "bookings");
 
   onSnapshot(ref, snap => {
-    if (!overbookedList) return;
     overbookedList.innerHTML = "";
+
+    // 1. Get current date for status calculation (Matching bookings.js logic)
+    const today = new Date().toISOString().split('T')[0];
 
     const overbooked = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
-      .filter(b => b.status === "active" && b.items?.some(i => i.shortage > 0));
+      .filter(b => {
+        // Only show if: 
+        // A) It's not marked as returned 
+        // B) It's not overdue or it's active (Status isn't "returned")
+        // C) It actually has items with a shortage
+        const status = b.status === "returned" ? "returned" : (today > b.event?.returnDate ? "overdue" : "active");
+        return status !== "returned" && b.items?.some(i => (Number(i.shortage) || 0) > 0);
+      });
 
     if (!overbooked.length) {
-      overbookedList.innerHTML = `<p class="text-gray-500">No overbooked items 🎉</p>`;
+      overbookedList.innerHTML = `<p class="text-center text-gray-400 py-6 italic text-sm">No overbooked items 🎉</p>`;
       return;
     }
 
     overbooked.forEach(b => {
-      const borrowed = b.items
-        .filter(i => i.shortage > 0)
-        .map(i => `${i.shortage} × ${i.name}`)
-        .join(", ");
+      const borrowedItems = b.items
+        .filter(i => (Number(i.shortage) || 0) > 0)
+        .map(i => {
+          // SYNCED: Using 'supplier' as primary field to match your bookings.js
+          const vendor = i.supplier || i.vendorName || i.vendor || "Unknown Vendor";
+          return `• ${i.shortage} × ${i.name} <span class="text-purple-700 font-bold">[${vendor}]</span>`;
+        });
+
+      const vendorBlock = `<div class="bg-purple-50 border border-purple-100 rounded-xl p-3 mt-3">
+             <p class="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-1">Vendor / Borrowed Items</p>
+             <div class="text-[11px] text-gray-700 leading-relaxed">
+               ${borrowedItems.join("<br>")}
+             </div>
+           </div>`;
 
       const div = document.createElement("div");
-      div.className = "p-3 bg-orange-50 border border-orange-200 rounded-lg cursor-pointer hover:bg-orange-100";
+      div.className = "p-4 mb-3 bg-white border border-gray-100 rounded-2xl shadow-sm border-l-4 border-l-orange-500 transition-all hover:shadow-md cursor-pointer";
+      
       div.innerHTML = `
-        <p class="font-semibold">${b.client?.name}</p>
-        <p class="text-xs text-gray-600">${b.event?.date}</p>
-        <p class="text-orange-700 text-sm">
-          Borrowed: ${borrowed}
-        </p>
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="font-bold text-gray-900 text-sm">${b.client?.name || "Client"}</p>
+            <p class="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
+              <ion-icon name="calendar-outline"></ion-icon> ${b.event?.date || "No Date"}
+            </p>
+          </div>
+          <span class="bg-orange-100 text-blue-600 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">Shortage</span>
+        </div>
+        ${vendorBlock}
       `;
+      
       div.onclick = () => window.location.href = `bookings.html#${b.id}`;
       overbookedList.appendChild(div);
     });
   });
 }
+
+
 
 /* =========================
    AUTH & LIVE DATA
@@ -195,46 +245,67 @@ onAuthStateChanged(auth, async user => {
 
     listenToOverbooked(businessId);
 
-    // Add new item
-    document.getElementById("addItemForm").addEventListener("submit", async e => {
-      e.preventDefault();
-      await addDoc(invRef, {
-        name: itemName.value.trim(),
-        totalQuantity: Number(itemQty.value),
-        availableQuantity: Number(itemQty.value),
-        price: Number(itemPrice.value),
-        createdAt: serverTimestamp()
-      });
-      e.target.reset();
-    });
 
+ // Add new item
+document.getElementById("addItemForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const name = itemName.value.trim();
+  const qty = Number(itemQty.value);
+
+  await addDoc(invRef, {
+    name: name,
+    totalQuantity: qty,
+    availableQuantity: qty,
+    price: Number(itemPrice.value),
+    createdAt: serverTimestamp()
+  });
+
+  // Notification
+  await sendInventoryNotification(businessId, `New item added: ${name} (${qty} units)`, "add");
+  
+  e.target.reset();
+});
     // Close edit modal
     closeEditModal.onclick = () => editModal.classList.add("hidden");
 
-    // Save changes in edit modal
-    editItemForm.onsubmit = async e => {
-      e.preventDefault();
-      const ref = doc(db, "businesses", businessId, "inventory", editItemId.value);
-      await updateDoc(ref, {
-        name: editItemName.value.trim(),
-        totalQuantity: Number(editItemQty.value),
-        availableQuantity: Number(editItemAvail.value),
-        price: Number(editItemPrice.value),
-        updatedAt: serverTimestamp()
-      });
-      editModal.classList.add("hidden");
-    };
+  // Save changes in edit modal
+editItemForm.onsubmit = async e => {
+  e.preventDefault();
+  const name = editItemName.value.trim();
+  const avail = Number(editItemAvail.value);
+  const ref = doc(db, "businesses", businessId, "inventory", editItemId.value);
 
-    // Delete item
-    deleteItemBtn.onclick = async () => {
-      if (!confirm("Delete this item?")) return;
-      await deleteDoc(doc(db, "businesses", businessId, "inventory", editItemId.value));
-      editModal.classList.add("hidden");
-    };
+  await updateDoc(ref, {
+    name: name,
+    totalQuantity: Number(editItemQty.value),
+    availableQuantity: avail,
+    price: Number(editItemPrice.value),
+    updatedAt: serverTimestamp()
+  });
 
+  // 🔔 Trigger Low Stock Notification
+  if (avail <= 5) {
+    await sendInventoryNotification(businessId, `⚠️ Low Stock Alert: ${name} only has ${avail} left!`, "inventory");
+  } else {
+    await sendInventoryNotification(businessId, `Updated item: ${name}`, "inventory");
+  }
+
+  editModal.classList.add("hidden");
+};
+// Delete item
+deleteItemBtn.onclick = async () => {
+  const name = editItemName.value; // Get name before deleting
+  if (!confirm(`Are you sure you want to delete ${name}?`)) return;
+  
+  await deleteDoc(doc(db, "businesses", businessId, "inventory", editItemId.value));
+  
+  await sendInventoryNotification(businessId, `Permanent Delete: ${name} was removed from inventory`, "inventory");
+  
+  editModal.classList.add("hidden");
+};
   } catch (err) {
     console.error(err);
-    window.location.href = "setup.html";
+    window.location.href = "signup.html";
   }
 });
 

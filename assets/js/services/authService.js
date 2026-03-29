@@ -289,3 +289,20 @@ onAuthStateChanged(auth, async user => {
     renderBookings();
   });
 });
+
+
+
+
+
+
+
+
+
+/* =========================================================
+   🔔 NOTIFICATION MODULE (ALL LOGIC IN ONE PLACE)
+   - Real-time listener
+   - Per-user delete (NOT global)
+   - Redirect handling
+   - UI rendering
+   ========================================================= */
+

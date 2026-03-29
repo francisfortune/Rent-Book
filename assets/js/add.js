@@ -6,6 +6,7 @@ import {
   query,
   where,
   getDocs,
+  getDoc,
   doc,
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -16,6 +17,24 @@ import {
   uploadBytes,
   getDownloadURL
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+let currentBusinessName = "Our Business"; 
+let inventoryItems = [];
+
+async function sendNotification(businessId, message, userEmail, type = "general", bookingId = null) {
+  try {
+    await addDoc(collection(db, "businesses", businessId, "notifications"), {
+      message,
+      triggeredBy: userEmail,
+      type,
+      bookingId,          // link to booking if exists
+      read: false,
+      createdAt: serverTimestamp()
+    });
+  } catch (e) {
+    console.error("Notification error:", e);
+  }
+}
 
 /* =========================
    BUSINESS LOOKUP
@@ -33,31 +52,73 @@ async function getBusinessIdByEmail(email) {
 /* =========================
    TOTAL CALCULATION
 ========================= */
-let inventoryItems = [];
 
 function recalcTotal() {
   let total = 0;
+  let itemsSummary = "";
 
   document.querySelectorAll(".item-row").forEach(row => {
+    const select = row.querySelector(".item-name");
+    const name = select.value || "Item Name";
     const qty = Number(row.querySelector(".item-qty")?.value || 0);
     const price = Number(row.querySelector(".item-price")?.value || 0);
-    total += qty * price;
+    
+    // Updated selector to find the vendor name inside the new container
+    const vendor = row.querySelector(".vendor-name")?.value;
+    
+    const rowTotal = qty * price;
+    total += rowTotal;
+
+    if (qty > 0) {
+      // Improved logic: only show the tag if a vendor name is actually typed
+      const vendorTag = vendor ? ` [Ext: ${vendor}]` : "";
+      itemsSummary += `• ${name} (x${qty})${vendorTag} - ₦${rowTotal.toLocaleString()}\n`;
+    }
   });
 
-  document.getElementById("totalAmount").value = total;
+  // Update hidden total input
+  if (document.getElementById("totalAmount")) {
+    document.getElementById("totalAmount").value = total;
+  }
+
+   // Read Amount Paid
+// ✅ FIXED: Get Paid Amount correctly
+  const paidInput = document.getElementById("amountPaid");
+  const paidValue = paidInput ? parseFloat(paidInput.value) || 0 : 0;
+
+  const balance = total - paidValue;
+
+  // Build Preview with Dynamic Business Name
+ const previewText = 
+  `*BOOKING CONFIRMATION - ${currentBusinessName.toUpperCase()}*\n\n` +
+  `Hi ${document.getElementById("clientName")?.value || "Customer"}, your booking is confirmed! ✅\n\n` +
+  `📅 *Date:* ${document.getElementById("eventDate")?.value || "Date"}\n` +
+  `📍 *Location:* ${document.getElementById("eventLocation")?.value || "Not specified"}\n\n` +
+  `*Items Ordered:* \n${itemsSummary}\n` +
+  `💰 *Total:* ₦${total.toLocaleString()}\n` +
+  `💳 *Paid:* ₦${paidValue.toLocaleString()}\n` +
+  `📉 *Balance:* ₦${balance.toLocaleString()}\n\n` +
+  `Thank you for choosing ${currentBusinessName}!`;
+  const previewBox = document.getElementById("liveReceiptText");
+  if (previewBox) {
+    previewBox.innerText = previewText;
+  }
 }
 
 /* =========================
    ADD ITEM ROW
 ========================= */
+/* =========================
+   ADD ITEM ROW (FIXED WITH VENDOR FIELD)
+========================= */
+
 window.addItemRow = function () {
   const container = document.getElementById("itemsContainer");
-
   const row = document.createElement("div");
-  row.className = "item-row flex gap-2 items-center mb-2";
+  row.className = "item-row flex flex-wrap gap-2 items-center mb-2 bg-gray-50 p-2 rounded-xl relative";
 
   row.innerHTML = `
-<select class="item-name flex-[2] p-2 border rounded-lg outline-none" required>
+    <select class="item-name flex-[2] p-2 border rounded-lg outline-none" required>
       <option value="">Select an Item</option>
       ${inventoryItems.map(item => `
         <option value="${item.name}" data-price="${item.price}" data-avail="${item.availableQuantity}">
@@ -65,30 +126,49 @@ window.addItemRow = function () {
         </option>
       `).join("")}
     </select>
-    <input class="item-qty w-20 p-2 border rounded-lg outline-none" type="number" min="1" value="1" required>
-    <input class="item-price w-24 p-2 border rounded-lg outline-none" type="number" placeholder="Price">
-    <button type="button" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all">✕</button>
+    <div class="flex gap-2 w-full sm:w-auto">
+        <input class="item-qty w-20 p-2 border rounded-lg outline-none" type="number" min="1" value="1" required>
+        <input class="item-price w-24 p-2 border rounded-lg outline-none" type="number" placeholder="Price">
+    </div>
+    
+    <div class="vendor-container hidden w-full mt-2 p-3 border border-purple-200 bg-purple-50 rounded-lg">
+        <label class="block text-[10px] font-bold text-purple-700 uppercase mb-1">Vendor Name (To borrow from):</label>
+        <input class="vendor-name w-full p-2 border border-purple-300 rounded-md text-sm outline-none" 
+               placeholder="e.g. John Rentals">
+    </div>
+    
+    <button type="button" class="absolute top-2 right-2 sm:static w-10 h-10 flex items-center justify-center bg-red-50 text-red-600 rounded-lg">✕</button>
   `;
 
   const select = row.querySelector(".item-name");
   const qtyInput = row.querySelector(".item-qty");
   const priceInput = row.querySelector(".item-price");
+  const vendorInput = row.querySelector(".vendor-name");
+  const vendorContainer = row.querySelector(".vendor-container"); // Target the wrapper
   const removeBtn = row.querySelector("button");
 
-  
-  // When user selects an item, populate default price but allow editing
-  select.addEventListener("change", (e) => {
-    const opt = e.target.selectedOptions[0];
-    if (opt) {
-      priceInput.value = opt.dataset.price || ""; // system price
+  const checkShortage = () => {
+    const opt = select.selectedOptions[0];
+    const avail = Number(opt?.dataset.avail || 0);
+    const requested = Number(qtyInput.value);
+
+    if (requested > avail) {
+      vendorContainer.classList.remove("hidden");
     } else {
-      priceInput.value = "";
+      vendorContainer.classList.add("hidden");
     }
     recalcTotal();
+  };
+
+  select.addEventListener("change", (e) => {
+    const opt = e.target.selectedOptions[0];
+    priceInput.value = opt?.dataset.price || "";
+    checkShortage();
   });
 
-  qtyInput.addEventListener("input", recalcTotal);
-  priceInput.addEventListener("input", recalcTotal); // total recalculation if user edits price
+  qtyInput.addEventListener("input", checkShortage);
+  priceInput.addEventListener("input", recalcTotal);
+  vendorInput.addEventListener("input", recalcTotal);
 
   removeBtn.addEventListener("click", () => {
     row.remove();
@@ -96,6 +176,7 @@ window.addItemRow = function () {
   });
 
   container.appendChild(row);
+  updateSelectOptions();
 };
 
 /* =========================
@@ -137,28 +218,54 @@ async function uploadReceiptImage(businessId, file) {
   return downloadURL;
 }
 
+let businessId = "";
+let currentUser = null;
+
 /* =========================
    AUTH + SUBMIT
 ========================= */
+
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    window.location.href = "login.html";
+    window.location.href = "signup.html";
     return;
   }
 
-  const businessId = await getBusinessIdByEmail(user.email);
+  try {
+    currentUser = user; // ✅ SAVE USER
+    businessId = await getBusinessIdByEmail(user.email); // ✅ NO const
 
-  // 1. Fetch Inventory for dropdowns
-  const invSnap = await getDocs(collection(db, "businesses", businessId, "inventory"));
-  inventoryItems = invSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const bizSnap = await getDoc(doc(db, "businesses", businessId));
+    if (bizSnap.exists()) {
+      currentBusinessName = bizSnap.data().name;
+    }
 
-  // 2. Add first row automatically
-  window.addItemRow();
+    const invSnap = await getDocs(
+      collection(db, "businesses", businessId, "inventory")
+    );
 
-  // brand avatar
-  // document.getElementById("user-avatar").textContent =
-  //   user.email.charAt(0).toUpperCase();
+    inventoryItems = invSnap.docs.map(d => ({
+      id: d.id,
+      ...d.data()
+    }));
 
+// ✅ ADD LISTENERS FOR LIVE UPDATES
+    const liveFields = ["clientName", "eventDate", "eventLocation", "amountPaid"];
+    liveFields.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        // Use 'input' event so it updates as you type
+        el.addEventListener("input", recalcTotal);
+      }
+    });
+
+    addItemRow();
+    recalcTotal();
+
+  } catch (error) {
+    console.error("Auth Init Error:", error);
+  }
+});
   // 3. Receipt image preview handler
   const receiptInput = document.getElementById("receiptImage");
   const receiptPreview = document.getElementById("receiptPreview");
@@ -214,7 +321,7 @@ const inventoryItem = inventoryItems.find(
 const availableAtBooking = inventoryItem?.availableQuantity || 0;
 const shortage = Math.max(0, qty - availableAtBooking);
 
-const supplierInput = row.querySelector(".item-supplier");
+const supplierInput = row.querySelector(".vendor-name");
 
 items.push({
   name,
@@ -279,18 +386,50 @@ if (overbookedItems.length) {
           receiptImage: receiptImageUrl,
           notes: document.getElementById("notes")?.value || "",
           status: "active",
-          createdBy: {
-            uid: user.uid,
-            email: user.email
-          },
+         createdBy: {
+  uid: currentUser.uid,
+  email: currentUser.email
+},
           createdAt: serverTimestamp()
         };
 
-        /* ===== SAVE BOOKING ===== */
-        await addDoc(
-          collection(db, "businesses", businessId, "bookings"),
-          bookingData
-        );
+       
+  /* ===== SAVE BOOKING ===== */
+const bookingRef = await addDoc(
+  collection(db, "businesses", businessId, "bookings"),
+  bookingData
+);
+
+// Add listeners for live updates
+["clientName", "eventDate", "eventLocation", "amountPaid"].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener("input", recalcTotal);
+});
+
+// Also recalc on page load
+recalcTotal();
+
+// 🔔 Send notification about new booking with bookingId
+await sendNotification(
+  businessId,
+  `New booking added ${bookingData.client.name} on ${bookingData.event.date}`,
+  currentUser.email, // ✅ FIXED
+  "booking_added",      // type
+  bookingRef.id         // bookingId
+);
+
+// 🎇 2. WELCOME NOTIFICATION (Add this part)
+// This checks if this is the very first booking in the system
+const allBookings = await getDocs(collection(db, "businesses", businessId, "bookings"));
+if (allBookings.size === 1) {
+  await sendNotification(
+    businessId,
+    `🎉 Welcome ${currentBusinessName}! ! You've just created your first booking for ${bookingData.client.name}. This platform is designed to help you track rentals and payments effortlessly. Explore your dashboard to see your new stats!`,
+    "System",
+    "welcome_message",
+    bookingRef.id
+  );
+}
 
         /* ===== DEDUCT INVENTORY ===== */
         await deductInventory(businessId, items);
@@ -303,7 +442,7 @@ if (overbookedItems.length) {
         submitBtn.textContent = originalText;
       }
     });
-});
+
 
 function updateSelectOptions() {
   const selectedItems = Array.from(document.querySelectorAll(".item-name"))
@@ -318,6 +457,22 @@ function updateSelectOptions() {
     });
   });
 }
+
+window.shareToWhatsApp = function() {
+  const phone = document.getElementById("clientPhone")?.value;
+  const message = document.getElementById("liveReceiptText")?.innerText;
+
+  if (!phone || phone.length < 5) {
+    alert("Please enter a valid Client Phone number first!");
+    return;
+  }
+
+  // Format phone for WhatsApp (removes spaces/dashes)
+  const cleanPhone = phone.replace(/\D/g, '');
+  const encodedMsg = encodeURIComponent(message);
+
+  window.open(`https://wa.me/${cleanPhone}?text=${encodedMsg}`, '_blank');
+};
 
 // ===== DYNAMIC BUY ME A COFFEE BUTTON WITH FLOATING ANIMATION =====
 (function() {

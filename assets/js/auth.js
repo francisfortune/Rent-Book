@@ -100,6 +100,35 @@ if (loginForm) {
   });
 }
 
+
+
+// async function initFCM(user, businessId) {
+//   try {
+//     const permission = await Notification.requestPermission();
+//     if (permission !== "granted") return;
+
+//     const token = await getToken(messaging, {
+//       vapidKey: "YOUR_VAPID_KEY_HERE"
+//     });
+
+//     console.log("FCM Token:", token);
+
+//     // Save token to Firestore (VERY IMPORTANT)
+//     const userRef = doc(db, "businessMembers", user.uid);
+
+//     await updateDoc(userRef, {
+//       fcmTokens: arrayUnion(token)
+//     });
+
+//   } catch (err) {
+//     console.error("FCM error:", err);
+//   }
+// }
+
+
+
+
+
 /* =========================
    GOOGLE AUTH
 ========================= */

@@ -4,6 +4,7 @@ import {
   doc,
   getDoc,
   updateDoc,
+  deleteDoc, // Added for deleting partners
   collection,
   getDocs,
   query,
@@ -33,6 +34,9 @@ const submitFeedbackBtn = document.getElementById("submitFeedback");
 
 const logoutBtn = document.getElementById("logoutBtn");
 
+// Global variable to hold user role for conditional UI
+let currentRole = "viewer"; 
+
 // ===== UTILS =====
 async function getBusinessId(email) {
   const snap = await getDocs(query(collection(db, "businessMembers"), where("email", "==", email)));
@@ -40,119 +44,361 @@ async function getBusinessId(email) {
   return snap.docs[0].data().businessId;
 }
 
+
+
+
 // ===== AUTH GUARD =====
 onAuthStateChanged(auth, async (user) => {
   if (!user) return window.location.href = "signup.html";
 
   try {
-    const businessId = await getBusinessId(user.email);
-    const businessRef = doc(db, "businesses", businessId);
-    const membersRef = collection(db, "businessMembers");
+// ... inside try block
+const businessId = await getBusinessId(user.email);
+const businessRef = doc(db, "businesses", businessId);
+const membersRef = collection(db, "businessMembers");
 
-    // ===== LIVE BUSINESS NAME UPDATE =====
+const memberSnap = await getDocs(query(membersRef, where("email", "==", user.email)));
+if (!memberSnap.empty) {
+  currentRole = memberSnap.docs[0].data().role;
+}
+
+// ✅ TRIGGER 1: WATCH FOR ACCEPTANCE
+onSnapshot(query(membersRef, where("businessId", "==", businessId)), (snapshot) => {
+  snapshot.docChanges().forEach(async (change) => {
+    if (change.type === "modified") {
+      const data = change.doc.data();
+      // Only fire if they just accepted and we haven't sent the 'Join' alert yet
+      if (data.status === "accepted" && !data.notifiedAccepted) {
+        await addDoc(collection(db, "businesses", businessId, "notifications"), {
+          message: `🎉 Welcome! ${data.email} has accepted the invite and joined the team.`,
+          type: "invite_accepted",
+          triggeredBy: data.email,
+          createdAt: serverTimestamp(),
+          readBy: []
+        });
+        // Flag it so it doesn't notify again if you change their role later
+        await updateDoc(doc(db, "businessMembers", change.doc.id), { notifiedAccepted: true });
+      }
+    }
+  });
+});
+    
+    // ===== 2. LIVE BUSINESS NAME UPDATE =====
     onSnapshot(businessRef, (docSnap) => {
       if (!docSnap.exists()) return;
-
       const data = docSnap.data();
       const newName = data.name || "";
-
-      // Update all references of the business name on the page
-      businessNameInput.value = newName;
-      brandNameMobileEl.textContent = newName;
-      feedbackBusinessName.value = newName;
+      if (businessNameInput) businessNameInput.value = newName;
+      if (brandNameMobileEl) brandNameMobileEl.textContent = newName;
+      if (feedbackBusinessName) feedbackBusinessName.value = newName;
       if (topNavBrand) topNavBrand.textContent = newName;
     });
 
-    // ===== OWNER CHECK =====
-    const memberSnap = await getDocs(query(membersRef, where("email", "==", user.email)));
-    const role = memberSnap.docs[0].data().role;
-    if (role !== "owner") {
-      businessNameInput.disabled = true;
-      saveBusinessBtn.disabled = true;
-      saveBusinessBtn.textContent = "Only owner can edit";
+// ===== SEND NEW MEMBER NOTIFICATION =====
+async function sendNewMemberNotification(businessId, newUserEmail) {
+  try {
+    const notifRef = collection(db, "businesses", businessId, "notifications");
+    
+    await addDoc(notifRef, {
+      message: `🤝 New Team Member: ${newUserEmail} has joined the business!`,
+      type: "member_joined",
+      triggeredBy: auth.currentUser.email, // Shows who invited them
+      createdAt: serverTimestamp(),
+      readBy: [],
+      deletedFor: []
+    });
+  } catch (err) {
+    console.error("Member notification failed:", err);
+  }
+}
+
+
+// ===== 8. NOTIFICATION PREFERENCES =====
+const notifCheckbox = document.getElementById("toggleNotifications");
+const soundCheckbox = document.getElementById("toggleNotificationSound");
+
+if (notifCheckbox && soundCheckbox) {
+  const userSettingsRef = doc(db, "userSettings", user.email); // Firestore collection for user preferences
+
+  // Load preferences
+  const loadPrefs = async () => {
+    const snap = await getDoc(userSettingsRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      notifCheckbox.checked = data.notifications ?? true; // default true
+      soundCheckbox.checked = data.sound ?? true; // default true
+    } else {
+      // Default preferences if none exist
+      await updateDoc(userSettingsRef, { notifications: true, sound: true }).catch(() => {});
+      notifCheckbox.checked = true;
+      soundCheckbox.checked = true;
+    }
+  };
+
+  loadPrefs();
+
+  // Save on change
+  notifCheckbox.addEventListener("change", async () => {
+    try {
+      await updateDoc(userSettingsRef, { notifications: notifCheckbox.checked });
+    } catch (err) {
+      console.error("Error saving notification preference:", err);
+    }
+  });
+
+  soundCheckbox.addEventListener("change", async () => {
+    try {
+      await updateDoc(userSettingsRef, { sound: soundCheckbox.checked });
+    } catch (err) {
+      console.error("Error saving sound preference:", err);
+    }
+  });
+}
+
+    // ===== 3. OWNER UI LOCKS =====
+    if (currentRole !== "owner") {
+      if (businessNameInput) businessNameInput.disabled = true;
+      if (saveBusinessBtn) {
+        saveBusinessBtn.disabled = true;
+        saveBusinessBtn.textContent = "Only owner can edit";
+      }
     }
 
-    // ===== SAVE BUSINESS NAME =====
-    saveBusinessBtn.addEventListener("click", async () => {
-      const newName = businessNameInput.value.trim();
-      if (!newName) return alert("Business name cannot be empty");
+    // ===== 4. SAVE BUSINESS NAME =====
+    if (saveBusinessBtn) {
+      saveBusinessBtn.addEventListener("click", async () => {
+        if (currentRole !== "owner") return alert("Only the owner can change business names.");
+        const newName = businessNameInput.value.trim();
+        if (!newName) return alert("Business name cannot be empty");
 
-      saveBusinessBtn.disabled = true;
-      saveBusinessBtn.textContent = "Saving...";
+        saveBusinessBtn.disabled = true;
+        saveBusinessBtn.textContent = "Saving...";
+        await updateDoc(businessRef, { name: newName, updatedAt: serverTimestamp() });
 
-      await updateDoc(businessRef, { name: newName, updatedAt: serverTimestamp() });
-
-      saveBusinessBtn.textContent = "Saved!";
-      setTimeout(() => {
-        saveBusinessBtn.textContent = "Save Changes";
-        saveBusinessBtn.disabled = false;
-      }, 1200);
+        // 🔔 TRIGGER NOTIFICATION
+    await addDoc(collection(db, "businesses", businessId, "notifications"), {
+      message: `📝 Business name updated to: "${newName}"`,
+      type: "settings_change",
+      triggeredBy: auth.currentUser.email,
+      createdAt: serverTimestamp(),
+      readBy: []
     });
 
-    // ===== INVITE PARTNER =====
-    if (inviteForm) {
-      inviteForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const email = partnerEmailInput.value.trim().toLowerCase();
-        const role = partnerRoleInput.value;
+        saveBusinessBtn.textContent = "Saved!";
+        setTimeout(() => {
+          saveBusinessBtn.textContent = "Save Changes";
+          saveBusinessBtn.disabled = false;
+        }, 1200);
+      });
+    }
 
-        if (!email) return alert("Enter an email");
+    // ===== 5. INVITE PARTNER (ANYONE CAN INVITE) =====
+// ===== 5. INVITE PARTNER =====
+if (inviteForm) {
+  inviteForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = partnerEmailInput.value.trim().toLowerCase();
+    const role = partnerRoleInput.value;
+    if (!email) return alert("Enter an email");
 
-        // Prevent multi-business invite
-        const globalSnap = await getDocs(query(membersRef, where("email", "==", email)));
-        if (!globalSnap.empty) {
-          const existing = globalSnap.docs[0].data();
-          if (existing.businessId !== businessId) {
-            return alert("This email is already linked to another business.");
-          }
-        }
 
-        // Prevent duplicates in the same business
-        const existsSnap = await getDocs(query(membersRef, where("email", "==", email), where("businessId", "==", businessId)));
-        if (!existsSnap.empty) return alert("Partner already added.");
+    // Prevent user joining another business
+    const globalSnap = await getDocs(query(membersRef, where("email", "==", email)));
+    if (!globalSnap.empty) {
+      const existing = globalSnap.docs[0].data();
+      if (existing.businessId !== businessId) {
+        return alert("User already belongs to another business.");
+      }
+    }
 
-        // Add partner
-        await addDoc(membersRef, {
-          email,
-          role,
-          status: "pending",
-          invitedBy: user.email,
-          businessId,
-          createdAt: serverTimestamp()
+    // Prevent duplicate in same business
+    const existsSnap = await getDocs(query(
+      membersRef,
+      where("email", "==", email),
+      where("businessId", "==", businessId)
+    ));
+
+    if (!existsSnap.empty) {
+      return alert("User already added.");
+    }
+
+    // Add partner doc
+    await addDoc(membersRef, {
+      email,
+      role,
+      status: "pending",
+      invitedBy: auth.currentUser.email,
+      businessId,
+      notifiedAccepted: false, // 👈 CRITICAL: This allows the watcher to work
+      createdAt: serverTimestamp()
+    });
+
+    // ✅ TRIGGER 2: NOTIFICATION FOR INVITE SENT
+    await addDoc(collection(db, "businesses", businessId, "notifications"), {
+      message: `✉️ Invite Sent: ${email} has been invited as a ${role}.`,
+      type: "invite_pending",
+      triggeredBy: auth.currentUser.email,
+      createdAt: serverTimestamp(),
+      readBy: []
+    });
+
+    inviteForm.reset();
+    alert(`Invite sent to ${email} ✅`);
+  });
+}
+
+    // ===== 6. LOAD PARTNERS (LIVE WITH EDIT/DELETE) =====
+    function listenToPartners() {
+      const q = query(membersRef, where("businessId", "==", businessId));
+      onSnapshot(q, (snap) => {
+        partnersList.innerHTML = "";
+        
+        snap.forEach(docSnap => {
+          const p = docSnap.data();
+          const pId = docSnap.id;
+          const status = p.status || "accepted";
+          const isOwner = (currentRole === "owner");
+
+          const div = document.createElement("div");
+          div.className = "p-3 bg-gray-50 border border-gray-200 rounded mb-2 flex justify-between items-center shadow-sm hover:shadow-md transition-shadow";
+
+          div.innerHTML = `
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs uppercase">
+                ${p.email.charAt(0)}
+              </div>
+              <div>
+                <p class="font-bold text-gray-800 text-sm mb-0">${p.email}</p>
+                <div class="flex items-center gap-2">
+                   <span class="px-2 py-[2px] rounded-full text-[10px] font-bold ${
+  p.role === "owner"
+    ? "bg-purple-100 text-purple-700"
+    : p.role === "partner"
+    ? "bg-blue-100 text-blue-700"
+    : "bg-gray-100 text-gray-600"
+}">
+  ${p.role}
+</span>
+                   <span class="w-1 h-1 bg-gray-300 rounded-full"></span>
+                   <span class="${status === 'pending' ? 'text-yellow-600' : 'text-green-600'} text-[10px] font-bold uppercase">${status}</span>
+                </div>
+              </div>
+            </div>
+            <div class="flex gap-1">
+              ${isOwner ? `
+                <button onclick="editPartner('${pId}', '${p.email}', '${p.role}')" class="p-2 text-blue-500 hover:bg-blue-50 rounded-lg">
+                  <ion-icon name="create-outline"></ion-icon>
+                </button>
+                <button onclick="deletePartner('${pId}', '${p.email}')" class="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                  <ion-icon name="trash-outline"></ion-icon>
+                </button>
+              ` : `<span class="text-[8px] text-gray-300 font-bold uppercase mr-2 italic">Protected</span>`}
+            </div>
+          `;
+          partnersList.appendChild(div);
         });
-
-        inviteForm.reset();
+        
+        if (snap.empty) {
+          partnersList.innerHTML = `<p class="text-center py-4 text-gray-400 text-sm">No partners invited yet.</p>`;
+        }
       });
     }
+    listenToPartners();
 
-    // ===== LOAD PARTNERS (LIVE) =====
-    async function loadPartners() {
-      const snap = await getDocs(query(membersRef, where("businessId", "==", businessId)));
-      partnersList.innerHTML = "";
 
-      snap.forEach(docSnap => {
-        const p = docSnap.data();
-        const status = p.status || "accepted"; // fix undefined
+    // ===== MODAL STATE =====
+let selectedPartnerId = null;
+let selectedPartnerEmail = null;
 
-        const div = document.createElement("div");
-        div.className = "p-3 bg-gray-50 border border-gray-200 rounded mb-2 flex justify-between items-center shadow-sm hover:shadow-md transition-shadow";
+// ===== EDIT PARTNER =====
+window.editPartner = function (docId, email, role) {
+  if (currentRole !== "owner") return;
 
-        div.innerHTML = `
-          <div>
-            <strong>${p.email}</strong> — <span class="text-blue-600">${p.role}</span>
-          </div>
-          <div>
-            <span class="${status === 'pending' ? 'text-yellow-600' : 'text-green-600'} font-semibold">${status}</span>
-          </div>
-        `;
-        partnersList.appendChild(div);
-      });
-    }
+  selectedPartnerId = docId;
 
-    loadPartners();
-    onSnapshot(membersRef, snap => loadPartners()); // live updates
+  document.getElementById("editPartnerEmail").value = email;
+  document.getElementById("editPartnerRole").value = role;
 
-    // ===== FEEDBACK MODAL =====
+  document.getElementById("editPartnerModal").classList.remove("hidden");
+};
+
+// CLOSE EDIT MODAL
+document.getElementById("closeEditModal").onclick = () => {
+  document.getElementById("editPartnerModal").classList.add("hidden");
+};
+
+// SAVE EDIT
+document.getElementById("savePartnerChanges").onclick = async () => {
+  const email = document.getElementById("editPartnerEmail").value.trim().toLowerCase();
+  const role = document.getElementById("editPartnerRole").value;
+
+  if (!email) return alert("Email required");
+
+  try {
+    await updateDoc(doc(db, "businessMembers", selectedPartnerId), {
+      email,
+      role
+    });
+
+// 🔔 TRIGGER NOTIFICATION
+    await addDoc(collection(db, "businesses", businessId, "notifications"), {
+      message: `⚙️ Team member updated: ${email} is now a ${role}`,
+      type: "member_updated",
+      triggeredBy: auth.currentUser.email,
+      createdAt: serverTimestamp(),
+      readBy: []
+    });
+
+    document.getElementById("editPartnerModal").classList.add("hidden");
+
+  } catch (err) {
+    console.error(err);
+    alert("Failed to update partner");
+  }
+};
+
+
+// ===== DELETE PARTNER =====
+window.deletePartner = function (docId, email) {
+  if (currentRole !== "owner") return;
+
+  selectedPartnerId = docId;
+  selectedPartnerEmail = email;
+
+  document.getElementById("deletePartnerText").textContent =
+    `Are you sure you want to remove ${email}?`;
+
+  document.getElementById("deletePartnerModal").classList.remove("hidden");
+};
+
+// CANCEL DELETE
+document.getElementById("cancelDeletePartner").onclick = () => {
+  document.getElementById("deletePartnerModal").classList.add("hidden");
+};
+
+// CONFIRM DELETE
+document.getElementById("confirmDeletePartner").onclick = async () => {
+  try {
+    await deleteDoc(doc(db, "businessMembers", selectedPartnerId));
+
+    // 🔔 TRIGGER NOTIFICATION
+    await addDoc(collection(db, "businesses", businessId, "notifications"), {
+      message: `🚫 Member Removed: ${selectedPartnerEmail} was removed from the business.`,
+      type: "member_removed",
+      triggeredBy: auth.currentUser.email,
+      createdAt: serverTimestamp(),
+      readBy: []
+    });
+
+    document.getElementById("deletePartnerModal").classList.add("hidden");
+
+  } catch (err) {
+    console.error(err);
+    alert("Delete failed");
+  }
+};
+
+// ===== FEEDBACK MODAL =====
     if (openFeedbackBtn) openFeedbackBtn.onclick = () => feedbackModal.classList.add("show");
     if (feedbackModal) feedbackModal.onclick = (e) => { if (e.target === feedbackModal) feedbackModal.classList.remove("show"); };
     if (submitFeedbackBtn) submitFeedbackBtn.onclick = async () => {

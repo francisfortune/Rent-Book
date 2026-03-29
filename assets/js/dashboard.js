@@ -9,12 +9,14 @@ import {
   onSnapshot,
   updateDoc,
   orderBy,
-  limit
+  limit,
+  arrayUnion,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-import {
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getMessaging, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
 /* =========================
    HELPERS
@@ -36,6 +38,7 @@ function isWithinThisWeek(dateValue) {
   const now = new Date();
   const start = new Date(now);
   start.setDate(now.getDate() - now.getDay());
+  start.setHours(0, 0, 0, 0);
   const end = new Date(start);
   end.setDate(start.getDate() + 7);
   return d >= start && d <= end;
@@ -45,10 +48,7 @@ function isWithinThisWeek(dateValue) {
    BUSINESS LOOKUP
 ========================= */
 async function getBusinessIdByEmail(email) {
-  const q = query(
-    collection(db, "businessMembers"),
-    where("email", "==", email)
-  );
+  const q = query(collection(db, "businessMembers"), where("email", "==", email));
   const snap = await getDocs(q);
   if (snap.empty) throw new Error("No business");
   return snap.docs[0].data().businessId;
@@ -60,9 +60,7 @@ async function getBusinessIdByEmail(email) {
 async function loadDashboardUI(businessId) {
   const snap = await getDoc(doc(db, "businesses", businessId));
   if (!snap.exists()) throw new Error("Business not found");
-
   const business = snap.data();
-
   safeSetText("welcome-text", `${business.name}`);
   safeSetText("brand-name", business.name);
   safeSetText("brand-name-mobile", business.name);
@@ -70,7 +68,7 @@ async function loadDashboardUI(businessId) {
 }
 
 /* =========================
-   INVENTORY COUNT (REALTIME)
+   INVENTORY COUNT
 ========================= */
 function listenToInventoryCount(businessId) {
   const ref = collection(db, "businesses", businessId, "inventory");
@@ -79,8 +77,26 @@ function listenToInventoryCount(businessId) {
   });
 }
 
+// // Open/close notification modal
+// const notifBtn = document.getElementById("notifBtn");
+// const notifModal = document.getElementById("notifModal");
+
+// if (notifBtn && notifModal) {
+//   notifBtn.addEventListener("click", () => {
+//     const isVisible = notifModal.style.display === "block";
+//     notifModal.style.display = isVisible ? "none" : "block";
+//   });
+
+//   // Optional: close modal if clicked outside
+//   document.addEventListener("click", (e) => {
+//     if (!notifModal.contains(e.target) && e.target !== notifBtn) {
+//       notifModal.style.display = "none";
+//     }
+//   });
+// }
+
 /* =========================
-   BOOKING STATS + AUTO-REPAIR
+   BOOKING STATS
 ========================= */
 function listenToBookingStats(businessId) {
   const ref = collection(db, "businesses", businessId, "bookings");
@@ -90,50 +106,42 @@ function listenToBookingStats(businessId) {
     let returned = 0;
     let overdue = 0;
     let overbooked = 0;
-    const now = new Date();
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     for (const d of snap.docs) {
       const b = d.data();
+      let currentStatus = b.status;
 
-      if (
-        b.status === "active" &&
-        b.items?.some(i => Number(i.shortage) > 0)
-      ) {
-        overbooked++;
-      }
+      if (currentStatus !== "returned" && b.items?.some(i => Number(i.shortage) > 0)) overbooked++;
 
-      /* 🔧 AUTO-REPAIR */
-      if (!b.status) {
+      if (!currentStatus) {
+        currentStatus = "active";
         await updateDoc(d.ref, { status: "active" });
-        active++;
-        continue;
       }
-
       if (!b.createdAt) {
-        await updateDoc(d.ref, { createdAt: new Date() });
+        await updateDoc(d.ref, { createdAt: serverTimestamp() });
       }
 
-      /* ⏰ OVERDUE CHECK */
-      if (
-        b.status === "active" &&
-        b.event?.returnDate
-      ) {
-        const r = new Date(b.event.returnDate);
-        if (now > r) {
+      if (currentStatus !== "returned" && b.event?.returnDate) {
+        const rDate = new Date(b.event.returnDate);
+        rDate.setHours(0, 0, 0, 0);
+        if (today > rDate && currentStatus !== "overdue") {
           await updateDoc(d.ref, { status: "overdue" });
-          overdue++;
-          continue;
+          currentStatus = "overdue";
+        } else if (today <= rDate && currentStatus === "overdue") {
+          await updateDoc(d.ref, { status: "active" });
+          currentStatus = "active";
         }
       }
 
-      if (b.status === "active") active++;
-      else if (b.status === "returned") returned++;
-      else if (b.status === "overdue") overdue++;
+      if (currentStatus === "active") active++;
+      else if (currentStatus === "returned") returned++;
+      else if (currentStatus === "overdue") overdue++;
     }
 
-    const el = document.getElementById("overbooked-bookings");
-    if (el) el.textContent = overbooked;
-
+    safeSetText("overbooked-bookings", overbooked);
     safeSetText("active-bookings", active);
     safeSetText("returned-bookings", returned);
     safeSetText("overdue-bookings", overdue);
@@ -141,7 +149,7 @@ function listenToBookingStats(businessId) {
 }
 
 /* =========================
-   RECENT BOOKINGS (THIS WEEK)
+   RECENT BOOKINGS
 ========================= */
 function listenToRecentBookings(businessId) {
   const tbody = document.getElementById("recent-bookings");
@@ -153,75 +161,58 @@ function listenToRecentBookings(businessId) {
     limit(10)
   );
 
-  onSnapshot(q, (snap) => {
+  onSnapshot(q, snap => {
     tbody.innerHTML = "";
     let hasEvent = false;
 
     snap.forEach(docSnap => {
       const b = docSnap.data();
       if (!isWithinThisWeek(b.event?.date)) return;
-
       hasEvent = true;
 
-     tbody.innerHTML += `
-<tr class="hover:bg-gray-50 transition-colors">
-  <td class="py-3 font-medium text-gray-800">${b.event?.date ? new Date(b.event.date).toLocaleDateString() : "-"}</td>
-  <td class="py-3 text-gray-600">${b.client?.name || "-"}</td>
-  <td class="py-3 text-gray-600">${b.event?.location || "-"}</td>
-  <td class="py-3">
-    <span class="status ${b.status} text-xs uppercase tracking-wider">${b.status}</span>
-  </td>
-</tr>
-`;
+      tbody.innerHTML += `
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="py-3 font-medium text-gray-800">${b.event?.date || "-"}</td>
+          <td class="py-3 text-gray-600">${b.client?.name || "-"}</td>
+          <td class="py-3 text-gray-600">${b.event?.location || "-"}</td>
+          <td class="py-3">
+            <span class="status ${b.status} text-xs uppercase tracking-wider">${b.status}</span>
+          </td>
+        </tr>`;
     });
 
     if (!hasEvent) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="4" style="text-align:center; opacity:.6; padding: 20px;">
-            No events scheduled for this week
-          </td>
-        </tr>
-      `;
+      tbody.innerHTML = `<tr><td colspan="4" class="text-center py-5 opacity-60">No events scheduled for this week</td></tr>`;
     }
   });
 }
 
 /* =========================
-   REAL-TIME INVENTORY (SORTED NEWEST FIRST)
-   + LOW STOCK HIGHLIGHT
+   INVENTORY LIST
 ========================= */
 function listenToInventory(businessId) {
   const tbody = document.getElementById("recent-customers");
-  const totalInventoryEl = document.getElementById("total-inventory");
-  if (!tbody || !totalInventoryEl) return;
+  if (!tbody) return;
 
-  const ref = collection(db, "businesses", businessId, "inventory");
-  const q = query(ref, orderBy("createdAt", "desc")); // newest first
+  const q = query(collection(db, "businesses", businessId, "inventory"), orderBy("createdAt", "desc"));
 
   onSnapshot(q, snap => {
-    // Update total inventory count
-    totalInventoryEl.textContent = snap.size;
-
-    // Update table
     tbody.innerHTML = "";
-
     if (snap.empty) {
-      tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; opacity:.6; padding: 20px;">No inventory items yet</td></tr>`;
+      tbody.innerHTML = `<tr><td class="text-center py-5 opacity-60">No items yet</td></tr>`;
       return;
     }
 
     snap.forEach(docSnap => {
       const i = docSnap.data();
-      const isLow = i.availableQuantity <= 5; // 🔥 low stock highlight
-
+      const isLow = i.availableQuantity <= 5;
       tbody.innerHTML += `
         <tr class="hover:bg-gray-50 transition-colors">
           <td class="py-3 px-4">
             <div class="flex justify-between items-center">
               <div>
                 <h4 class="font-bold text-gray-800">${i.name}</h4>
-                <p class="text-xs text-gray-500">₦${i.price || 0} per unit</p>
+                <p class="text-xs text-gray-500">₦${(i.price || 0).toLocaleString()}</p>
               </div>
               <div class="text-right">
                 <span class="text-sm font-semibold ${isLow ? 'text-red-600' : 'text-purple-600'}">
@@ -231,8 +222,7 @@ function listenToInventory(businessId) {
               </div>
             </div>
           </td>
-        </tr>
-      `;
+        </tr>`;
     });
   });
 }
@@ -240,151 +230,198 @@ function listenToInventory(businessId) {
 /* =========================
    AUTH GUARD
 ========================= */
+
 onAuthStateChanged(auth, async user => {
-  if (!user) {
-    window.location.href = "signup.html";
-    return;
-  }
-
-  let businessId;
-
+  if (!user) { window.location.href = "signup.html"; return; }
   try {
-    businessId = await getBusinessIdByEmail(user.email);
-  } catch {
-    window.location.href = "setup.html";
-    return;
-  }
-
-  try {
+    const businessId = await getBusinessIdByEmail(user.email);
     await loadDashboardUI(businessId);
     listenToInventoryCount(businessId);
     listenToBookingStats(businessId);
     listenToRecentBookings(businessId);
     listenToInventory(businessId);
-    
-    // 🔔 Notifications history with modal
-    listenToNotifications(businessId);
+    listenToNotifications(businessId); // ✅ make sure this is here
   } catch (err) {
     console.error("Dashboard error:", err);
-    alert("Failed to load dashboard");
+    window.location.href = "setup.html";
   }
 });
+/* =========================
+   COFFEE BUTTON
+========================= */
+(function() {
+  const coffeeBtn = document.createElement("button");
+  coffeeBtn.innerHTML = "☕ Support Me";
+  coffeeBtn.className = "animate-bounce";
+  Object.assign(coffeeBtn.style, {
+    position: "fixed", bottom: "80px", right: "20px", background: "Purple",
+    color: "#fff", padding: "12px 24px", fontWeight: "800", borderRadius: "50px",
+    zIndex: "9999", cursor: "pointer", border: "none", boxShadow: "0 10px 20px rgba(0,0,0,0.2)"
+  });
+  document.body.appendChild(coffeeBtn);
+  coffeeBtn.onclick = () => window.open("https://www.buymeacoffee.com/francisfortune", "_blank");
+})();
 
 /* =========================
-   NOTIFICATIONS HISTORY MODAL
+   LISTEN TO NOTIFICATIONS
 ========================= */
+const notificationSound = new Audio("https://notificationsounds.com/storage/sounds/file-sounds-1150-pristine.mp3");
+
+function triggerNotificationAlert() {
+  // 🔊 Play sound
+  notificationSound.play().catch(() => {});
+  
+  // 💥 Animate bell
+  const btn = document.getElementById("notifBtn");
+  if (btn) {
+    btn.classList.add("shake");
+    setTimeout(() => { btn.classList.remove("shake"); }, 600);
+  }
+}
+
+
+
 function listenToNotifications(businessId) {
-  const ref = collection(db, "businesses", businessId, "notifications");
+  const notifRef = collection(db, "businesses", businessId, "notifications");
+  const q = query(notifRef, orderBy("createdAt", "desc"), limit(20));
+
   const dot = document.getElementById("notifDot");
   const notifList = document.getElementById("notifList");
   const modal = document.getElementById("notifModal");
 
-  if (!dot || !notifList || !modal) return;
+  onSnapshot(q, snapshot => {
+    const user = auth.currentUser;
+    if (!user) return;
 
-  onSnapshot(ref, snapshot => {
-    const notifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const notifications = snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(n => !(n.deletedFor || []).includes(user.uid));
 
-    const hasUnread = notifications.some(n => n.read === false);
-    dot.style.display = hasUnread ? "block" : "none";
+    // UNREAD COUNT BADGE
+const unreadCount = notifications.filter(
+  n => !(n.readBy || []).includes(user.uid)
+).length;
+    if (dot) {
+      if (unreadCount > 0) {
+        dot.style.display = "flex";
+        dot.style.alignItems = "center";
+        dot.style.justifyContent = "center";
+        dot.textContent = unreadCount > 99 ? "99+" : unreadCount;
+        dot.style.background = "purple";
+        dot.style.color = "white";
+        dot.style.width = "20px";
+        dot.style.height = "20px";
+        dot.style.borderRadius = "50%";
+        dot.style.fontSize = "12px";
+        dot.style.fontWeight = "bold";
+
+        triggerNotificationAlert();
+      } else {
+        dot.style.display = "none";
+      }
+    }
+
+    if (!notifList) return;
 
     if (notifications.length === 0) {
-      notifList.innerHTML = '<p style="text-align:center; color: #888;">No notifications yet</p>';
-    } else {
-      notifList.innerHTML = notifications.map(n => `
-        <div style="padding:8px 10px; border-bottom:1px solid #eee; cursor:pointer; background:${n.read ? '#fff' : '#f9f0ff'};">
-          ${n.message}
-        </div>
-      `).join('');
+      notifList.innerHTML = `<p class="text-center text-gray-400 py-4">No notifications</p>`;
+      return;
     }
+
+    // RENDER NOTIFICATIONS
+    notifList.innerHTML = notifications.map(n => {
+      const time = n.createdAt?.toDate?.().toLocaleString() || "";
+      const email = n.triggeredBy || "Unknown";
+
+      let bgColor = "bg-gray-50", borderColor = "border-gray-200", icon = "notifications-outline";
+      if (n.type?.includes("booking")) { bgColor = n.read ? "bg-white" : "bg-purple-50"; borderColor = "border-purple-200"; icon = "calendar-outline"; }
+      else if (n.type === "add") { bgColor = n.read ? "bg-white" : "bg-green-50"; borderColor = "border-green-200"; icon = "add-circle-outline"; }
+      else if (n.type === "welcome") {
+  bgColor = n.read ? "bg-white" : "bg-blue-50";
+  borderColor = "border-blue-200";
+  icon = "sparkles-outline";
+}
+      else if (n.type === "inventory") { bgColor = n.read ? "bg-white" : "bg-yellow-50"; borderColor = "border-yellow-200"; icon = "cube-outline"; }
+
+      return `
+        <div class="p-3 border-b ${borderColor} ${bgColor}" style="display:flex; gap:10px; align-items:flex-start; position:relative;">
+          <div onclick="markNotificationReadAndRedirect('${businessId}', '${n.id}', '${n.type}', '${n.bookingId || ""}')" style="display:flex; gap:10px; flex:1; cursor:pointer;">
+            <ion-icon name="${icon}" style="font-size:1.5rem; color:purple;"></ion-icon>
+            <div>
+              <p class="text-sm font-medium text-gray-800">${n.message}</p>
+              <p class="text-[10px] text-gray-500 mt-1">By: ${email}</p>
+              <p class="text-[10px] text-gray-400 mt-1">${time}</p>
+            </div>
+          </div>
+          <button onclick="deleteNotification('${businessId}', '${n.id}')" style="background:none; border:none; color:red; font-size:14px; cursor:pointer;"> ✖ </button>
+        </div>
+      `;
+    }).join("");
   });
 
-  document.getElementById("notifBtn").addEventListener("click", () => {
-    modal.style.display = modal.style.display === "none" ? "block" : "none";
-  });
+  // TOGGLE MODAL
+  const btn = document.getElementById("notifBtn");
+  if (btn && modal) {
+    btn.onclick = () => {
+      modal.style.display = modal.style.display === "none" ? "block" : "none";
+    };
+  }
 }
 
-/* =========================
-   BUY ME A COFFEE BUTTON
-========================= */
-(function() {
-  const bmcLink = "https://www.buymeacoffee.com/francisfortune";
-
-  const coffeeBtn = document.createElement("button");
-  coffeeBtn.id = "buyCoffeeBtn";
-  coffeeBtn.innerHTML = "☕ Support Me";
-  coffeeBtn.style.position = "fixed";
-  coffeeBtn.style.bottom = "80px";
-  coffeeBtn.style.right = "20px";
-  coffeeBtn.style.background = "Purple";
-  coffeeBtn.style.color = "#fff";
-  coffeeBtn.style.padding = "0.7rem 1.5rem";
-  coffeeBtn.style.fontWeight = "700";
-  coffeeBtn.style.borderRadius = "50px";
-  coffeeBtn.style.border = "none";
-  coffeeBtn.style.cursor = "pointer";
-  coffeeBtn.style.boxShadow = "0 8px 16px rgba(0,0,0,0.3)";
-  coffeeBtn.style.zIndex = "9999";
-  coffeeBtn.style.display = "flex";
-  coffeeBtn.style.alignItems = "center";
-  coffeeBtn.style.justifyContent = "center";
-  coffeeBtn.style.transition = "transform 0.3s, box-shadow 0.3s";
-  coffeeBtn.style.fontSize = "1.3rem";
-
-  coffeeBtn.onmouseover = () => {
-    coffeeBtn.style.transform = "translateY(-6px)";
-    coffeeBtn.style.boxShadow = "0 12px 24px rgba(0,0,0,0.35)";
-  };
-  coffeeBtn.onmouseout = () => {
-    coffeeBtn.style.transform = "translateY(0)";
-    coffeeBtn.style.boxShadow = "0 8px 16px rgba(0,0,0,0.3)";
-  };
-
-  const style = document.createElement("style");
-  style.innerHTML = `
-    @keyframes floatButton {
-      0% { transform: translateY(0px); }
-      50% { transform: translateY(-8px); }
-      100% { transform: translateY(0px); }
-    }
-    #buyCoffeeBtn {
-      animation: floatButton 3s ease-in-out infinite;
-    }
-  `;
-  document.head.appendChild(style);
-
-  function updateBtnSize() {
-    if (window.innerWidth < 768) {
-      coffeeBtn.style.padding = "0.5rem 1.3rem";
-      coffeeBtn.style.fontSize = "1.4rem";
-      coffeeBtn.style.bottom = "130px";
-      coffeeBtn.style.right = "15px";
-    } else {
-      coffeeBtn.style.padding = "0.7rem 1.5rem";
-      coffeeBtn.style.fontSize = "1rem";
-      coffeeBtn.style.bottom = "80px";
-      coffeeBtn.style.right = "20px";
-    }
+// DELETE (PER USER ONLY)
+window.deleteNotification = async function(businessId, notifId) {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+    const notifRef = doc(db, "businesses", businessId, "notifications", notifId);
+    await updateDoc(notifRef, { deletedFor: arrayUnion(user.uid) });
+  } catch (e) {
+    console.error("Delete notification error:", e);
   }
-  window.addEventListener("resize", updateBtnSize);
-  updateBtnSize();
+};
 
-  document.body.appendChild(coffeeBtn);
+// MARK AS READ + REDIRECT
+window.markNotificationReadAndRedirect = async function(businessId, notifId, type, bookingId) {
+  try {
+    const notifRef = doc(db, "businesses", businessId, "notifications", notifId);
+const user = auth.currentUser;
 
-  coffeeBtn.addEventListener("click", () => {
-    const popupWidth = 500;
-    const popupHeight = 700;
-    const left = (window.innerWidth / 2) - (popupWidth / 2);
-    const top = (window.innerHeight / 2) - (popupHeight / 2);
+await updateDoc(notifRef, {
+  readBy: arrayUnion(user.uid)
+});
+    const modal = document.getElementById("notifModal");
+    if (modal) modal.style.display = "none";
 
-    window.open(
-      bmcLink,
-      "BuyMeACoffee",
-      `width=${popupWidth},height=${popupHeight},top=${top},left=${left},resizable=yes,scrollbars=yes`
-    );
-  });
+    let targetPage = "dashboard.html";
 
-  coffeeBtn.title = `
-Hi! I'm Francis Fortune.
-I’m passionate about motivating young teens to explore technology, learn new skills, and create innovative solutions.
-`;
-})();
+    // ✅ BOOKINGS (covers ALL booking types)
+    if (type.includes("booking")) {
+      targetPage = bookingId
+        ? `bookings.html?highlight=${bookingId}`
+        : "bookings.html";
+    }
+
+    // ✅ ADD PAGE
+    else if (type === "add") {
+      targetPage = "add.html";
+    }
+
+    // ✅ INVENTORY PAGE
+    else if (type === "inventory") {
+      targetPage = "inventory.html";
+    }
+
+    else if (type === "welcome") {
+  targetPage = "dashboard.html";
+}
+
+    // SETTINGS PAGE (ROBUST)
+else if (type.toLowerCase().includes("setting")) {
+  targetPage = "settings.html";
+}
+    window.location.href = targetPage;
+
+  } catch (e) {
+    console.error("Notification redirect error:", e);
+  }
+};
