@@ -30,6 +30,9 @@ const STATIC_ASSETS = [
     '/manifest.json'
 ];
 
+
+
+
 // External CDN resources to cache
 const CDN_ASSETS = [
     'https://cdn.tailwindcss.com',
@@ -98,6 +101,7 @@ self.addEventListener('activate', (event) => {
             })
     );
 });
+
 
 // Fetch event - Network first with cache fallback for API, Cache first for static
 self.addEventListener('fetch', (event) => {

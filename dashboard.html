@@ -647,7 +647,12 @@
             color: purple;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 768px) 
+        {
+        
+        #notifBtn{
+            font-size: 2.2rem;
+        }
             .navigation {
                 display: none;
             }
@@ -732,6 +737,19 @@
                 font-size: 1.3rem;
             }
         }
+
+
+        @keyframes bell-shake {
+  0% { transform: rotate(0); }
+  15% { transform: rotate(10deg); }
+  30% { transform: rotate(-10deg); }
+  45% { transform: rotate(5deg); }
+  60% { transform: rotate(-5deg); }
+  100% { transform: rotate(0); }
+}
+.notif-shake {
+  animation: bell-shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
     </style>
     <style>
         @view-transition {

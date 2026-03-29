@@ -977,16 +977,29 @@
 
     <label>
       Role
-      <select id="partnerRole">
-        <option value="staff">Staff</option>
-        <option value="viewer">Viewer</option>
-      </select>
+    <select id="partnerRole">
+  <option value="partner">Partner</option>
+  <option value="viewer">Viewer</option>
+</select>
     </label>
 
     <button type="submit" class="secondary-btn">Invite Partner</button>
   </form>
 
   <div id="partnersList" style="margin-top:15px;"></div>
+</div>
+
+
+<div class="p-4 bg-gray-50 border border-gray-200 rounded mb-4">
+  <h3 class="font-bold mb-2 text-gray-800">Notifications</h3>
+  <div class="flex items-center gap-2 mb-2">
+    <input type="checkbox" id="toggleNotifications">
+    <label for="toggleNotifications" class="text-sm text-gray-700">Enable notifications</label>
+  </div>
+  <div class="flex items-center gap-2">
+    <input type="checkbox" id="toggleNotificationSound">
+    <label for="toggleNotificationSound" class="text-sm text-gray-700">Enable notification sounds</label>
+  </div>
 </div>
 
 <!-- FEEDBACK -->
@@ -1032,7 +1045,48 @@
         <ion-icon name="settings-outline"></ion-icon> </span> <span class="title">Settings</span> </a></li>
     </ul>
    </nav>
-  </div><!-- =========== Scripts =========  -->
+  </div>
+  
+  
+  <div id="editPartnerModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50">
+  <div class="bg-white w-[90%] max-w-md rounded-2xl p-5 shadow-xl">
+    
+    <h2 class="text-lg font-bold mb-4">Edit Partner</h2>
+
+    <input id="editPartnerEmail"
+      class="w-full border p-2 rounded mb-3"
+      placeholder="Email" />
+
+    <select id="editPartnerRole" class="w-full border p-2 rounded mb-4">
+      <option value="owner">Owner</option>
+      <option value="partner">Partner</option>
+      <option value="viewer">Viewer</option>
+    </select>
+
+    <div class="flex justify-end gap-2">
+      <button id="closeEditModal" class="px-4 py-2 text-gray-500">Cancel</button>
+      <button id="savePartnerChanges" class="px-4 py-2 bg-purple-600 text-white rounded-lg">Save</button>
+    </div>
+
+  </div>
+</div>
+
+<div id="deletePartnerModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50">
+  <div class="bg-white w-[90%] max-w-md rounded-2xl p-5 shadow-xl">
+
+    <h2 class="text-lg font-bold mb-2 text-red-600">Remove Partner</h2>
+    <p id="deletePartnerText" class="text-sm text-gray-600 mb-4"></p>
+
+    <div class="flex justify-end gap-2">
+      <button id="cancelDeletePartner" class="px-4 py-2 text-gray-500">Cancel</button>
+      <button id="confirmDeletePartner" class="px-4 py-2 bg-red-600 text-white rounded-lg">Remove</button>
+    </div>
+
+  </div>
+</div>
+  
+  
+  <!-- =========== Scripts =========  -->
   <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
   <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
   <script>
