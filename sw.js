@@ -1,6 +1,6 @@
-// RentBook Service Worker - Production Level PWA
-const CACHE_NAME = 'rentbook-v1.0.0';
-const DYNAMIC_CACHE = 'rentbook-dynamic-v1';
+// Tracknrent Service Worker - Production Level PWA
+const CACHE_NAME = 'Tracknrent-v1.0.0';
+const DYNAMIC_CACHE = 'Tracknrent-dynamic-v1';
 
 // Core assets to cache for offline use
 const STATIC_ASSETS = [
@@ -220,7 +220,7 @@ self.addEventListener('push', (event) => {
     console.log('[ServiceWorker] Push received');
 
     const options = {
-        body: event.data ? event.data.text() : 'New notification from RentBook',
+        body: event.data ? event.data.text() : 'New notification from Tracknrent',
         icon: '/assets/imgs/logo.png',
         badge: '/assets/imgs/logo.png',
         vibrate: [100, 50, 100],
@@ -235,7 +235,7 @@ self.addEventListener('push', (event) => {
     };
 
     event.waitUntil(
-        self.registration.showNotification('RentBook', options)
+        self.registration.showNotification('Tracknrent', options)
     );
 });
 
