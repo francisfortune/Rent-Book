@@ -49,7 +49,7 @@
           bottom: 20px;
           left: 50%;
           transform: translateX(-50%);
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: purple;
           color: white;
           padding: 16px 24px;
           border-radius: 12px;
@@ -249,27 +249,7 @@
         if (existingIndicator) existingIndicator.remove();
 
         if (!isOnline) {
-            const indicator = document.createElement('div');
-            indicator.id = 'connection-status';
-            indicator.innerHTML = `
-        <style>
-          #connection-status {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: #f56565;
-            color: white;
-            text-align: center;
-            padding: 8px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            z-index: 10001;
-          }
-        </style>
-        <span>📡 You're offline. Some features may be unavailable.</span>
-      `;
-            document.body.prepend(indicator);
+window.location.href = "offline.html";
         }
     }
 

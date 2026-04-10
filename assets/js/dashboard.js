@@ -169,16 +169,25 @@ function listenToRecentBookings(businessId) {
       const b = docSnap.data();
       if (!isWithinThisWeek(b.event?.date)) return;
       hasEvent = true;
-
-      tbody.innerHTML += `
-        <tr class="hover:bg-gray-50 transition-colors">
-          <td class="py-3 font-medium text-gray-800">${b.event?.date || "-"}</td>
-          <td class="py-3 text-gray-600">${b.client?.name || "-"}</td>
-          <td class="py-3 text-gray-600">${b.event?.location || "-"}</td>
-          <td class="py-3">
-            <span class="status ${b.status} text-xs uppercase tracking-wider">${b.status}</span>
-          </td>
-        </tr>`;
+tbody.innerHTML += `
+  <tr class="hover:bg-gray-50 border-b border-gray-100 transition-colors cursor-pointer">
+    <td class="py-4 px-4 text-sm font-semibold text-gray-800">
+      ${b.event?.date || "-"}
+    </td>
+    
+    <td class="py-4 px-2 text-sm text-gray-600">
+      <div class="flex flex-col">
+        <span class="font-medium text-gray-800">${b.client?.name || "-"}</span>
+        <span class="text-[10px] text-gray-400 opacity-80">${b.event?.location || "No Location"}</span>
+      </div>
+    </td>
+    
+    <td class="py-4 px-4 text-right">
+      <span class="status ${b.status} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
+        ${b.status || "active"}
+      </span>
+    </td>
+  </tr>`;
     });
 
     if (!hasEvent) {
@@ -246,21 +255,21 @@ onAuthStateChanged(auth, async user => {
     window.location.href = "setup.html";
   }
 });
-/* =========================
-   COFFEE BUTTON
-========================= */
-(function() {
-  const coffeeBtn = document.createElement("button");
-  coffeeBtn.innerHTML = "☕ Support Me";
-  coffeeBtn.className = "animate-bounce";
-  Object.assign(coffeeBtn.style, {
-    position: "fixed", bottom: "80px", right: "20px", background: "Purple",
-    color: "#fff", padding: "12px 24px", fontWeight: "800", borderRadius: "50px",
-    zIndex: "9999", cursor: "pointer", border: "none", boxShadow: "0 10px 20px rgba(0,0,0,0.2)"
-  });
-  document.body.appendChild(coffeeBtn);
-  coffeeBtn.onclick = () => window.open("https://www.buymeacoffee.com/francisfortune", "_blank");
-})();
+// /* =========================
+//    COFFEE BUTTON
+// ========================= */
+// (function() {
+//   const coffeeBtn = document.createElement("button");
+//   coffeeBtn.innerHTML = "☕ Support Me";
+//   coffeeBtn.className = "animate-bounce";
+//   Object.assign(coffeeBtn.style, {
+//     position: "fixed", bottom: "80px", right: "20px", background: "Purple",
+//     color: "#fff", padding: "12px 24px", fontWeight: "800", borderRadius: "50px",
+//     zIndex: "9999", cursor: "pointer", border: "none", boxShadow: "0 10px 20px rgba(0,0,0,0.2)"
+//   });
+//   document.body.appendChild(coffeeBtn);
+//   coffeeBtn.onclick = () => window.open("https://www.buymeacoffee.com/francisfortune", "_blank");
+// })();
 
 /* =========================
    LISTEN TO NOTIFICATIONS
@@ -298,9 +307,10 @@ function listenToNotifications(businessId) {
       .filter(n => !(n.deletedFor || []).includes(user.uid));
 
     // UNREAD COUNT BADGE
-const unreadCount = notifications.filter(
-  n => !(n.readBy || []).includes(user.uid)
-).length;
+    const unreadCount = notifications.filter(
+      n => !(n.readBy || []).includes(user.uid)
+    ).length;
+    
     if (dot) {
       if (unreadCount > 0) {
         dot.style.display = "flex";
@@ -314,7 +324,6 @@ const unreadCount = notifications.filter(
         dot.style.borderRadius = "50%";
         dot.style.fontSize = "12px";
         dot.style.fontWeight = "bold";
-
         triggerNotificationAlert();
       } else {
         dot.style.display = "none";
@@ -330,30 +339,37 @@ const unreadCount = notifications.filter(
 
     // RENDER NOTIFICATIONS
     notifList.innerHTML = notifications.map(n => {
-      const time = n.createdAt?.toDate?.().toLocaleString() || "";
-      const email = n.triggeredBy || "Unknown";
+      const isRead = n.readBy?.includes(user?.uid);
 
-      let bgColor = "bg-gray-50", borderColor = "border-gray-200", icon = "notifications-outline";
-      if (n.type?.includes("booking")) { bgColor = n.read ? "bg-white" : "bg-purple-50"; borderColor = "border-purple-200"; icon = "calendar-outline"; }
-      else if (n.type === "add") { bgColor = n.read ? "bg-white" : "bg-green-50"; borderColor = "border-green-200"; icon = "add-circle-outline"; }
-      else if (n.type === "welcome") {
-  bgColor = n.read ? "bg-white" : "bg-blue-50";
-  borderColor = "border-blue-200";
-  icon = "sparkles-outline";
-}
-      else if (n.type === "inventory") { bgColor = n.read ? "bg-white" : "bg-yellow-50"; borderColor = "border-yellow-200"; icon = "cube-outline"; }
+      let icon = "notifications-outline";
+      if (n.type?.includes("booking")) icon = "calendar-outline";
+      else if (n.type === "add") icon = "add-circle-outline";
+      else if (n.type === "welcome") icon = "sparkles-outline";
+      else if (n.type === "inventory") icon = "cube-outline";
+
+      let bgColor = isRead ? "bg-green-50" : "bg-purple-50";
+      let borderColor = isRead ? "border-green-200" : "border-purple-300";
+      let textWeight = isRead ? "font-normal" : "font-semibold";
+
+      // UNREAD: One purple tick | READ: Two green ticks
+      let tickIcon = isRead
+        ? `<ion-icon name="checkmark-done" style="color:green;"></ion-icon>`
+        : `<ion-icon name="checkmark" style="color:purple;"></ion-icon>`;
 
       return `
-        <div class="p-3 border-b ${borderColor} ${bgColor}" style="display:flex; gap:10px; align-items:flex-start; position:relative;">
-          <div onclick="markNotificationReadAndRedirect('${businessId}', '${n.id}', '${n.type}', '${n.bookingId || ""}')" style="display:flex; gap:10px; flex:1; cursor:pointer;">
+        <div class="p-3 border-b ${borderColor} ${bgColor} flex items-start gap-3">
+          <div onclick="markNotificationReadAndRedirect('${businessId}', '${n.id}', '${n.type}', '${n.bookingId || ""}')" class="flex flex-1 gap-3 cursor-pointer">
             <ion-icon name="${icon}" style="font-size:1.5rem; color:purple;"></ion-icon>
-            <div>
-              <p class="text-sm font-medium text-gray-800">${n.message}</p>
-              <p class="text-[10px] text-gray-500 mt-1">By: ${email}</p>
-              <p class="text-[10px] text-gray-400 mt-1">${time}</p>
+            <div class="flex-1">
+              <p class="text-sm ${textWeight}">${n.message}</p>
+              <p class="text-[10px] text-gray-500">By: ${n.triggeredBy || "Unknown"}</p>
+              <p class="text-[10px] text-gray-400 flex items-center gap-2">
+                ${n.createdAt?.toDate?.().toLocaleString() || ""}
+                ${tickIcon}
+              </p>
             </div>
           </div>
-          <button onclick="deleteNotification('${businessId}', '${n.id}')" style="background:none; border:none; color:red; font-size:14px; cursor:pointer;"> ✖ </button>
+          <button onclick="event.stopPropagation(); deleteNotification('${businessId}', '${n.id}')" class="text-gray-400">✖</button>
         </div>
       `;
     }).join("");
@@ -367,7 +383,6 @@ const unreadCount = notifications.filter(
     };
   }
 }
-
 // DELETE (PER USER ONLY)
 window.deleteNotification = async function(businessId, notifId) {
   try {

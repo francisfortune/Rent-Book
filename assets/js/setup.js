@@ -147,7 +147,7 @@ async function sendWelcomeNotification(businessId, businessName) {
     await addDoc(collection(db, "businesses", businessId, "notifications"), {
       message: `Welcome ${businessName}! 🎉 To get started, go to the Inventory tab to manage your items, or use the Bookings tab to schedule your first client event. We're here to help you grow!`,
       type: "welcome",
-      triggeredBy: "System",
+      triggeredBy: "Tracknrent",
       createdAt: serverTimestamp(),
       readBy: [],
       deletedFor: []
