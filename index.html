@@ -7,16 +7,16 @@
     <title>Tracknrent – Smart Rental &amp; Inventory Management</title>
 
     <meta name="description"
-        content="Tracknrent is now 100% free! Manage rentals, inventory, and bookings effortlessly with our all-in-one SaaS dashboard. Perfect for rental businesses and stores.">
+        content="Tracknrent is now 100% ! Manage rentals, inventory, and bookings effortlessly with our all-in-one SaaS dashboard. Perfect for rental businesses and stores.">
     <meta name="keywords"
-        content="Free rental management, Free inventory tracking, Tracknrent SaaS, Booking system, Free rental software">
+        content=" rental management,  inventory tracking, Tracknrent SaaS, Booking system,  rental software">
 
-    <meta property="og:title" content="Tracknrent – Free Rental & Inventory Management SaaS">
+    <meta property="og:title" content="Tracknrent –  Rental & Inventory Management SaaS">
     <meta property="og:description"
-        content="Tracknrent is now free! Manage rentals, inventory, and bookings effortlessly with our all-in-one SaaS dashboard.">
-    <meta property="twitter:title" content="Tracknrent – Free Rental & Inventory Management SaaS">
+        content="Tracknrent is now ! Manage rentals, inventory, and bookings effortlessly with our all-in-one SaaS dashboard.">
+    <meta property="twitter:title" content="Tracknrent –  Rental & Inventory Management SaaS">
     <meta property="twitter:description"
-        content="Tracknrent is now free! Manage rentals, inventory, and bookings effortlessly with our all-in-one SaaS dashboard.">
+        content="Tracknrent is now ! Manage rentals, inventory, and bookings effortlessly with our all-in-one SaaS dashboard.">
 
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#800080">
@@ -775,7 +775,7 @@
             <h1>Manage Rentals &amp; Inventory<br><span>Without Stress</span></h1>
             <p>Tracknrent helps rental businesses and stores track items, bookings, customers, and availability in real
                 time — all from one simple dashboard.</p>
-            <div class="hero__buttons"><a href="signup.html" class="btn-primary">Start Free</a>
+            <div class="hero__buttons"><a href="signup.html" class="btn-primary">Start </a>
                 <a href="#" id="openDemo" class="btn-secondary">Watch Demo</a>
                 <p class="text-gray-500 mt-2 italic">Join <strong>500+ rental businesses</strong> already using
                     Tracknrent.</p>
@@ -857,20 +857,22 @@
         <p>Watch how to manage your rentals in minutes</p>
         <div id="videoBox" class="video__box cursor-pointer">
             <div class="video__placeholder">
-                <div class="play-button"></div>
+                <div class="play-button" id="videoBox"></div>
                 <h3>Product Demo Video</h3>
                 <p>Click to watch the full walkthrough</p>
             </div>
         </div>
     </section>
 
+
+    
     <!-- CONTACT US SECTION -->
     <section id="contact" class="max-w-7xl mx-auto py-20 px-6">
         <div class="text-center mb-12">
             <h2 class="text-3xl md:text-4xl font-bold">Get in Touch</h2>
             <p class="text-gray-600 mt-4">Have questions? Our support team is here to help.</p>
         </div>
-        <form class="max-w-3xl mx-auto grid grid-cols-1 gap-6" c action="https://formspree.io/f/xkonpgdy">
+        <form class="max-w-3xl mx-auto grid grid-cols-1 gap-6" action="https://formspree.io/f/xkonpgdy">
             <input type="text" placeholder="Your Name" name="Name"
                 class="p-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-600 focus:outline-none">
             <input type="email" placeholder="Your Email" name="email"
@@ -890,13 +892,15 @@
         <p class="text-lg md:text-xl mb-8">Create your account today and start saving time & money.</p>
         <a href="signup.html"
             class="bg-white px-8 py-4 rounded-full font-bold shadow-lg hover:shadow-xl hover:-translate-y-1 transition text-lg md:text-xl"
-            style="color: purple;">Create Free Account</a>
-    </section>
-    <div id="demoModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden">
+            style="color: purple;">Create  Account</a>
+            </section>
+
+
+            <div id="demoModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden">
         <div class="relative w-full max-w-4xl mx-4">
             <button id="closeModal" class="absolute top-2 right-2 text-white text-3xl font-bold">&times;</button>
             <div class="aspect-w-16 aspect-h-9">
-                <iframe id="demoVideo" class="w-full h-full rounded-lg shadow-lg" src="https://youtu.be/V6ouUmcpRI8"
+                <iframe id="demoVideo" class="w-full h-full rounded-lg shadow-lg" src="io.mp4"
                     title="Tracknrent Demo Video" frameborder="0" allowfullscreen allow="autoplay"></iframe>
             </div>
         </div>
@@ -995,13 +999,10 @@ popup.addEventListener('click', (e) => {
 window.addEventListener('appinstalled', () => {
   popup.remove(); // 🔥 permanently gone
 });
-</script>
 
-    <script>
         const openBtn = document.getElementById('openDemo');
         const videoBox = document.getElementById('videoBox');
         const modal = document.getElementById('demoModal');
-        const closeBtn = document.getElementById('closeModal');
         const iframe = document.getElementById('demoVideo');
 
         function openModal() {
@@ -1052,7 +1053,7 @@ window.addEventListener('appinstalled', () => {
             const closeBtn = document.getElementById("close-popup");
 
             // show only once per user
-            const hasSeenPopup = localStorage.getItem("Tracknrent_download_popup");
+            const hasSeenPopup = localStorage.getItem("rentbook_download_popup");
 
             if (!hasSeenPopup) {
                 setTimeout(() => {
@@ -1062,7 +1063,7 @@ window.addEventListener('appinstalled', () => {
 
             closeBtn.addEventListener("click", () => {
                 popup.classList.add("hidden");
-                localStorage.setItem("Tracknrent_download_popup", "true");
+                localStorage.setItem("rentbook_download_popup", "true");
             });
         });
 

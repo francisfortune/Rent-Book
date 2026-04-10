@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Settings | Tracknrent</title>
 
-  <meta name="description" content="Manage account preferences, notifications, and user access in your free Tracknrent SaaS dashboard.">
-  <meta name="keywords" content="Free Tracknrent settings, SaaS account preferences, user settings, notification management">
+  <meta name="description" content="Manage account preferences, notifications, and user access in your  RentBook SaaS dashboard.">
+  <meta name="keywords" content=" Tracknrent settings, SaaS account preferences, user settings, notification management">
   
-  <meta property="og:title" content="Settings – Free Tracknrent SaaS">
-  <meta property="og:description" content="Manage account preferences, notifications, and user access in your free Tracknrent SaaS dashboard.">
-  <meta property="twitter:title" content="Settings – Free Tracknrent SaaS">
-  <meta property="twitter:description" content="Manage account preferences, notifications, and user access in your free Tracknrent SaaS dashboard.">
+  <meta property="og:title" content="Settings –  Tracknrent SaaS">
+  <meta property="og:description" content="Manage account preferences, notifications, and user access in your  RentBook SaaS dashboard.">
+  <meta property="twitter:title" content="Settings –  Tracknrent SaaS">
+  <meta property="twitter:description" content="Manage account preferences, notifications, and user access in your  RentBook SaaS dashboard.">
   
 
   <script src="/_sdk/element_sdk.js"></script>
@@ -133,7 +133,14 @@
         }
 
         .brand {
-            font-weight: bold;
+              position: relative;
+            display: block;
+            padding: 0 3px;
+            height: 60px;
+            line-height: 60px;
+            text-align: start;
+            white-space: nowrap;
+            font-weight: 800;
             font-size: 1.5rem;
             font-family: "Ubuntu", sans-serif;
         }
@@ -883,7 +890,17 @@
   <div class="container">
    <div class="navigation">
     <ul>
-     <li><a href="dashboard.html"> <span class="title brand">Tracknrent</span> </a></li>
+     <li><a href="dashboard.html"> <span class="icon">
+                            <div class="logo">
+                                <img src="assets/imgs/logo.png" alt="Tracknrent" style="
+      width: 74px;
+      height: 50px;
+      object-fit: contain;
+      margin-right: 4px;
+    " />
+                            </div>
+                        </span>
+         <span class="brand">Tracknrent</span> </a></li>
      <li><a href="dashboard.html"> <span class="icon">
         <ion-icon name="home-outline"></ion-icon> </span> <span class="title">Dashboard</span> </a></li>
      <li><a href="bookings.html"> <span class="icon">
@@ -905,7 +922,7 @@
      </div>
 <div class="mobile-brand">
     
-  <h1 style="color: black;">Rent<span style="color: purple;"> Book</span></h1>
+  <h1 style="color: black;">Track<span style="color: purple;">nrent</span></h1>
   <span id="brand-name-mobile">Loading...</span>
 </div>
 
@@ -916,7 +933,7 @@
       width: 100%;
       height: 100%;
       border-radius: 50%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: purple;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1003,7 +1020,7 @@
 <!-- FEEDBACK MODAL -->
 <div id="feedbackModal" class="modal">
   <div class="modal-content">
-    <h3>Feedback</h3>
+    <h3>Feedback</h3> <br>
     <label>
       Business Name
       <input id="feedbackBusinessName" type="text" disabled>
@@ -1175,6 +1192,7 @@
     <script type="module" src="assets/js/avatar.js"></script>
     <script type="module" src="assets/js/firebase.js"></script>
     <script type="module" src="assets/js/setting.js"></script>
+    <script src="assets/js/pwa.js"></script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b34487a56f0b78a',t:'MTc2NjYyMzE4NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
 
 </body>

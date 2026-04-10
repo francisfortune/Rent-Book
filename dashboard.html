@@ -8,12 +8,12 @@
 
     <meta name="description"
         content="Access your Tracknrent dashboard to monitor rentals, bookings, inventory, and customer activity in real-time.">
-    <meta name="keywords" content="Tracknrent dashboard, rental tracking, inventory dashboard, SaaS  dashboard">
+    <meta name="keywords" content=" Tracknrent dashboard, rental tracking, inventory dashboard, SaaS  dashboard">
 
-    <meta property="og:title" content="Dashboard –  Tracknrent SaaS">
+    <meta property="og:title" content="Dashboard – Tracknrent SaaS">
     <meta property="og:description"
-        content="Access your  Tracknrent dashboard to monitor rentals, bookings, inventory, and customer activity in real-time.">
-    <meta property="twitter:title" content="Dashboard –  Tracknrent SaaS">
+        content="Access your  dashboard to monitor rentals, bookings, inventory, and customer activity in real-time.">
+    <meta property="twitter:title" content="Dashboard – Tracknrent SaaS">
     <meta property="twitter:description"
         content="Access your  Tracknrent dashboard to monitor rentals, bookings, inventory, and customer activity in real-time.">
 
@@ -145,7 +145,14 @@
         }
 
         .brand {
-            font-weight: bold;
+              position: relative;
+            display: block;
+            padding: 0 3px;
+            height: 60px;
+            line-height: 60px;
+            text-align: start;
+            white-space: nowrap;
+            font-weight: 800;
             font-size: 1.5rem;
             font-family: "Ubuntu", sans-serif;
         }
@@ -764,7 +771,16 @@
     <div class="container">
         <div class="navigation">
             <ul>
-                <li><a href="dashboard.html"> <span class="title brand">Tracknrent</span> </a></li>
+                <li><a href="dashboard.html"> <span class="icon">
+                            <div class="logo">
+                                <img src="assets/imgs/logo.png" alt="Tracknrent" style="
+      width: 74px;
+      height: 50px;
+      object-fit: contain;
+      margin-right: 4px;
+    " />
+                            </div>
+                        </span> <span class="brand">Tracknrent</span> </a></li>
                 <li class="hovered"><a href="dashboard.html"> <span class="icon">
                             <ion-icon name="home-outline"></ion-icon> </span> <span class="title">Dashboard</span> </a>
                 </li>
@@ -824,7 +840,7 @@
       width: 45px;
       height: 45px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: purple;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -935,14 +951,15 @@
                         </div>
 
                         <table>
-                            <thead>
+                            
+<thead class="bg-gray-50 text-left">
   <tr>
-    <th class="py-3">Event Date</th>
-    <th class="py-3">Customer</th>
-    <th class="py-3">Location</th>
-    <th class="py-3">Status</th>
+    <th class="py-4 px-4 text-[10px] font-black uppercase text-gray-500 tracking-widest">Event Date</th>
+    <th class="py-4 px-4 text-[10px] font-black uppercase text-gray-500 tracking-widest">Customer</th>
+    <th class="py-4 px-4 text-[10px] font-black uppercase text-gray-500 tracking-widest text-right">Status</th>
   </tr>
 </thead>
+
                             <tbody id="recent-bookings">
                                 <tr>
                                     <td colspan="4" style="text-align:center; opacity:0.6;">
@@ -974,7 +991,7 @@
     <!-- Add to Home Screen Button -->
 <button id="addHomeBtn" 
         class="hidden fixed bottom-20 right-5 bg-purple-600 text-white px-5 py-3 rounded-full font-bold shadow-lg z-50 hover:shadow-xl transition-transform transform hover:-translate-y-1">
-  Add Rent to Home Screen
+  Add Tracknrent to Home Screen
 </button>
 
         </div><!-- =============== Bottom Navigation (Mobile) ================ -->
@@ -1039,7 +1056,7 @@
 
         // Edit Panel Integration
         const defaultConfig = {
-            brand_name: "Rent Book",
+            brand_name: "Tracknrent",
             welcome_text: "Welcome back, Admin! 👋",
             welcome_subtitle: "Here's what's happening with your rental business today",
             properties_label: "Total Properties",

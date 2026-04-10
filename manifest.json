@@ -1,7 +1,7 @@
 {
-    "name": "RentBook - Rental Management",
-    "short_name": "RentBook",
-    "description": "Free rental management SaaS for managing bookings, inventory, and customer rentals",
+    "name": "Tracknrent - Rental Management",
+    "short_name": "Tracknrent",
+    "description": "rental management SaaS for managing bookings, inventory, and customer rentals",
     "start_url": "/dashboard.html",
     "display": "standalone",
     "background_color": "#ffffff",

@@ -1,4 +1,4 @@
-// Tracknrent Service Worker - Production Level PWA
+// RentBook Service Worker - Production Level PWA
 const CACHE_NAME = 'Tracknrent-v1.0.0';
 const DYNAMIC_CACHE = 'Tracknrent-dynamic-v1';
 
@@ -6,6 +6,7 @@ const DYNAMIC_CACHE = 'Tracknrent-dynamic-v1';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
+    '/offline.html',
     '/dashboard.html',
     '/bookings.html',
     '/add.html',
