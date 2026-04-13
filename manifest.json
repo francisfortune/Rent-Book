@@ -1,7 +1,7 @@
 {
-    "name": "Tracknrent - Rental Management",
+    "name": "Tracknrent - Rental Management System",
     "short_name": "Tracknrent",
-    "description": "rental management SaaS for managing bookings, inventory, and customer rentals",
+    "description": "Smart Rental Management & Bookings",
     "start_url": "/dashboard.html",
     "display": "standalone",
     "background_color": "#ffffff",
@@ -12,6 +12,7 @@
     "categories": [
         "business",
         "productivity",
+        "event rentals",
         "utilities"
     ],
     "icons": [

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms & Conditions | TracknRent</title>
+    <link rel="icon" type="image/x-icon" href="assets/imgs/logo.ico">
+    <link rel="canonical" href="https://tracknrent.vercel.app/" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        .legal-gradient {
+            background: purple;
+        }
+
+        .content-card {
+            box-shadow: 0 10px 50px rgba(0,0,0,0.05);
+            border: 1px solid #f0f0f0;
+        }
+
+        /* Custom Scrollbar for Purple Brand */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: purple; border-radius: 10px; }
+
+        h2 {
+            color: purple;
+            font-weight: 800;
+            font-size: 1.5rem;
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        p, li {
+            color: #4A5568;
+            line-height: 1.8;
+            margin-bottom: 1.2rem;
+        }
+
+        .nav-link {
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link:hover {
+            color: purple;
+            border-left: 3px solid purple;
+            padding-left: 15px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <header class="legal-gradient py-20 px-6 text-center text-white">
+        <div class="max-w-4xl mx-auto animate__animated animate__fadeIn">
+            <h1 class="text-4xl md:text-5xl font-black tracking-tighter mb-4">Terms and Conditions</h1>
+            <p class="opacity-80 font-medium" style="color: white;font-style: italic;">Last Updated: April 10, 2026</p>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-6 py-12">
+        <div class="flex flex-col lg:flex-row gap-12">
+            
+            <aside class="hidden lg:block w-1/4 sticky top-10 h-fit">
+                <nav class="space-y-4">
+                    <p class="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-6">Table of Contents</p>
+                    <a href="#acceptance" class="nav-link block text-sm font-bold text-gray-500 pl-3">1. Acceptance</a>
+                    <a href="#about" class="nav-link block text-sm font-bold text-gray-500 pl-3">2. About Us</a>
+                    <a href="#accounts" class="nav-link block text-sm font-bold text-gray-500 pl-3">4. User Accounts</a>
+                    <a href="#membership" class="nav-link block text-sm font-bold text-gray-500 pl-3">5. Membership</a>
+                    <a href="#roles" class="nav-link block text-sm font-bold text-gray-500 pl-3">6. Roles</a>
+                    <a href="#payments" class="nav-link block text-sm font-bold text-gray-500 pl-3">7. Payments</a>
+                    <a href="#data" class="nav-link block text-sm font-bold text-gray-500 pl-3">9. Data Privacy</a>
+                    <a href="#ip" class="nav-link block text-sm font-bold text-gray-500 pl-3">10. Intellectual Property</a>
+                </nav>
+            </aside>
+
+            <article class="w-full lg:w-3/4 bg-white rounded-[32px] p-8 md:p-16 content-card">
+                
+                <section id="acceptance">
+                    <h2><ion-icon name="checkmark-circle"></ion-icon> 1. Acceptance of Terms</h2>
+                    <p>
+                        By accessing or using <strong>TracknRent</strong> Platform or Services, 
+                        you agree to be bound by these Terms and Conditions. If you do not agree to these terms, 
+                        you must immediately cease use of the Platform.
+                    </p>
+                </section>
+
+                <section id="about">
+                    <h2><ion-icon name="business"></ion-icon> 2. About TracknRent</h2>
+                    <p>
+                        TracknRent is a cloud-based rental management software platform designed to help 
+                        businesses automate record-keeping, manage inventory, track bookings, and streamline 
+                        operational workflows for the rental and circular economy.
+                    </p>
+                </section>
+
+                <section id="accounts">
+                    <h2><ion-icon name="person-circle"></ion-icon> 4. User Accounts</h2>
+                    <p>
+                        Users must provide accurate registration information. You are solely responsible 
+                        for safeguarding your login credentials. TracknRent is not liable for unauthorized 
+                        access resulting from your failure to protect your account.
+                    </p>
+                </section>
+
+                <section id="membership">
+                    <h2><ion-icon name="people"></ion-icon> 5. Business Membership</h2>
+                    <p>
+                        Business owners may invite partners and staff to their workspace. Once a user joins 
+                        through a valid invite, they become part of the workspace. TracknRent reserves the right 
+                        to revoke access to any user suspected of fraud or abuse.
+                    </p>
+                </section>
+
+                <section id="roles" class="bg-purple-50 p-6 rounded-2xl border border-purple-100 my-8">
+                    <h2 class="mt-0">6. Roles & Permissions</h2>
+                    <ul class="list-none space-y-2">
+                        <li><strong>🟣 Owner:</strong> Full administrative control and billing access.</li>
+                        <li><strong>🔵 Partner:</strong> High-level operational and management access.</li>
+                        <li><strong>⚪ Staff:</strong> View-only or limited operational access.</li>
+                    </ul>
+                </section>
+
+                <section id="payments">
+                    <h2><ion-icon name="card"></ion-icon> 7. Subscription & Payments</h2>
+                    <p>
+                        Some features require a paid subscription. All fees are displayed transparently before payment. 
+                        Payments made are non-refundable except where required by the laws of Nigeria.
+                    </p>
+                </section>
+
+                <section id="data">
+                    <h2><ion-icon name="shield-lock"></ion-icon> 9. Data & Privacy</h2>
+                    <p>
+                        We process personal data in line with the <strong>Nigeria Data Protection Regulation (NDPR)</strong>. 
+                        Users are responsible for ensuring that any customer data they upload is lawfully collected.
+                    </p>
+                </section>
+
+                <section id="ip">
+                    <h2><ion-icon name="ribbon"></ion-icon> 10. Intellectual Property</h2>
+                    <p>
+                        All software code, UI design, and platform infrastructure remain the exclusive property of 
+                        <strong>TracknRent</strong>. Users may not copy, sell, or reproduce any part of the platform 
+                        without written permission.
+                    </p>
+                </section>
+
+                <div class="mt-16 pt-8 border-t border-gray-100 text-center">
+                    <p class="text-sm font-bold text-gray-400 mb-4">Questions about these terms?</p>
+                    <a href="mailto:francisfortune62@gmail.com" class="inline-flex items-center gap-2 bg-purple-700 text-white px-8 py-4 rounded-2xl font-black shadow-lg hover:bg-purple-800 transition">
+                        <ion-icon name="mail"></ion-icon> Contact Support
+                    </a>
+                </div>
+
+            </article>
+        </div>
+    </main>
+
+    <footer class="bg-white py-12 border-t border-gray-100 text-center text-gray-400 text-sm">
+        &copy; 2026 TracknRent. All rights reserved. <br>
+        <span class="text-purple-600 font-bold">tracknrent.vercel.app</span>
+    </footer>
+
+</body>
+</html>
