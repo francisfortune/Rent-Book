@@ -137,73 +137,111 @@ function renderInventory(filteredItems, allItems) {
 
 /* =========================
    OVERBOOKED PANEL (SYNCED WITH BOOKINGS.JS)
-========================= */
-function listenToOverbooked(businessId) {
-  const overbookedList = document.getElementById("overbookedList") || document.getElementById("overbooked-list"); 
+========================= */function listenToOverbooked(businessId) {
+  const overbookedList =
+    document.getElementById("overbookedList") ||
+    document.getElementById("overbooked-list");
+
   if (!overbookedList) return;
 
   const ref = collection(db, "businesses", businessId, "bookings");
 
-  onSnapshot(ref, snap => {
+  onSnapshot(ref, (snap) => {
     overbookedList.innerHTML = "";
 
-    // 1. Get current date for status calculation (Matching bookings.js logic)
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
 
     const overbooked = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .filter(b => {
-        // Only show if: 
-        // A) It's not marked as returned 
-        // B) It's not overdue or it's active (Status isn't "returned")
-        // C) It actually has items with a shortage
-        const status = b.status === "returned" ? "returned" : (today > b.event?.returnDate ? "overdue" : "active");
-        return status !== "returned" && b.items?.some(i => (Number(i.shortage) || 0) > 0);
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .filter((b) => {
+        const status =
+          b.status === "returned"
+            ? "returned"
+            : today > b.event?.returnDate
+            ? "overdue"
+            : "active";
+
+        return (
+          status !== "returned" &&
+          b.items?.some(
+            (i) =>
+              Number(i.shortage || 0) > 0 ||
+              i.supplier ||
+              i.vendor ||
+              i.vendorName
+          )
+        );
       });
 
     if (!overbooked.length) {
-      overbookedList.innerHTML = `<p class="text-center text-gray-400 py-6 italic text-sm">No overbooked items 🎉</p>`;
+      overbookedList.innerHTML = `
+        <p class="text-center text-gray-400 py-6 italic text-sm">
+          No overbooked items 🎉
+        </p>
+      `;
       return;
     }
 
-    overbooked.forEach(b => {
+    overbooked.forEach((b) => {
       const borrowedItems = b.items
-        .filter(i => (Number(i.shortage) || 0) > 0)
-        .map(i => {
-          // SYNCED: Using 'supplier' as primary field to match your bookings.js
-          const vendor = i.supplier || i.vendorName || i.vendor || "Unknown Vendor";
-          return `• ${i.shortage} × ${i.name} <span class="text-purple-700 font-bold">[${vendor}]</span>`;
+        .filter(
+          (i) =>
+            Number(i.shortage || 0) > 0 ||
+            i.supplier ||
+            i.vendor ||
+            i.vendorName
+        )
+        .map((i) => {
+          const vendor =
+            i.supplier ||
+            i.vendorName ||
+            i.vendor ||
+            "Unknown Vendor";
+
+          const qty = Number(i.shortage || i.qty || 0);
+
+          return `• ${qty} × ${i.name}
+            <span class="text-purple-700 font-bold">[${vendor}]</span>`;
         });
 
-      const vendorBlock = `<div class="bg-purple-50 border border-purple-100 rounded-xl p-3 mt-3">
-             <p class="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-1">Vendor / Borrowed Items</p>
-             <div class="text-[11px] text-gray-700 leading-relaxed">
-               ${borrowedItems.join("<br>")}
-             </div>
-           </div>`;
-
       const div = document.createElement("div");
-      div.className = "p-4 mb-3 bg-white border border-gray-100 rounded-2xl shadow-sm border-l-4 border-l-orange-500 transition-all hover:shadow-md cursor-pointer";
-      
+      div.className =
+        "p-4 mb-3 bg-white border border-gray-100 rounded-2xl shadow-sm border-l-4 border-l-orange-500 transition-all hover:shadow-md cursor-pointer";
+
       div.innerHTML = `
         <div class="flex justify-between items-start">
           <div>
-            <p class="font-bold text-gray-900 text-sm">${b.client?.name || "Client"}</p>
+            <p class="font-bold text-gray-900 text-sm">
+              ${b.client?.name || "Client"}
+            </p>
             <p class="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
-              <ion-icon name="calendar-outline"></ion-icon> ${b.event?.date || "No Date"}
+              <ion-icon name="calendar-outline"></ion-icon>
+              ${b.event?.date || "No Date"}
             </p>
           </div>
-          <span class="bg-orange-100 text-blue-600 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">Shortage</span>
+          <span class="bg-orange-100 text-orange-600 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+            Shortage
+          </span>
         </div>
-        ${vendorBlock}
+
+        <div class="bg-purple-50 border border-purple-100 rounded-xl p-3 mt-3">
+          <p class="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-1">
+            Vendor / Borrowed Items
+          </p>
+          <div class="text-[11px] text-gray-700 leading-relaxed">
+            ${borrowedItems.join("<br>")}
+          </div>
+        </div>
       `;
-      
-      div.onclick = () => window.location.href = `bookings.html#${b.id}`;
+
+      div.onclick = () => {
+        window.location.href = `bookings.html?highlight=${b.id}`;
+      };
+
       overbookedList.appendChild(div);
     });
   });
 }
-
 
 
 /* =========================
