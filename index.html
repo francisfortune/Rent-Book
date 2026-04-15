@@ -30,6 +30,7 @@
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="assets/imgs/logo.png">
 
+    <script src="/_sdk/element_sdk.js"></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-H4V84QQ8WJ"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
@@ -40,6 +41,7 @@
 
     <!-- FAVICON -->
     <link rel="icon" type="image/x-icon" href="assets/logo.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap");
 
@@ -759,49 +761,67 @@
             navigation: auto;
         }
     </style>
+    <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
     <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
 </head>
-
-<body><!-- NAV -->
+<body>
     <nav>
         <div class="nav__container">
             <div class="nav__logo">
                 Track<span>nrent</span>
-            </div><a href="signup.html" class="nav__btn">Get Started</a>
+            </div>
+            <a href="signup.html" class="nav__btn">Get Started</a>
         </div>
-    </nav><!-- HERO -->
+    </nav>
+
     <section class="hero">
         <div class="hero__content">
             <h1>Manage Rentals &amp; Inventory<br><span>Without Stress</span></h1>
-            <p>Tracknrent helps rental businesses and stores track items, bookings, customers, and availability in real
-                time — all from one simple dashboard.</p>
-            <div class="hero__buttons"><a href="signup.html" class="btn-primary">Start </a>
+            <p>Tracknrent helps rental businesses and stores track items, bookings, customers, and availability in real time — all from one simple dashboard.</p>
+            <div class="hero__buttons">
+                <a href="signup.html" class="btn-primary">Start </a>
                 <a href="#" id="openDemo" class="btn-secondary">Watch Demo</a>
-                <p class="text-gray-500 mt-2 italic">Join <strong>500+ rental businesses</strong> already using
-                    Tracknrent.</p>
+                <p class="text-gray-500 mt-2 italic">Join <strong>500+ rental businesses</strong> already using Tracknrent.</p>
             </div>
         </div>
         <div class="hero__image">
             <img src="assets/header.png" alt="">
         </div>
     </section>
-    <!-- FEATURES -->
-    <section class="features">
-        <div class="features__container">
-            <div class="feature"><i class="ri-box-3-line"></i>
-                <h4>Inventory Tracking</h4>
-                <p>Know what is available, rented, or overdue at a glance.</p>
+
+    <section class="py-20 px-6 bg-white">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold" style="color: purple;">From Chaos to Control</h2>
+                <p class="text-gray-600 mt-4">See how Tracknrent transforms your daily rental struggles</p>
             </div>
-            <div class="feature"><i class="ri-calendar-check-line"></i>
-                <h4>Rental Bookings</h4>
-                <p>Manage bookings, durations, and returns effortlessly.</p>
-            </div>
-            <div class="feature"><i class="ri-store-2-line"></i>
-                <h4>Business Ready</h4>
-                <p>Perfect for rental shops, event vendors, and retail stores.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div class="bg-red-50 border border-red-100 p-8 rounded-2xl shadow-sm">
+                    <h3 class="text-2xl font-bold text-red-600 mb-6">WITHOUT TRACKNRENT</h3>
+                    <ul class="space-y-4 text-gray-700">
+                        <li>❌ Counting items manually before every event</li>
+                        <li>❌ Forgetting who owes you and how much</li>
+                        <li>❌ Double-booking items you don't even have</li>
+                        <li>❌ Losing customers because of disorganisation</li>
+                        <li>❌ Using notebooks and WhatsApp chats to "manage"</li>
+                    </ul>
+                </div>
+
+                <div class="bg-purple-50 border border-purple-100 p-8 rounded-2xl shadow-sm">
+                    <h3 class="text-2xl font-bold text-purple-700 mb-6">WITH TRACKNRENT</h3>
+                    <ul class="space-y-4 text-gray-700">
+                        <li>✅ Live inventory that updates automatically</li>
+                        <li>✅ Every booking organised with payment tracking</li>
+                        <li>✅ Overbooking alerts before they happen</li>
+                        <li>✅ Receipts sent directly via WhatsApp</li>
+                        <li>✅ Real-time notifications for everything</li>
+                    </ul>
+                </div>
             </div>
         </div>
-    </section><!-- BENEFITS -->
+    </section>
+
     <section class="benefits">
         <div class="benefits__container">
             <div class="benefits__header">
@@ -811,32 +831,28 @@
             <div class="benefits__grid">
                 <div>
                     <div class="benefit__item">
-                        <div class="benefit__icon"><i class="ri-dashboard-line"></i>
-                        </div>
+                        <div class="benefit__icon"><i class="ri-dashboard-line"></i></div>
                         <div class="benefit__text">
                             <h4>Real-Time Dashboard</h4>
                             <p>Monitor all your rentals, inventory, and revenue from one beautiful dashboard.</p>
                         </div>
                     </div>
                     <div class="benefit__item">
-                        <div class="benefit__icon"><i class="ri-notification-line"></i>
-                        </div>
+                        <div class="benefit__icon"><i class="ri-notification-line"></i></div>
                         <div class="benefit__text">
                             <h4>Smart Notifications</h4>
                             <p>Get alerts for upcoming returns, overdue items, and booking requests.</p>
                         </div>
                     </div>
                     <div class="benefit__item">
-                        <div class="benefit__icon"><i class="ri-team-line"></i>
-                        </div>
+                        <div class="benefit__icon"><i class="ri-team-line"></i></div>
                         <div class="benefit__text">
                             <h4>Customer Management</h4>
                             <p>Keep detailed records of customers, rental history, and payment status.</p>
                         </div>
                     </div>
                     <div class="benefit__item">
-                        <div class="benefit__icon"><i class="ri-bar-chart-line"></i>
-                        </div>
+                        <div class="benefit__icon"><i class="ri-bar-chart-line"></i></div>
                         <div class="benefit__text">
                             <h4>Insights &amp; Reports</h4>
                             <p>Track revenue, popular items, and business trends with detailed analytics.</p>
@@ -844,26 +860,69 @@
                     </div>
                 </div>
 
-
-<div class="benefit__image">
-    <div class="benefit__visual" style="background: transparent;">
-        <img src="assets/imgs/dash.png" alt="">
-    </div>
-</div>
-
-
-
-
+                <div class="benefit__image">
+                    <div class="benefit__visual" style="background: transparent;">
+                        <img src="assets/imgs/dash.png" alt="">
+                    </div>
+                </div>
             </div>
         </div>
     </section>
-    <!-- Video Section -->
+
+    <section class="py-20 px-6 bg-white">
+    <div class="max-w-7xl mx-auto">
+        <div class="max-w-5xl mx-auto text-center">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">Everything You Need. Nothing You Don't.</h2>
+            <p class="text-gray-600 text-lg mb-12">One system to replace notebooks, spreadsheets, and guesswork.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left">
+                <div class="p-6 bg-white rounded-2xl shadow-md border hover:-translate-y-2 transition">
+                    <div class="text-purple-600 text-3xl mb-4"><i class="ri-archive-line"></i></div>
+                    <h4 class="text-xl font-bold mb-2">Inventory Tracking</h4>
+                    <p class="text-gray-600">Know exactly what you have. Stock reduces on booking and restores on return — automatically.</p>
+                </div>
+
+                <div class="p-6 bg-white rounded-2xl shadow-md border hover:-translate-y-2 transition">
+                    <div class="text-purple-600 text-3xl mb-4"><i class="ri-calendar-check-line"></i></div>
+                    <h4 class="text-xl font-bold mb-2">Booking Management</h4>
+                    <p class="text-gray-600">Create, edit, update, and track every booking. Mark items returned with one tap.</p>
+                </div>
+
+                <div class="p-6 bg-white rounded-2xl shadow-md border hover:-translate-y-2 transition">
+                    <div class="text-purple-600 text-3xl mb-4"><i class="ri-error-warning-line"></i></div>
+                    <h4 class="text-xl font-bold mb-2">Overbooking Prevention</h4>
+                    <p class="text-gray-600">Get warned before you book what you don't have. Track borrowed vendor items too.</p>
+                </div>
+
+                <div class="p-6 bg-white rounded-2xl shadow-md border hover:-translate-y-2 transition">
+                    <div class="text-purple-600 text-3xl mb-4"><i class="ri-bank-card-line"></i></div>
+                    <h4 class="text-xl font-bold mb-2">Payment Tracking</h4>
+                    <p class="text-gray-600">See total cost, paid amount, and balance instantly. Know who owes you.</p>
+                </div>
+
+                <div class="p-6 bg-white rounded-2xl shadow-md border hover:-translate-y-2 transition">
+                    <div class="text-purple-600 text-3xl mb-4"><i class="ri-whatsapp-line"></i></div>
+                    <h4 class="text-xl font-bold mb-2">WhatsApp Receipts</h4>
+                    <p class="text-gray-600">Generate clean receipts and send them directly via WhatsApp to customers.</p>
+                </div>
+
+                <div class="p-6 bg-white rounded-2xl shadow-md border hover:-translate-y-2 transition">
+                    <div class="text-purple-600 text-3xl mb-4"><i class="ri-notification-3-line"></i></div>
+                    <h4 class="text-xl font-bold mb-2">Real-Time Alerts</h4>
+                    <p class="text-gray-600">Instant notifications for bookings, returns, updates, and system activity.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
     <section class="video">
         <h2>How Tracknrent Works</h2>
         <p>Watch how to manage your rentals in minutes</p>
         <div id="videoBox" class="video__box cursor-pointer">
             <div class="video__placeholder">
-<div class="play-button"></div>
+                <div class="play-button"></div>
                 <h3>Product Demo Video</h3>
                 <p>Click to watch the full walkthrough</p>
             </div>
@@ -871,185 +930,219 @@
     </section>
 
 
-    
-    <!-- CONTACT US SECTION -->
+
+<section id="pricing" class="py-24 bg-white text-gray-900">
+    <div class="max-w-3xl mx-auto px-6 text-center">
+        <h2 class="text-4xl font-extrabold mb-6" style="color: purple;">One lost booking costs more than Tracknrent</h2>
+        <p class="text-gray-600 text-lg mb-12">Designed to prevent the mistakes that already cost you money every month.</p>
+
+        <div class="bg-purple-50 p-10 rounded-3xl border border-purple-100 shadow-xl relative overflow-hidden">
+            <div class="absolute top-0 right-0 bg-purple-600 px-4 py-1 text-xs font-bold uppercase tracking-widest text-white">
+                Best Value
+            </div>
+            <div class="text-5xl font-extrabold mb-2" style="color: purple;">
+                ₦5,000<span class="text-xl text-gray-500 font-normal"> / 3 months</span>
+            </div>
+            <p class="text-gray-600 mb-8 font-medium">Everything you need to run your rental business without stress</p>
+
+            <ul class="text-left space-y-4 mb-10 mx-auto max-w-xs">
+                <li class="flex items-center"><span class="text-purple-600 mr-3">✔</span> Unlimited bookings & inventory</li>
+                <li class="flex items-center"><span class="text-purple-600 mr-3">✔</span> Automatic conflict prevention</li>
+                <li class="flex items-center"><span class="text-purple-600 mr-3">✔</span> Real-time availability calendar</li>
+                <li class="flex items-center"><span class="text-purple-600 mr-3">✔</span> Full customer & history tracking</li>
+                <li class="flex items-center"><span class="text-purple-600 mr-3">✔</span> WhatsApp receipts & alerts</li>
+                <li class="flex items-center"><span class="text-purple-600 mr-3">✔</span> Payment tracking dashboard</li>
+            </ul>
+
+            <button onclick="openTrialModal()" class="w-full bg-purple-600 py-4 rounded-xl font-bold text-lg text-white hover:bg-purple-700 transition shadow-lg">
+                Start Free
+            </button>
+            <p class="mt-6 text-gray-500 text-sm italic">Start free, upgrade when your business grows.</p>
+        </div>
+    </div>
+</section>
     <section id="contact" class="max-w-7xl mx-auto py-20 px-6">
         <div class="text-center mb-12">
             <h2 class="text-3xl md:text-4xl font-bold">Get in Touch</h2>
             <p class="text-gray-600 mt-4">Have questions? Our support team is here to help.</p>
         </div>
         <form class="max-w-3xl mx-auto grid grid-cols-1 gap-6" action="https://formspree.io/f/xkonpgdy">
-            <input type="text" placeholder="Your Name" name="Name"
-                class="p-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-600 focus:outline-none">
-            <input type="email" placeholder="Your Email" name="email"
-                class="p-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-600 focus:outline-none">
-            <textarea placeholder="Your Message" rows="5" name="message"
-                class="p-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-600 focus:outline-none"></textarea>
-            <button type="submit" style="background-color: purple;"
-                class="text-white px-6 py-3 rounded-full shadow-md hover:shadow-lg hover:-translate-y-1 transition font-semibold">Send
-                Message</button>
+            <input type="text" placeholder="Your Name" name="Name" class="p-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-600 focus:outline-none">
+            <input type="email" placeholder="Your Email" name="email" class="p-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-600 focus:outline-none">
+            <textarea placeholder="Your Message" rows="5" name="message" class="p-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-600 focus:outline-none"></textarea>
+            <button type="submit" style="background-color: purple;" class="text-white px-6 py-3 rounded-full shadow-md hover:shadow-lg hover:-translate-y-1 transition font-semibold">
+                Send Message
+            </button>
         </form>
     </section>
 
-
-    <!-- CTA SECTION -->
     <section class="py-20 px-6 text-center text-white" style="background-color: purple;">
         <h2 class="text-4xl md:text-5xl font-bold mb-6">Ready to Simplify Your Rentals?</h2>
         <p class="text-lg md:text-xl mb-8">Create your account today and start saving time & money.</p>
-        <a href="signup.html"
-            class="bg-white px-8 py-4 rounded-full font-bold shadow-lg hover:shadow-xl hover:-translate-y-1 transition text-lg md:text-xl"
-            style="color: purple;">Create  Account</a>
-            </section>
+        <a href="signup.html" class="bg-white px-8 py-4 rounded-full font-bold shadow-lg hover:shadow-xl hover:-translate-y-1 transition text-lg md:text-xl" style="color: purple;">Create Account</a>
+    </section>
 
-
-            <div id="demoModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden">
+    <div id="demoModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden">
         <div class="relative w-full max-w-4xl mx-4">
             <button id="closeModal" class="absolute top-2 right-2 text-white text-3xl font-bold">&times;</button>
             <div class="aspect-w-16 aspect-h-9">
-               <video
-    id="demoVideo"
-    class="w-full h-full rounded-lg shadow-lg"
-    controls
-    preload="metadata">
-    <source src="assets/imgs/Neon New Articles Fashion Gradient Video (1).mp4" type="video/mp4">
-</video>
+                <video id="demoVideo" class="w-full h-full rounded-lg shadow-lg" controls preload="metadata">
+                    <source src="assets/imgs/Neon New Articles Fashion Gradient Video (1).mp4" type="video/mp4">
+                </video>
             </div>
         </div>
     </div>
-    <!-- FOOTER -->
-    <footer>
+
+    <footer style="padding: 20px; text-align: center;">
         © 2025 Tracknrent. All rights reserved.
     </footer>
 
-
-
-    <!-- INSTALL APP POPUP -->
-<div id="installPopup" class="install-overlay hidden">
-  <div class="install-card">
-    <h3>Install Tracknrent App</h3>
-    <p>
-      Add Tracknrent to your home screen for faster access and an app-like experience.
-    </p>
-
-    <div class="install-actions">
-      <button id="installConfirm" class="install-btn">
-        Install App
-      </button>
-      <button id="installClose" class="close-btn">
-        Maybe later
-      </button>
+    <div id="installPopup" class="install-overlay hidden">
+        <div class="install-card">
+            <h3>Install Tracknrent App</h3>
+            <p>Add Tracknrent to your home screen for faster access and an app-like experience.</p>
+            <div class="install-actions">
+                <button id="installConfirm" class="install-btn">Install App</button>
+                <button id="installClose" class="close-btn">Maybe later</button>
+            </div>
+        </div>
     </div>
-  </div>
-</div>
 
-// 1. GLOBALS & STATE
+<script>
 let deferredPrompt = null;
 
-// Use specific names to avoid "Variable Redeclaration" errors
-const installPopupEl = document.getElementById('installPopup');
-const installConfirmBtn = document.getElementById('installConfirm');
-const installCancelBtn = document.getElementById('installClose');
+const popup = document.getElementById('installPopup');
+const installBtn = document.getElementById('installConfirm');
+const closeBtn = document.getElementById('installClose');
 
-const demoOpenBtn = document.getElementById('openDemo');
-const demoVideoBox = document.getElementById('videoBox');
-const demoModalEl = document.getElementById('demoModal');
-const demoVideoPlayer = document.getElementById('demoVideo');
-const demoCloseBtn = document.getElementById('closeModal');
-
-// 2. UTILITIES
+// ✅ Robust install detection
 function isInstalled() {
-    return (
-        window.matchMedia('(display-mode: standalone)').matches ||
-        window.navigator.standalone === true
-    );
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  );
 }
 
-// 3. PWA INSTALLATION LOGIC
+// Capture install prompt
 window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
+  e.preventDefault();
+  deferredPrompt = e;
 });
 
+// 🔥 Main logic
 window.addEventListener('load', () => {
-    if (!installPopupEl) return;
+  // If already installed → destroy popup completely
+  if (isInstalled()) {
+    popup.remove();
+    return;
+  }
 
-    if (isInstalled()) {
-        installPopupEl.remove();
-        return;
-    }
-
-    // Show popup only if they haven't dismissed it before
-    const hasSeen = localStorage.getItem("tracknrent_install_dismissed");
-    if (!hasSeen) {
-        setTimeout(() => {
-            installPopupEl.classList.remove('hidden');
-        }, 2000);
-    }
+  // Not installed → show popup after 1s
+  setTimeout(() => {
+    popup.classList.remove('hidden');
+  }, 1000);
 });
 
-if (installConfirmBtn) {
-    installConfirmBtn.addEventListener('click', async () => {
-        if (!deferredPrompt) {
-            alert('Install not available yet. Please wait a moment.');
-            return;
+// Install click
+installBtn.addEventListener('click', async () => {
+  if (!deferredPrompt) {
+    alert('Installation not available yet. Try again');
+    return;
+  }
+
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+
+  if (outcome === 'accepted') {
+    popup.remove(); // 🔥 remove from DOM
+  }
+
+  deferredPrompt = null;
+});
+
+// Close popup (but keep asking next reload)
+closeBtn.addEventListener('click', () => {
+  popup.classList.add('hidden');
+});
+
+// Click outside modal
+popup.addEventListener('click', (e) => {
+  if (e.target === popup) popup.classList.add('hidden');
+});
+
+// App installed event
+window.addEventListener('appinstalled', () => {
+  popup.remove(); // 🔥 permanently gone
+});
+
+        const openBtn = document.getElementById('openDemo');
+        const videoBox = document.getElementById('videoBox');
+        const modal = document.getElementById('demoModal');
+        const iframe = document.getElementById('demoVideo');
+
+function openModal() {
+    modal.classList.remove('hidden');
+    iframe.play();
+}
+
+function closeModal() {
+    modal.classList.add('hidden');
+    iframe.pause();
+    iframe.currentTime = 0;
+}
+        openBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal();
+        });
+
+        videoBox.addEventListener('click', openModal);
+        closeBtn.addEventListener('click', closeModal);
+
+        // Close modal when clicking outside the video
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        tailwind.config = {
+            theme: {
+                extend: {},
+            },
+            plugins: [
+                function ({ addUtilities }) {
+                    addUtilities({
+                        '.aspect-w-16': { 'aspect-ratio': '16/9' },
+                        '.aspect-h-9': { 'aspect-ratio': '16/9' },
+                    })
+                }
+            ]
         }
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') installPopupEl.remove();
-        deferredPrompt = null;
-    });
-}
 
-if (installCancelBtn) {
-    installCancelBtn.addEventListener('click', () => {
-        installPopupEl.classList.add('hidden');
-        localStorage.setItem("tracknrent_install_dismissed", "true");
-    });
-}
+        document.addEventListener("DOMContentLoaded", () => {
+            const popup = document.getElementById("download-popup");
+            const closeBtn = document.getElementById("close-popup");
 
-// 4. DEMO MODAL LOGIC
-function handleOpenModal(e) {
-    if (e) e.preventDefault();
-    if (demoModalEl && demoVideoPlayer) {
-        demoModalEl.classList.remove('hidden');
-        demoVideoPlayer.play();
-    }
-}
+            // show only once per user
+            const hasSeenPopup = localStorage.getItem("rentbook_download_popup");
 
-function handleCloseModal() {
-    if (demoModalEl && demoVideoPlayer) {
-        demoModalEl.classList.add('hidden');
-        demoVideoPlayer.pause();
-        demoVideoPlayer.currentTime = 0;
-    }
-}
-
-if (demoOpenBtn) demoOpenBtn.addEventListener('click', handleOpenModal);
-if (demoVideoBox) demoVideoBox.addEventListener('click', handleOpenModal);
-if (demoCloseBtn) demoCloseBtn.addEventListener('click', handleCloseModal);
-
-if (demoModalEl) {
-    demoModalEl.addEventListener('click', (e) => {
-        if (e.target === demoModalEl) handleCloseModal();
-    });
-}
-
-// 5. TAILWIND & REMAINING INIT
-if (window.tailwind) {
-    tailwind.config = {
-        theme: { extend: {} },
-        plugins: [
-            function ({ addUtilities }) {
-                addUtilities({
-                    '.aspect-w-16': { 'aspect-ratio': '16/9' },
-                    '.aspect-h-9': { 'aspect-ratio': '16/9' },
-                })
+            if (!hasSeenPopup) {
+                setTimeout(() => {
+                    popup.classList.remove("hidden");
+                }, 2000); // 2 seconds
             }
-        ]
-    }
-}
 
-// Clear that weird Cloudflare/Challenge iframe script if you don't need it.
-// It is often the cause of the "404" errors in the console.
+            closeBtn.addEventListener("click", () => {
+                popup.classList.add("hidden");
+                localStorage.setItem("rentbook_download_popup", "true");
+            });
+        });
+
+
+    </script>
+    <script>(function () { function c() { var b = a.contentDocument || a.contentWindow.document; if (b) { var d = b.createElement('script'); d.innerHTML = "window.__CF$cv$params={r:'9b34560d11de8560',t:'MTc2NjYyMzc0MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);"; b.getElementsByTagName('head')[0].appendChild(d) } } if (document.body) { var a = document.createElement('iframe'); a.height = 1; a.width = 1; a.style.position = 'absolute'; a.style.top = 0; a.style.left = 0; a.style.border = 'none'; a.style.visibility = 'hidden'; document.body.appendChild(a); if ('loading' !== document.readyState) c(); else if (window.addEventListener) document.addEventListener('DOMContentLoaded', c); else { var e = document.onreadystatechange || function () { }; document.onreadystatechange = function (b) { e(b); 'loading' !== document.readyState && (document.onreadystatechange = e, c()) } } } })();</script>
 </body>
+
+
+
 </html>
+
+
