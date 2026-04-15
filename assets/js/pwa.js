@@ -39,64 +39,16 @@
     }
 
     // Show update notification
-    function showUpdateNotification() {
-        const updateBanner = document.createElement('div');
-        updateBanner.id = 'pwa-update-banner';
-        updateBanner.innerHTML = `
-      <style>
-        #pwa-update-banner {
-          position: fixed;
-          bottom: 20px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: purple;
-          color: white;
-          padding: 16px 24px;
-          border-radius: 12px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          z-index: 10000;
-          animation: slideUp 0.3s ease;
-          max-width: 90vw;
-        }
-        #pwa-update-banner button {
-          background: white;
-          color: #667eea;
-          border: none;
-          padding: 8px 16px;
-          border-radius: 8px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        #pwa-update-banner button:hover {
-          transform: scale(1.05);
-        }
-        #pwa-update-banner .dismiss {
-          background: transparent;
-          color: white;
-          opacity: 0.8;
-        }
-        @keyframes slideUp {
-          from {
-            transform: translateX(-50%) translateY(100px);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(-50%) translateY(0);
-            opacity: 1;
-          }
-        }
-      </style>
-      <span>🚀 A new version is available!</span>
-      <button onclick="location.reload()">Update Now</button>
-      <button class="dismiss" onclick="this.parentElement.remove()">Later</button>
+function showUpdateNotification() {
+    const banner = document.createElement('div');
+    banner.id = 'pwa-update-banner';
+    banner.innerHTML = `
+        🚀 New version available
+        <button onclick="location.reload()">Update</button>
+        <button onclick="this.parentElement.remove()">Later</button>
     `;
-        document.body.appendChild(updateBanner);
-    }
-
+    document.body.appendChild(banner);
+}
     // Install prompt handling
     let deferredPrompt = null;
 
@@ -115,9 +67,7 @@
         // Auto-show install prompt after 30 seconds on first visit
         const hasPrompted = localStorage.getItem('pwa-install-prompted');
         if (!hasPrompted) {
-            setTimeout(() => {
-                showInstallPrompt();
-            }, 30000);
+          // Only show install prompt when user interacts
         }
     });
 
@@ -241,17 +191,53 @@
     window.showInstallPrompt = showInstallPrompt;
 
     // Online/Offline status handling
-    function updateOnlineStatus() {
-        const isOnline = navigator.onLine;
+function updateOnlineStatus() {
+    const isOnline = navigator.onLine;
 
-        // Remove existing status indicator
-        const existingIndicator = document.getElementById('connection-status');
-        if (existingIndicator) existingIndicator.remove();
+    let bar = document.getElementById('connection-bar');
 
-        if (!isOnline) {
-window.location.href = "offline.html";
-        }
+    // create if not exists
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'connection-bar';
+        document.body.appendChild(bar);
     }
+
+    // STYLE (applied via JS so no CSS file needed)
+    bar.style.position = 'fixed';
+    bar.style.top = '0';
+    bar.style.left = '0';
+    bar.style.right = '0';
+    bar.style.zIndex = '99999';
+    bar.style.padding = '12px';
+    bar.style.textAlign = 'center';
+    bar.style.fontFamily = 'sans-serif';
+    bar.style.fontWeight = '600';
+    bar.style.transition = 'all 0.3s ease';
+
+    if (isOnline) {
+        bar.style.background = '#16a34a'; // green
+        bar.style.color = 'white';
+        bar.innerHTML = '🟢 You are back online';
+
+        setTimeout(() => {
+            bar.style.transform = 'translateY(-100%)';
+            bar.style.opacity = '0';
+        }, 2000);
+
+        setTimeout(() => {
+            if (bar) bar.remove();
+        }, 2600);
+
+    } else {
+        bar.style.background = '#dc2626'; // red
+        bar.style.color = 'white';
+        bar.style.transform = 'translateY(0)';
+        bar.style.opacity = '1';
+        bar.innerHTML = '🔴 No internet connection - you are offline';
+    }
+}
+
 
     window.addEventListener('online', updateOnlineStatus);
     window.addEventListener('offline', updateOnlineStatus);

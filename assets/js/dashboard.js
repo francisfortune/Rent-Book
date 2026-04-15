@@ -254,6 +254,28 @@ onAuthStateChanged(auth, async user => {
     console.error("Dashboard error:", err);
     window.location.href = "setup.html";
   }
+
+
+
+const messaging = getMessaging();
+
+async function requestPushPermission() {
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") return;
+
+    const token = await getToken(messaging, {
+      vapidKey: "YOUR_PUBLIC_VAPID_KEY"
+    });
+
+    console.log("FCM Token:", token);
+
+    // SAVE token to Firestore for this user
+    // db -> users/{uid}/fcmTokens
+  } catch (err) {
+    console.error("Push permission error:", err);
+  }
+}
 });
 // /* =========================
 //    COFFEE BUTTON
@@ -426,17 +448,59 @@ await updateDoc(notifRef, {
       targetPage = "inventory.html";
     }
 
+      // ✅ INVENTORY PAGE
+    else if (type === "inventory") {
+      targetPage = "settings.html";
+    }
+
     else if (type === "welcome") {
   targetPage = "dashboard.html";
 }
 
     // SETTINGS PAGE (ROBUST)
-else if (type.toLowerCase().includes("setting")) {
+else if (String(type).toLowerCase() === "settings") {
   targetPage = "settings.html";
 }
-    window.location.href = targetPage;
+   if (targetPage) {
+  window.location.href = targetPage;
+} else {
+  console.warn("No page matched for type:", type);
+}
 
   } catch (e) {
     console.error("Notification redirect error:", e);
   }
 };
+
+// --- Avatar Dropdown Logic ---
+
+const userAvatar = document.getElementById('user-avatar');
+const userDropdown = document.getElementById('user-dropdown');
+const notifBtn = document.getElementById('notifBtn');
+const notifModal = document.getElementById('notifModal');
+
+// Toggle Dropdown
+userAvatar.addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevents immediate closing
+    
+    // Close notifications if they are open to avoid overlap
+    if (notifModal) notifModal.style.display = 'none';
+    
+    userDropdown.classList.toggle('hidden');
+});
+
+// Close dropdown when clicking outside
+window.addEventListener('click', (e) => {
+    if (userDropdown && !userDropdown.contains(e.target) && e.target !== userAvatar) {
+        userDropdown.classList.add('hidden');
+    }
+});
+
+// --- Dynamic Avatar Letter ---
+// If you have a function that loads user data, add this line inside it:
+function updateAvatar(businessName) {
+    const avatarContainer = document.getElementById('user-avatar');
+    if (avatarContainer && businessName) {
+        avatarContainer.textContent = businessName.charAt(0).toUpperCase();
+    }
+}
