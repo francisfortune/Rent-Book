@@ -191,53 +191,37 @@ function showUpdateNotification() {
     window.showInstallPrompt = showInstallPrompt;
 
     // Online/Offline status handling
-function updateOnlineStatus() {
-    const isOnline = navigator.onLine;
+    function updateOnlineStatus() {
+        const isOnline = navigator.onLine;
 
-    let bar = document.getElementById('connection-bar');
+        // Remove existing status indicator
+        const existingIndicator = document.getElementById('connection-status');
+        if (existingIndicator) existingIndicator.remove();
 
-    // create if not exists
-    if (!bar) {
-        bar = document.createElement('div');
-        bar.id = 'connection-bar';
-        document.body.appendChild(bar);
+        if (!isOnline) {
+            const indicator = document.createElement('div');
+            indicator.id = 'connection-status';
+            indicator.innerHTML = `
+        <style>
+          #connection-status {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #f56565;
+            color: white;
+            text-align: center;
+            padding: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            z-index: 10001;
+          }
+        </style>
+        <span>📡 You're offline. Some features may be unavailable.</span>
+      `;
+            document.body.prepend(indicator);
+        }
     }
-
-    // STYLE (applied via JS so no CSS file needed)
-    bar.style.position = 'fixed';
-    bar.style.top = '0';
-    bar.style.left = '0';
-    bar.style.right = '0';
-    bar.style.zIndex = '99999';
-    bar.style.padding = '12px';
-    bar.style.textAlign = 'center';
-    bar.style.fontFamily = 'sans-serif';
-    bar.style.fontWeight = '600';
-    bar.style.transition = 'all 0.3s ease';
-
-    if (isOnline) {
-        bar.style.background = '#16a34a'; // green
-        bar.style.color = 'white';
-        bar.innerHTML = '🟢 You are back online';
-
-        setTimeout(() => {
-            bar.style.transform = 'translateY(-100%)';
-            bar.style.opacity = '0';
-        }, 2000);
-
-        setTimeout(() => {
-            if (bar) bar.remove();
-        }, 2600);
-
-    } else {
-        bar.style.background = '#dc2626'; // red
-        bar.style.color = 'white';
-        bar.style.transform = 'translateY(0)';
-        bar.style.opacity = '1';
-        bar.innerHTML = '🔴 No internet connection - you are offline';
-    }
-}
-
 
     window.addEventListener('online', updateOnlineStatus);
     window.addEventListener('offline', updateOnlineStatus);

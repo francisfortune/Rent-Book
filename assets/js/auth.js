@@ -238,7 +238,7 @@ document.addEventListener("DOMContentLoaded", () => {
       await sendPasswordResetEmail(auth, email);
 
       // Success message
-      alert("📧 Reset link sent. Check your email.");
+alert("A password reset link has been sent to your email address. Kindly check your inbox and spam folder.");
       resetModal.classList.add("hidden");
 
     } catch (error) {
