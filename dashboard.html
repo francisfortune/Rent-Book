@@ -837,21 +837,41 @@
   </div>
 
   <!-- User Avatar -->
-  <div id="user-avatar" style="
-      width: 45px;
-      height: 45px;
-      border-radius: 50%;
-      background: purple;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: 700;
-      font-size: 1rem;
-      text-transform: uppercase;
-    ">
-      ?
+
+<div class="relative inline-block text-left">
+  <div 
+    id="user-avatar" style="background-color: purple;"
+    class="w-10 h-10 rounded-full text-white flex items-center justify-center font-bold cursor-pointer hover:bg-purple-700 transition-all shadow-md"
+  >
+    </div>
+
+  <div 
+    id="user-dropdown" 
+    class="hidden absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden transform origin-top-right transition-all"
+  >
+    <div class="py-2">
+      <a href="analytics.html" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-purple hover:text-purple-600 transition-colors">
+        <ion-icon name="bar-chart-outline" class="mr-3 text-lg"></ion-icon>
+        Analytics
+      </a>
+      <a href="settings.html" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-purple hover:text-purple-600 transition-colors">
+        <ion-icon name="settings-outline" class="mr-3 text-lg"></ion-icon>
+        Settings
+      </a>
+      <hr class="my-1 border-gray-100">
+      <button 
+        onclick="auth.signOut()" 
+        class="w-full flex items-center px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
+      >
+        <ion-icon name="log-out-outline" class="mr-3 text-lg"></ion-icon>
+        Logout
+      </button>
+    </div>
   </div>
+</div>
+
+
+
 </div>
 
 <!-- Notification Modal -->

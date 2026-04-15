@@ -30,7 +30,6 @@
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="assets/imgs/logo.png">
 
-    <script src="/_sdk/element_sdk.js"></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-H4V84QQ8WJ"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
@@ -41,7 +40,6 @@
 
     <!-- FAVICON -->
     <link rel="icon" type="image/x-icon" href="assets/logo.ico">
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap");
 
@@ -761,7 +759,6 @@
             navigation: auto;
         }
     </style>
-    <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
     <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
 </head>
 
@@ -945,148 +942,114 @@
   </div>
 </div>
 
-
-<script>
+// 1. GLOBALS & STATE
 let deferredPrompt = null;
 
-const popup = document.getElementById('installPopup');
-const installBtn = document.getElementById('installConfirm');
-const closeBtn = document.getElementById('installClose');
+// Use specific names to avoid "Variable Redeclaration" errors
+const installPopupEl = document.getElementById('installPopup');
+const installConfirmBtn = document.getElementById('installConfirm');
+const installCancelBtn = document.getElementById('installClose');
 
-// ✅ Robust install detection
+const demoOpenBtn = document.getElementById('openDemo');
+const demoVideoBox = document.getElementById('videoBox');
+const demoModalEl = document.getElementById('demoModal');
+const demoVideoPlayer = document.getElementById('demoVideo');
+const demoCloseBtn = document.getElementById('closeModal');
+
+// 2. UTILITIES
 function isInstalled() {
-  return (
-    window.matchMedia('(display-mode: standalone)').matches ||
-    window.navigator.standalone === true
-  );
+    return (
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true
+    );
 }
 
-// Capture install prompt
+// 3. PWA INSTALLATION LOGIC
 window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
+    e.preventDefault();
+    deferredPrompt = e;
 });
 
-// 🔥 Main logic
 window.addEventListener('load', () => {
-  // If already installed → destroy popup completely
-  if (isInstalled()) {
-    popup.remove();
-    return;
-  }
+    if (!installPopupEl) return;
 
-  // Not installed → show popup after 1s
-  setTimeout(() => {
-    popup.classList.remove('hidden');
-  }, 1000);
+    if (isInstalled()) {
+        installPopupEl.remove();
+        return;
+    }
+
+    // Show popup only if they haven't dismissed it before
+    const hasSeen = localStorage.getItem("tracknrent_install_dismissed");
+    if (!hasSeen) {
+        setTimeout(() => {
+            installPopupEl.classList.remove('hidden');
+        }, 2000);
+    }
 });
 
-// Install click
-installBtn.addEventListener('click', async () => {
-  if (!deferredPrompt) {
-    alert('Installation not available yet. Try again');
-    return;
-  }
-
-  deferredPrompt.prompt();
-  const { outcome } = await deferredPrompt.userChoice;
-
-  if (outcome === 'accepted') {
-    popup.remove(); // 🔥 remove from DOM
-  }
-
-  deferredPrompt = null;
-});
-
-// Close popup (but keep asking next reload)
-closeBtn.addEventListener('click', () => {
-  popup.classList.add('hidden');
-});
-
-// Click outside modal
-popup.addEventListener('click', (e) => {
-  if (e.target === popup) popup.classList.add('hidden');
-});
-
-// App installed event
-window.addEventListener('appinstalled', () => {
-  popup.remove(); // 🔥 permanently gone
-});
-
-        const openBtn = document.getElementById('openDemo');
-        const videoBox = document.getElementById('videoBox');
-        const modal = document.getElementById('demoModal');
-        const iframe = document.getElementById('demoVideo');
-
-function openModal() {
-    modal.classList.remove('hidden');
-    iframe.play();
-}
-
-function closeModal() {
-    modal.classList.add('hidden');
-    iframe.pause();
-    iframe.currentTime = 0;
-}
-        openBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            openModal();
-        });
-
-        videoBox.addEventListener('click', openModal);
-        closeBtn.addEventListener('click', closeModal);
-
-        // Close modal when clicking outside the video
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeModal();
-        });
-    </script>
-
-    <!-- Tailwind Aspect Ratio Plugin -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {},
-            },
-            plugins: [
-                function ({ addUtilities }) {
-                    addUtilities({
-                        '.aspect-w-16': { 'aspect-ratio': '16/9' },
-                        '.aspect-h-9': { 'aspect-ratio': '16/9' },
-                    })
-                }
-            ]
+if (installConfirmBtn) {
+    installConfirmBtn.addEventListener('click', async () => {
+        if (!deferredPrompt) {
+            alert('Install not available yet. Please wait a moment.');
+            return;
         }
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') installPopupEl.remove();
+        deferredPrompt = null;
+    });
+}
 
-        document.addEventListener("DOMContentLoaded", () => {
-            const popup = document.getElementById("download-popup");
-            const closeBtn = document.getElementById("close-popup");
+if (installCancelBtn) {
+    installCancelBtn.addEventListener('click', () => {
+        installPopupEl.classList.add('hidden');
+        localStorage.setItem("tracknrent_install_dismissed", "true");
+    });
+}
 
-            // show only once per user
-            const hasSeenPopup = localStorage.getItem("rentbook_download_popup");
+// 4. DEMO MODAL LOGIC
+function handleOpenModal(e) {
+    if (e) e.preventDefault();
+    if (demoModalEl && demoVideoPlayer) {
+        demoModalEl.classList.remove('hidden');
+        demoVideoPlayer.play();
+    }
+}
 
-            if (!hasSeenPopup) {
-                setTimeout(() => {
-                    popup.classList.remove("hidden");
-                }, 2000); // 2 seconds
+function handleCloseModal() {
+    if (demoModalEl && demoVideoPlayer) {
+        demoModalEl.classList.add('hidden');
+        demoVideoPlayer.pause();
+        demoVideoPlayer.currentTime = 0;
+    }
+}
+
+if (demoOpenBtn) demoOpenBtn.addEventListener('click', handleOpenModal);
+if (demoVideoBox) demoVideoBox.addEventListener('click', handleOpenModal);
+if (demoCloseBtn) demoCloseBtn.addEventListener('click', handleCloseModal);
+
+if (demoModalEl) {
+    demoModalEl.addEventListener('click', (e) => {
+        if (e.target === demoModalEl) handleCloseModal();
+    });
+}
+
+// 5. TAILWIND & REMAINING INIT
+if (window.tailwind) {
+    tailwind.config = {
+        theme: { extend: {} },
+        plugins: [
+            function ({ addUtilities }) {
+                addUtilities({
+                    '.aspect-w-16': { 'aspect-ratio': '16/9' },
+                    '.aspect-h-9': { 'aspect-ratio': '16/9' },
+                })
             }
+        ]
+    }
+}
 
-            closeBtn.addEventListener("click", () => {
-                popup.classList.add("hidden");
-                localStorage.setItem("rentbook_download_popup", "true");
-            });
-        });
-
-
-    </script>
-    <script>(function () { function c() { var b = a.contentDocument || a.contentWindow.document; if (b) { var d = b.createElement('script'); d.innerHTML = "window.__CF$cv$params={r:'9b34560d11de8560',t:'MTc2NjYyMzc0MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);"; b.getElementsByTagName('head')[0].appendChild(d) } } if (document.body) { var a = document.createElement('iframe'); a.height = 1; a.width = 1; a.style.position = 'absolute'; a.style.top = 0; a.style.left = 0; a.style.border = 'none'; a.style.visibility = 'hidden'; document.body.appendChild(a); if ('loading' !== document.readyState) c(); else if (window.addEventListener) document.addEventListener('DOMContentLoaded', c); else { var e = document.onreadystatechange || function () { }; document.onreadystatechange = function (b) { e(b); 'loading' !== document.readyState && (document.onreadystatechange = e, c()) } } } })();</script>
+// Clear that weird Cloudflare/Challenge iframe script if you don't need it.
+// It is often the cause of the "404" errors in the console.
 </body>
-
-
-
 </html>
-
-
-
-

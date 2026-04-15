@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics & Customers | Tracknrent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap");
+        body { font-family: 'Inter', sans-serif; background: #f5f6fa; overflow: hidden; }
+        
+        /* Shiny Card Effect */
+        .shiny-card {
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        .shiny-card::after {
+            content: "";
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+            transform: rotate(45deg);
+            animation: shimmer 4s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+    /* The "Peek-a-boo" Glass Effect */
+    .preview-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+            to bottom, 
+            rgba(245, 246, 250, 0.7) 0%, 
+            rgba(245, 246, 250, 0.2) 50%, 
+            rgba(245, 246, 250, 0.8) 100%
+        );
+        backdrop-filter: blur(4px);
+        z-index: 50;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.5s ease;
+    }
+
+    /* Reveal logic on hover of the badge */
+    .preview-overlay:hover {
+        backdrop-filter: blur(1px);
+        background: rgba(245, 246, 250, 0.1);
+    }
+
+    .peek-badge {
+        background: white;
+        padding: 12px 24px;
+        border-radius: 12px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        border: 1px solid #e5e7eb;
+        text-align: center;
+        cursor: default;
+        transform: translateY(0);
+        transition: transform 0.3s ease;
+    }
+
+    .peek-badge:hover {
+        transform: translateY(-5px);
+    }
+
+    .shiny-text {
+        background: linear-gradient(90deg, #7e22ce, #3b82f6, #7e22ce);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: shine-text 3s linear infinite;
+        font-weight: 800;
+        font-size: 1.25rem;
+    }
+
+    @keyframes shine-text {
+        to { background-position: 200% center; }
+    }    </style>
+</head>
+<body class="flex">
+
+    <aside class="w-64 bg-purple-900 min-h-screen text-white hidden md:block">
+        <div class="p-6 font-bold text-2xl flex items-center gap-2">
+            <img src="assets/imgs/logo.png" class="w-10 h-10 object-contain"> Tracknrent
+        </div>
+        <nav class="mt-10">
+            <a href="dashboard.html" class="flex items-center p-4 hover:bg-white hover:text-purple-900 transition">
+                <ion-icon name="home-outline" class="mr-3 text-xl"></ion-icon> Dashboard
+            </a>
+            <a href="#" class="flex items-center p-4 bg-white text-purple-900 shadow-lg">
+                <ion-icon name="bar-chart-outline" class="mr-3 text-xl"></ion-icon> Analytics
+            </a>
+            <a href="bookings.html" class="flex items-center p-4 hover:bg-white hover:text-purple-900 transition">
+                <ion-icon name="calendar-outline" class="mr-3 text-xl"></ion-icon> Bookings
+            </a>
+            <a href="inventory.html" class="flex items-center p-4 hover:bg-white hover:text-purple-900 transition">
+                <ion-icon name="people-outline" class="mr-3 text-xl"></ion-icon> Customers
+            </a>
+        </nav>
+    </aside>
+
+    <main class="relative flex-1 p-4 md:p-8 overflow-hidden h-screen">
+        
+     
+<div class="preview-overlay">
+    <div class="peek-badge">
+        <span class="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-1">Feature Preview</span>
+        <h2 class="shiny-text">Smart Analytics 2.0</h2>
+        <p class="text-gray-500 text-sm mt-2 max-w-xs">
+            We're connecting your live rental data to our new AI engine. 
+        </p>
+        <div class="mt-4 flex gap-2 justify-center">
+            <span class="bg-purple-100 text-purple-700 text-[10px] px-2 py-1 rounded font-bold">REVENUE TRACKING</span>
+            <span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-1 rounded font-bold">DEBTOR ALERTS</span>
+        </div>
+        <button class="mt-6 text-xs text-purple-600 font-bold flex items-center gap-1 mx-auto hover:underline">
+            <ion-icon name="eye-outline"></ion-icon> Hover to preview interface
+        </button>
+    </div>
+</div>
+
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Business Insights</h1>
+                <p class="text-gray-500">Private reports unique to your business activity</p>
+            </div>
+            <div class="flex gap-4">
+                <button class="bg-white border border-gray-200 px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium text-gray-600">
+                    <ion-icon name="download-outline"></ion-icon> Export CSV
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="shiny-card p-6 rounded-2xl shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">Total Revenue</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mt-1">₦2,450,000</h3>
+                        <span class="text-green-500 text-xs font-bold">+12.5%</span>
+                    </div>
+                    <div class="p-3 bg-purple-100 rounded-lg text-purple-600"><ion-icon name="cash-outline" class="text-2xl"></ion-icon></div>
+                </div>
+            </div>
+            <div class="shiny-card p-6 rounded-2xl shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">Customer Retention</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mt-1">68%</h3>
+                    </div>
+                    <div class="p-3 bg-blue-100 rounded-lg text-blue-600"><ion-icon name="person-add-outline" class="text-2xl"></ion-icon></div>
+                </div>
+            </div>
+            <div class="shiny-card p-6 rounded-2xl shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">Active Rentals</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mt-1">42</h3>
+                    </div>
+                    <div class="p-3 bg-orange-100 rounded-lg text-orange-600"><ion-icon name="star-outline" class="text-2xl"></ion-icon></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 opacity-50">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h4 class="font-bold text-gray-700 mb-4">Revenue Trends</h4>
+                <div class="h-48 bg-gray-50 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-200">
+                    <ion-icon name="pulse-outline" class="text-4xl text-gray-300"></ion-icon>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h4 class="font-bold text-gray-700 mb-4">Category Distribution</h4>
+                <div class="h-48 bg-gray-50 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-200">
+                    <ion-icon name="pie-chart-outline" class="text-4xl text-gray-300"></ion-icon>
+                </div>
+            </div>
+        </div>
+    </main>
+
+</body>
+</html>
