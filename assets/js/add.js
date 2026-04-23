@@ -378,6 +378,7 @@ if (overbookedItems.length) {
           },
           event: {
             type: eventType.value,
+             pickupDate: pickupDate.value || "",   // NEW
             date: eventDate.value,
             returnDate: returnDate.value,
             location: eventLocation.value || ""
