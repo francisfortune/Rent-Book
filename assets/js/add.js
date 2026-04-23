@@ -138,8 +138,9 @@ window.addItemRow = function () {
     <div class="vendor-container hidden w-full mt-2 p-3 border border-purple-200 bg-purple-50 rounded-lg">
         <label class="block text-[10px] font-bold text-purple-700 uppercase mb-1">Vendor Name (To borrow from):</label>
         <input class="vendor-name w-full p-2 border border-purple-300 rounded-md text-sm outline-none" 
-               placeholder="e.g. John Rentals">
+               placeholder="e.g. John Rentals" title='Vendor to borrow shortage from'>
     </div>
+    
     
     <button type="button" class="absolute top-2 right-2 sm:static w-10 h-10 flex items-center justify-center bg-red-50 text-red-600 rounded-lg">✕</button>
   `;
@@ -297,18 +298,28 @@ onAuthStateChanged(auth, async (user) => {
       e.preventDefault();
 
       const submitBtn = e.target.querySelector('button[type="submit"]');
-      const originalText = submitBtn.textContent;
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Saving...";
+const originalText = submitBtn.textContent;
 
-      try {
-        /* ===== VALIDATION ===== */
-        if (new Date(returnDate.value) < new Date(eventDate.value)) {
-          alert("Return date cannot be before event date");
-          submitBtn.disabled = false;
-          submitBtn.textContent = originalText;
-          return;
-        }
+submitBtn.disabled = true;
+submitBtn.textContent = "Saving...";
+
+try {
+  /* ===== VALIDATION ===== */
+
+  const delivery = deliveryDate.value || eventDate.value;
+
+  if (new Date(returnDate.value) < new Date(delivery)) {
+    alert("Return date cannot be before delivery date");
+
+    // ✅ FIX: restore button
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+
+    return;
+  }
+
+  // ✅ REMOVE this completely (no longer needed)
+  // if (new Date(returnDate.value) < new Date(eventDate.value)) { ... }
 
         const items = [];
         document.querySelectorAll(".item-row").forEach(row => {
@@ -378,6 +389,7 @@ if (overbookedItems.length) {
           event: {
             type: eventType.value,
             date: eventDate.value,
+  deliveryDate: deliveryDate.value || "", // ✅ NEW
             returnDate: returnDate.value,
             location: eventLocation.value || ""
           },

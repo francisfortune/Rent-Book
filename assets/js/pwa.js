@@ -134,10 +134,10 @@ function showUpdateNotification() {
         }
         #pwa-install-banner p {
           font-size: 0.9rem;
-          color: #718096;
+          color: black;
         }
         #pwa-install-banner .install-btn {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: purple;
           color: white;
           border: none;
           padding: 12px 24px;
@@ -208,7 +208,7 @@ function showUpdateNotification() {
             top: 0;
             left: 0;
             right: 0;
-            background: #f56565;
+            background: #e41515ff;
             color: white;
             text-align: center;
             padding: 8px;
