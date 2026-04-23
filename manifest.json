@@ -1,7 +1,7 @@
 {
-    "name": "Tracknrent - Event Rental Management System",
+    "name": "Tracknrent - Rental Management System",
     "short_name": "Tracknrent",
-    "description": "Event Rental Management Software",
+    "description": "Smart Rental Management & Bookings",
     "start_url": "/dashboard.html",
     "display": "standalone",
     "background_color": "#ffffff",
