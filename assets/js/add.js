@@ -138,9 +138,8 @@ window.addItemRow = function () {
     <div class="vendor-container hidden w-full mt-2 p-3 border border-purple-200 bg-purple-50 rounded-lg">
         <label class="block text-[10px] font-bold text-purple-700 uppercase mb-1">Vendor Name (To borrow from):</label>
         <input class="vendor-name w-full p-2 border border-purple-300 rounded-md text-sm outline-none" 
-               placeholder="e.g. John Rentals" title="Vendor to borrow shortage from'>
+               placeholder="e.g. John Rentals">
     </div>
-    
     
     <button type="button" class="absolute top-2 right-2 sm:static w-10 h-10 flex items-center justify-center bg-red-50 text-red-600 rounded-lg">✕</button>
   `;
