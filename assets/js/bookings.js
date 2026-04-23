@@ -33,9 +33,7 @@ function generateReceiptText(booking) {
 
   return `*BOOKING RECEIPT*\n\n` +
     `Hi ${booking.client.name}, your booking details are below:\n\n` +
-    `Delivery Date: ${booking.pickup?.date || "Not set"}\n` +
     `Date: ${booking.event.date}\n` +
-    `Return date: ${booking.event.returnDate}\n` +
     `Location: ${booking.event.location || "Not specified"}\n\n` +
     `Items Ordered: \n${itemsSummary}\n\n` +
     `Total: ₦${total.toLocaleString()}\n` +
@@ -364,7 +362,7 @@ modalContent.innerHTML = `
 
         ${isOverbooked ? `
           <div class="mt-2 bg-purple-500 text-[10px] font-black px-2 py-1 rounded shadow-sm inline-block uppercase">
-            ⚠️ Overbooked: Another Vendor's item Used
+            ⚠️ Overbooked: Vendor Stock Used
           </div>` : ''}
       </div>
 
@@ -386,12 +384,6 @@ modalContent.innerHTML = `
       <p class="text-[10px] uppercase text-gray-500 font-bold">Event Type</p>
       <p class="font-bold text-gray-800">${booking.event.type || "Other"}</p>
     </div>
-
-   <div class="bg-gray-50 border-b-4 border-purple-500 p-3 rounded-xl shadow-sm">
-      <p class="text-[10px] uppercase text-gray-500 font-bold">Delivery Date</p>
-      <p class="font-bold text-gray-800">${booking.pickup.date}</p>
-    </div>
-
 
     <div class="bg-gray-50 border-b-4 border-purple-500 p-3 rounded-xl shadow-sm">
       <p class="text-[10px] uppercase text-gray-500 font-bold">Event Date</p>
@@ -597,9 +589,7 @@ window.openEditModal = async function(booking, id, businessId) {
   <div class="space-y-2">
     <label class="text-[10px] font-black text-purple-700 uppercase">Event Details</label>
     <div class="grid grid-cols-2 gap-2">
-    <label class="text-[10px] font-black text-purple-700 uppercase">Delivery Date</label>
-      <input id="editpickup" type="date" value="${booking.pickup.date}" class="p-3 bg-gray-50 border rounded-xl text-sm">
-    <input id="editDate" type="date" value="${booking.event.date}" class="p-3 bg-gray-50 border rounded-xl text-sm">
+      <input id="editDate" type="date" value="${booking.event.date}" class="p-3 bg-gray-50 border rounded-xl text-sm">
       <input id="editReturn" type="date" value="${booking.event.returnDate}" class="p-3 bg-gray-50 border rounded-xl text-sm">
     </div>
     <input id="editLocation" type="text" value="${booking.event.location || ""}" class="w-full p-3 bg-gray-50 border rounded-xl" placeholder="Location">
@@ -729,7 +719,6 @@ window.saveEdit = async function(id, businessId) {
       "client.name": document.getElementById("editName").value,
       "client.phone": document.getElementById("editPhone").value,
       "client.email": document.getElementById("editEmail").value,
-      "pickup.date": document.getElementById("editpickup").value,
       "event.date": document.getElementById("editDate").value,
       "event.returnDate": document.getElementById("editReturn").value,
       "event.location": document.getElementById("editLocation").value,
@@ -749,7 +738,7 @@ window.saveEdit = async function(id, businessId) {
     // Send the notification
     await sendNotification(
       businessId,
-      ` Updated ${freshBooking.client.name} booking`,
+      `Booking for ${freshBooking.client.name} updated ✏️`,
       auth.currentUser?.email || "System",
       "booking_updated",
       id
@@ -805,8 +794,8 @@ function renderRow(b, id, businessId) {
         data-id="${id}"
         data-business="${businessId}"
         onclick="handleViewClick(this)">
-${b.pickup?.date || "-"}
-        </td>
+        ${b.event.date}
+      </td>
 
       <td class="p-4 cursor-pointer"
         data-id="${id}"
