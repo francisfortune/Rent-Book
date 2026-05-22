@@ -28,7 +28,8 @@ function generateReceiptText(booking) {
   const balance = total - paid;
 
   let itemsSummary = booking.items?.map(i =>
-    `• ${i.name} (x${i.qty}) - ₦${(i.total || 0).toLocaleString()}`
+    `• ${i.name} (x${i.qty})
+${i.summary ? `   - ${i.summary}` : ""} - ₦${(i.total || 0).toLocaleString()}`
   ).join("\n") || "No items";
 
   const deliveryDate =
@@ -82,17 +83,21 @@ window.shareToWhatsApp = function(phone, message) {
    DYNAMIC STATUS CALCULATOR
 ========================= */
 function getCalculatedStatus(booking) {
-  // If the DB explicitly says 'returned', that takes precedence
+
   if (booking.status === "returned") return "returned";
-  
-  const today = new Date().toISOString().split('T')[0]; // Current date YYYY-MM-DD
-  const returnDate = booking.event.returnDate;
-  
-  // If today is past the return date, it's overdue
-  return today > returnDate ? "overdue" : "active";
+
+  const returnDate = booking.event?.returnDate;
+
+  if (!returnDate) return "active";
+
+  const now = new Date();
+  const returnTime = new Date(returnDate);
+
+  return now > returnTime ? "overdue" : "active";
 }
 
 let inventoryItems = [];
+let allBookingsGlobal = [];
 
 async function loadInventory(businessId) {
   const snap = await getDocs(collection(db, "businesses", businessId, "inventory"));
@@ -138,27 +143,144 @@ async function getBusinessIdByEmail(email) {
 ========================= */
 async function restoreInventory(businessId, items) {
   const invSnap = await getDocs(collection(db, "businesses", businessId, "inventory"));
+
   for (const item of items) {
-    const match = invSnap.docs.find(d => d.data().name.toLowerCase() === item.name.toLowerCase());
-    if (!match) continue;
-    
-    // Logic: If you booked 400 chairs but only had 300 (shortage 100), 
-    // you only put 300 back into your stock.
-    const restorableQty = Math.max(0, item.qty - (item.shortage || 0));
-    if (restorableQty === 0) continue;
-    
-    await updateDoc(match.ref, {
-      availableQuantity: match.data().availableQuantity + restorableQty
+  const match = invSnap.docs.find(
+    d => d.data().name.toLowerCase() === item.name.toLowerCase()
+  );
+
+  if (!match) continue;
+
+  const restorableQty = Math.max(0, item.qty - (item.shortage || 0));
+  if (restorableQty === 0) continue;
+
+  const currentQty = match.data().availableQuantity || 0;
+
+  await updateDoc(match.ref, {
+    availableQuantity: currentQty + restorableQty
+  });
+}
+
+  }
+
+/* =========================
+   INVENTORY DEDUCT
+========================= */
+async function deductInventory(businessId, items) {
+
+  const invSnap = await getDocs(
+    collection(db, "businesses", businessId, "inventory")
+  );
+for (const item of items) {
+  const match = invSnap.docs.find(
+    d => d.data().name.toLowerCase() === item.name.toLowerCase()
+  );
+
+  if (!match) continue;
+
+  const currentQty = match.data().availableQuantity || 0;
+
+  const requestedQty = item.qty || 0;
+
+  // 🔥 SAFE SHORTAGE LOGIC
+  const shortage = Math.max(0, requestedQty - currentQty);
+  const usableQty = requestedQty - shortage;
+
+  const newQty = Math.max(0, currentQty - usableQty);
+
+  await updateDoc(match.ref, {
+    availableQuantity: newQty
+  });
+
+  // store shortage back into item (IMPORTANT)
+  item.shortage = shortage;
+}
+  }
+
+
+
+
+/* =========================
+   EXPORT BOOKINGS
+========================= */
+document.getElementById("exportBookingsBtn")?.addEventListener("click", exportBookingsPDF);
+
+async function exportBookingsPDF() {
+  try {
+
+    const { jsPDF } = window.jspdf;
+
+    const docPDF = new jsPDF();
+
+    docPDF.setFontSize(18);
+    docPDF.text(`${currentBusinessName} Bookings Report`, 14, 20);
+
+    docPDF.setFontSize(11);
+    docPDF.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
+
+    const rows = allBookingsGlobal.map(({ data }, index) => {
+
+      const status = getCalculatedStatus(data);
+
+      return [
+        index + 1,
+        data.client?.name || "",
+        data.client?.phone || "",
+        data.event?.type || "",
+        data.event?.date || "",
+        `₦${(data.payment?.total || 0).toLocaleString()}`,
+        `₦${(data.payment?.paid || 0).toLocaleString()}`,
+        status.toUpperCase()
+      ];
     });
+
+    docPDF.autoTable({
+      startY: 35,
+      head: [[
+        "#",
+        "Client",
+        "Phone",
+        "Event",
+        "Date",
+        "Total",
+        "Paid",
+        "Status"
+      ]],
+      body: rows,
+      styles: {
+        fontSize: 9
+      },
+      headStyles: {
+        fillColor: [128, 0, 128]
+      }
+    });
+
+    docPDF.save(`Bookings_Report_${Date.now()}.pdf`);
+
+  } catch (err) {
+    console.error(err);
+    alert("Failed to export PDF");
   }
 }
+
+
+
+
+
 
 /* =========================
    RETURN BOOKING
 ========================= */
 window.returnBooking = async function(bookingId, businessId, items) {
-  const btn = event?.target;
-  if(btn) disableButton(btn);
+
+  if (!items || items.length === 0) {
+  alert("No items found in booking");
+  return;
+}
+
+
+const btn = document.activeElement;
+if(btn) disableButton(btn);
 
   // 1. Initial Checks
   const hasBorrowedItems = items.some(i => (i.shortage || 0) > 0);
@@ -205,10 +327,10 @@ window.returnBooking = async function(bookingId, businessId, items) {
     const booking = snap.data();
 
     // 3. Update Status in Database
-    await updateDoc(bookingRef, { status: "returned" });
     
     // 4. Restore physical items to inventory
-    await restoreInventory(businessId, items);
+   await restoreInventory(businessId, items);
+await updateDoc(bookingRef, { status: "returned" });
 
     // 5. Success UI Cleanup
     if (document.getElementById("returnLoader")) document.body.removeChild(loader);
@@ -322,6 +444,12 @@ if (highlightId) {
   })();
 }
 
+
+
+
+
+
+
 /* =========================
    OPEN BOOKING MODAL
 ========================= */
@@ -403,33 +531,90 @@ modalContent.innerHTML = `
   </div>
 
   <!-- EVENT INFO -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-center">
+<div class="flex flex-col gap-3">
 
-    <div class="bg-gray-50 border-b-4 border-purple-500 p-3 rounded-xl shadow-sm">
-      <p class="text-[10px] uppercase text-gray-500 font-bold">Event Type</p>
-      <p class="font-bold text-gray-800">${booking.event.type || "Other"}</p>
-    </div>
+  <!-- TOP ROW -->
+  <div class="flex flex-col sm:flex-row gap-3">
 
-    <div class="bg-gray-50 border-b-4 border-purple-500 p-3 rounded-xl shadow-sm">
-      <p class="text-[10px] uppercase text-gray-500 font-bold">Event Date</p>
-      <p class="font-bold text-gray-800">${booking.event.date}</p>
-    </div>
-
-    <div class="bg-gray-50 border-b-4 border-purple-500 p-3 rounded-xl shadow-sm">
-  <p class="text-[10px] uppercase text-gray-500 font-bold">Delivery Date</p>
-  <p class="font-bold text-gray-800">
-    ${booking.event.deliveryDate || booking.event.date}
-  </p>
-</div>
-
-    <div class="bg-gray-50 border-b-4 border-purple-500 p-3 rounded-xl shadow-sm">
-      <p class="text-[10px] uppercase text-gray-500 font-bold">Return Date</p>
-      <p class="font-bold ${status === 'overdue' ? 'text-red-600' : 'text-gray-800'}">
-        ${booking.event.returnDate}
+    <div class="flex-1 min-w-0 bg-gray-50 border-b-4 border-purple-500 p-4 rounded-2xl shadow-sm">
+      <p class="text-[10px] uppercase text-gray-500 font-black tracking-wider">
+        Event Type
       </p>
+
+      <div class="flex items-center gap-2 mt-1">
+        <ion-icon name="sparkles-outline" class="text-purple-600"></ion-icon>
+
+        <p class="font-black text-gray-800 text-sm sm:text-base break-words">
+          ${booking.event.type || "Other"}
+        </p>
+      </div>
+    </div>
+
+    
+    <div class="flex-1 min-w-0 bg-gray-50 border-b-4 border-purple-500 p-4 rounded-2xl shadow-sm">
+      <p class="text-[10px] uppercase text-gray-500 font-black tracking-wider">
+        Event Date
+      </p>
+
+      <div class="flex items-center gap-2 mt-1">
+        <ion-icon name="calendar-outline" class="text-purple-600"></ion-icon>
+
+        <p class="font-black text-gray-800 text-sm sm:text-base break-all">
+          ${booking.event.date || "Not set"}
+        </p>
+      </div>
     </div>
 
   </div>
+
+  <!-- BOTTOM ROW -->
+  <div class="flex flex-col lg:flex-row gap-3">
+
+    <div class="flex-1 min-w-0 bg-gray-50 border-b-4 border-purple-500 p-4 rounded-2xl shadow-sm">
+      <p class="text-[10px] uppercase text-gray-500 font-black tracking-wider">
+        Delivery Date
+      </p>
+
+      <div class="flex items-start gap-2 mt-1">
+        <ion-icon name="cube-outline" class="text-purple-600 mt-1"></ion-icon>
+
+        <p class="font-black text-gray-800 text-sm break-all leading-relaxed">
+          ${formatDateTime(booking.event.deliveryDate || booking.event.date)}
+        </p>
+      </div>
+    </div>
+
+    <div class="flex-1 min-w-0 bg-gray-50 border-b-4 ${
+      status === "overdue"
+        ? "border-red-500"
+        : "border-purple-500"
+    } p-4 rounded-2xl shadow-sm">
+
+      <p class="text-[10px] uppercase text-gray-500 font-black tracking-wider">
+        Return Date
+      </p>
+
+      <div class="flex items-start gap-2 mt-1">
+        <ion-icon 
+          name="return-up-back-outline" 
+          class="${status === "overdue"
+            ? "text-red-600"
+            : "text-purple-600"} mt-1">
+        </ion-icon>
+
+        <p class="font-black text-sm break-all leading-relaxed ${
+          status === "overdue"
+            ? "text-red-600"
+            : "text-gray-800"
+        }">
+          ${formatDateTime(booking.event.returnDate)}
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+</div>
 
   ${vendorBlock}
 
@@ -441,7 +626,7 @@ modalContent.innerHTML = `
     </h4>
 
     <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
-      ${booking.items.map(i => `
+      ${(booking.items || []).map(i => `
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-white border border-gray-100 p-3 rounded-xl shadow-sm">
 
           <div>
@@ -512,27 +697,45 @@ modalContent.innerHTML = `
 
   <!-- NOTES -->
   ${booking.notes ? `
-  <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-    <p class="text-xs font-bold text-yellow-700 uppercase">Notes</p>
-    <p class="text-sm text-gray-700 mt-1 break-words">${booking.notes}</p>
-  </div>
+<div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+  <p class="text-xs font-bold text-yellow-700 uppercase">Notes</p>
+  <p class="text-sm text-gray-700 mt-1 break-words">${booking.notes}</p>
+</div>
+` : ""}
+<!-- RECEIPT -->
+<div class="mt-6">
 
-  <div class="mt-6">
-    <p class="text-[10px] font-black text-purple-700 uppercase mb-2">
+  <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+    <p class="text-[10px] font-black text-purple-700 uppercase">
       Live Receipt Preview
     </p>
 
-    <div class="bg-gray-900 text-green-400 p-4 rounded-xl font-mono text-xs whitespace-pre-wrap border-2 border-gray-800 shadow-inner overflow-x-auto">
-      ${receiptText}
-    </div>
-
-    <button onclick="shareToWhatsApp('${booking.client.phone}', \`${receiptText}\`)" 
-      class="w-full mt-3 py-3 bg-green-500 text-white rounded-xl font-black flex items-center justify-center gap-2 shadow-lg">
-      <ion-icon name="logo-whatsapp"></ion-icon>
-      Share Receipt to ${booking.client.name} via WhatsApp
-    </button>
+    <span class="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold">
+      WhatsApp Ready
+    </span>
   </div>
-  ` : ""}
+
+  <div class="bg-gray-900 text-green-400 p-4 rounded-2xl font-mono text-xs whitespace-pre-wrap border-2 border-gray-800 shadow-inner overflow-auto max-h-72">
+    ${receiptText}
+  </div>
+
+  <div class="flex flex-col sm:flex-row gap-3 mt-4">
+
+    <button
+      onclick="shareToWhatsApp('${booking.client.phone}', \`${receiptText}\`)"
+      class="flex-1 min-h-[55px] px-4 bg-green-500 hover:bg-green-600 transition text-white rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg">
+
+      <ion-icon name="logo-whatsapp" class="text-xl"></ion-icon>
+
+      <span class="text-sm sm:text-base text-center">
+        Share Receipt via WhatsApp
+      </span>
+    </button>
+
+  </div>
+
+</div>
+
 <!-- ACTION BUTTONS -->
 <div class="space-y-3">
 
@@ -586,15 +789,20 @@ bookingModal.style.display = "flex";
 document.body.style.overflow = "hidden";
 
 setTimeout(() => {
-  document.querySelectorAll("#editItemsContainer .item-name").forEach(select => {
-    select.addEventListener("change", (e) => {
-      const opt = e.target.selectedOptions[0];
-      const row = e.target.closest(".item-row");
+document.querySelectorAll("#editItemsContainer .item-name").forEach(select => {
 
-      const priceInput = row.querySelector(".item-price");
-      priceInput.value = opt?.dataset.price || "";
-    });
+  select.addEventListener("change", (e) => {
+
+    const opt = e.target.selectedOptions[0];
+    const row = e.target.closest(".item-row");
+
+    row.querySelector(".item-price").value =
+      opt?.dataset.price || 0;
+
+    recalculateEditTotal();
   });
+
+});
 }, 200);
 };
 
@@ -723,11 +931,37 @@ ${booking.items.map((item, index) => `
 
 function formatDateTime(value) {
   if (!value) return "Not set";
-  return new Date(value).toLocaleString();
+
+  const date = new Date(value);
+
+  return date.toLocaleString("en-NG", {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true
+  });
 }
 
 
 window.addEditItem = function () {
+
+function recalculateEditTotal() {
+  let total = 0;
+
+  document.querySelectorAll("#editItemsContainer .item-row").forEach(row => {
+    const qty = Number(row.querySelector(".item-qty")?.value || 0);
+    const price = Number(row.querySelector(".item-price")?.value || 0);
+
+    total += qty * price;
+  });
+
+  document.getElementById("editTotal").value = total;
+}
+
+
   const container = document.getElementById("editItemsContainer");
 
   container.insertAdjacentHTML("beforeend", `
@@ -746,9 +980,15 @@ window.addEditItem = function () {
 window.removeEditItem = function(index) {
   document.querySelectorAll("#editItemsContainer > div")[index]?.remove();
 };
+
+
+
+
+
 window.saveEdit = async function(id, businessId) {
   const saveBtn = event?.target;
   if(saveBtn) disableButton(saveBtn);
+   saveBtn.dataset.locked = "true";
 
   try {
     const rows = document.querySelectorAll("#editItemsContainer .item-row");
@@ -768,8 +1008,11 @@ window.saveEdit = async function(id, businessId) {
         qty: qty,
         price: price,
         total: qty * price,
-        supplier: supplierInput?.value || "" // Saving the new supplier value
-      });
+        supplier: supplierInput?.value || "", // Saving the new supplier value
+summary: row.querySelector(".item-summary")?.value || "",
+    });
+
+    if (!select?.value) return alert("Item name cannot be empty");
     });
 
     const updatedData = {
@@ -787,12 +1030,56 @@ window.saveEdit = async function(id, businessId) {
       "notes": document.getElementById("editNotes").value
     };
 
+for (const item of updatedItems) {
+
+  const inv = inventoryItems.find(
+    i => i.name.toLowerCase() === item.name.toLowerCase()
+  );
+
+  if (!inv) continue;
+
+  if (item.qty > inv.availableQuantity) {
+
+    const proceed = confirm(
+      `${item.name} only has ${inv.availableQuantity} available.\n\nContinue as overbooked?`
+    );
+
+    if (!proceed) return;
+
+    item.shortage = item.qty - inv.availableQuantity;
+  
+  
+  }
+}
+
     const bookingRef = doc(db, "businesses", businessId, "bookings", id);
-    await updateDoc(bookingRef, updatedData);
+
+// GET OLD BOOKING
+const oldSnap = await getDoc(bookingRef);
+const oldBooking = oldSnap.data();
+
+const oldItems = oldBooking.items || [];
+const newItems = updatedItems || [];
+
+// Restore old inventory first
+
+
+// 1. Restore old inventory first
+await restoreInventory(businessId, oldBooking.items || []);
+await deductInventory(businessId, updatedItems);
+
+
+if (!Array.isArray(oldBooking.items)) oldBooking.items = [];
+if (!Array.isArray(updatedItems)) updatedItems = [];  
+
+// 3. Save updated booking
+await updateDoc(bookingRef, updatedData);
 
     // Fetch the data again to make sure we have the updated "shortage" logic (if handled by DB)
     const freshSnap = await getDoc(bookingRef);
     const freshBooking = freshSnap.data();
+
+    saveBtn.dataset.locked = "false";
 
     // Send the notification
     await sendNotification(
@@ -825,6 +1112,22 @@ function disableButton(button, duration = 1500) {
     button.classList.remove("opacity-50", "cursor-not-allowed", "animate-pulse");
   }, duration);
 }
+
+function recalculateEditTotal() {
+  let total = 0;
+
+  document.querySelectorAll("#editItemsContainer .item-row").forEach(row => {
+    const qty = Number(row.querySelector(".item-qty")?.value || 0);
+    const price = Number(row.querySelector(".item-price")?.value || 0);
+    total += qty * price;
+  });
+
+  document.getElementById("editTotal").value = total;
+}
+
+
+
+
 /* =========================
    RENDER ROW (TABLE)
 ========================= */
@@ -953,7 +1256,7 @@ onAuthStateChanged(auth, async (user) => {
     const q = query(collection(db, "businesses", businessId, "bookings"), orderBy("createdAt", "desc"));
 
     onSnapshot(q, (snap) => {
-      const allBookings = snap.docs.map(d => ({ id: d.id, data: d.data() }));
+      allBookingsGlobal = snap.docs.map(d => ({ id: d.id, data: d.data() }));
 
       function filterAndRender() {
         const sFilter = document.getElementById("filterStatus").value;
@@ -964,7 +1267,7 @@ onAuthStateChanged(auth, async (user) => {
         if (!tbody) return;
         tbody.innerHTML = "";
 
-        const filtered = allBookings.filter(({ data }) => {
+        const filtered = allBookingsGlobal.filter(({ data }) => {
           const currentStatus = getCalculatedStatus(data);
           return (!sFilter || currentStatus === sFilter) &&
                  (!dFilter || data.event.date === dFilter) &&
