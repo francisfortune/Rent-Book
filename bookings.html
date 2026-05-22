@@ -18,6 +18,8 @@
     <meta property="twitter:description"
         content="Manage rental bookings, schedule durations, returns, and track customer reservations with our  SaaS dashboard.">
 
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js"></script>
 
 <script type="application/ld+json">
 {
@@ -975,12 +977,17 @@
                     <select id="filterStatus">
                         <option value="">All Status</option>
                         <option value="active">Active</option>
-                        <option value="done">Returned</option>
-                    </select>
+<option value="returned">Returned</option>
+                        </select>
 
                     <input type="date" id="filterDate">
                     <input type="text" id="searchInput" placeholder="Search client name..." class="flex-grow">
-                </div>
+
+                    <button id="exportBookingsBtn" class="btn">
+  Export Bookings
+</button>
+
+                    </div>
 
                 <!-- Bookings Table -->
                 <div class="details">
@@ -1015,7 +1022,7 @@
             <div class="modal-overlay" id="bookingModal">
                 <div class="modal-card" style="margin-top: 70px;">
 
-                    <div class="modal-header" style="color: purple;">
+                    <div class="modal-header">
                         <h3 id="modalTitle">Booking</h3>
                         <button onclick="closeModal()">✕</button>
                     </div>
@@ -1150,6 +1157,7 @@
     <script type="module" src="assets/js/firebase.js"></script>
     <script type="module" src="assets/js/bookings.js"></script>
     <script src="assets/js/pwa.js"></script>
+ <script src="sw.js"></script>    
     <script>(function () { function c() { var b = a.contentDocument || a.contentWindow.document; if (b) { var d = b.createElement('script'); d.innerHTML = "window.__CF$cv$params={r:'9b34487a56f0b78a',t:'MTc2NjYyMzE4NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);"; b.getElementsByTagName('head')[0].appendChild(d) } } if (document.body) { var a = document.createElement('iframe'); a.height = 1; a.width = 1; a.style.position = 'absolute'; a.style.top = 0; a.style.left = 0; a.style.border = 'none'; a.style.visibility = 'hidden'; document.body.appendChild(a); if ('loading' !== document.readyState) c(); else if (window.addEventListener) document.addEventListener('DOMContentLoaded', c); else { var e = document.onreadystatechange || function () { }; document.onreadystatechange = function (b) { e(b); 'loading' !== document.readyState && (document.onreadystatechange = e, c()) } } } })();</script>
 </body>
 

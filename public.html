@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Public Profile Setup | Tracknrent</title>
+
+  <script src="/_sdk/element_sdk.js"></script>
+  <link rel="stylesheet" href="assets/css/setting.css">
+  <link rel="icon" type="image/x-icon" href="assets/imgs/logo.ico">
+  
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap");
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background: #f5f6fa;
+        overflow-x: hidden;
+        height: 100%; width: 100%;
+    }
+    .container { position: relative; width: 100%; height: 100%; }
+
+    /* =============== Navigation ================ */
+    .navigation {
+        position: fixed; width: 280px; height: 100%;
+        background: purple; border-left: 10px solid purple;
+        transition: 0.5s; overflow: hidden;
+    }
+    .navigation ul { position: absolute; top: 0; left: 0; width: 100%; }
+    .navigation ul li {
+        position: relative; width: 100%; list-style: none;
+        border-top-left-radius: 30px; border-bottom-left-radius: 30px;
+    }
+    .navigation ul li:hover, .navigation ul li.hovered { background-color: white; }
+    .navigation ul li:nth-child(1) { margin-bottom: 35px; pointer-events: none; }
+    .navigation ul li a {
+        display: flex; text-decoration: none; color: white;
+        margin: 20px; font-size: 23px;
+    }
+    .navigation ul li:hover a, .navigation ul li.hovered a { color: purple; }
+    .navigation ul li a .icon { min-width: 60px; text-align: center; }
+    .navigation ul li a .icon ion-icon { font-size: 1.75rem; padding-right: 30px; }
+    .navigation ul li a .title { font-weight: 500; height: 60px; line-height: 60px; }
+    
+    .logo { width: 75px; height: 65px; margin-top: 5px; }
+    .brand { font-weight: 800; font-size: 1.5rem; font-family: "Ubuntu", sans-serif; height: 60px; line-height: 60px; }
+
+    /* ================ Main ================ */
+    .main { position: absolute; width: calc(100% - 280px); left: 280px; min-height: 100%; background: white; transition: 0.5s; }
+    .topbar {
+        position: fixed; top: 0; left: 280px; width: calc(100% - 280px); height: 60px;
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 0 20px; background: white; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); z-index: 100;
+    }
+    .toggle { font-size: 2.5rem; cursor: pointer; color: purple; }
+    .mobile-brand { display: none; align-items: center; gap: 8px; font-size: 1.3rem; font-weight: 700; }
+
+    /* ================ Content Layout ================ */
+    .dashboard { padding: 60px; padding-top: 80px; display: flex; flex-direction: column; gap: 20px; }
+    .page-title { font-size: 1.8rem; font-weight: 700; color: #2d3748; margin-bottom: 10px; }
+    
+    .profile-card {
+        background: #ffffff; padding: 25px; border-radius: 16px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08); width: 100%;
+    }
+    .profile-card h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 18px; color: purple; }
+    .profile-card label { display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; font-weight: 600; color: #4a5568; margin-bottom: 15px; }
+    .profile-card input, .profile-card select, .profile-card textarea {
+        padding: 12px 14px; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 0.95rem; outline: none; background: #fafafa;
+    }
+    .profile-card input:focus, .profile-card select:focus, .profile-card textarea:focus { border-color: purple; background: white; }
+    
+    .primary-btn { width: 100%; padding: 12px; border-radius: 12px; background: purple; color: white; border: none; font-weight: 600; cursor: pointer; transition: 0.25s; }
+    .primary-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    /* Bottom Navigation Mobile */
+    .bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: white; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 1000; padding: 10px 0; }
+    .bottom-nav ul { display: flex; justify-content: space-around; list-style: none; }
+    .bottom-nav ul li a { display: flex; flex-direction: column; align-items: center; color: #718096; text-decoration: none; font-size: 0.7rem; }
+    .bottom-nav ul li.active a { color: purple; }
+    .bottom-nav ul li a .icon { font-size: 1.5rem; }
+
+    @media (max-width: 768px) {
+        .navigation { display: none; }
+        .bottom-nav { display: block; }
+        .main { width: 100%; left: 0; padding-bottom: 70px; }
+        .topbar { left: 0; width: 100%; }
+        .toggle { display: none; }
+        .mobile-brand { display: flex; }
+        .dashboard { padding: 15px; padding-top: 80px; }
+    }
+  </style>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+
+  <div class="container">
+   <div class="navigation">
+    <ul>
+     <li><a href="dashboard.html">
+       <span class="icon"><div class="logo"><img src="assets/imgs/logo.png" alt="Tracknrent" style="width: 74px; height: 50px; object-fit: contain;" /></div></span>
+       <span class="brand">Tracknrent</span>
+     </a></li>
+     <li><a href="dashboard.html"> <span class="icon"><ion-icon name="home-outline"></ion-icon></span> <span class="title">Dashboard</span> </a></li>
+     <li><a href="bookings.html"> <span class="icon"><ion-icon name="calendar-outline"></ion-icon></span> <span class="title">Bookings</span> </a></li>
+     <li><a href="add.html"> <span class="icon"><ion-icon name="add-circle-outline"></ion-icon></span> <span class="title">Add</span> </a></li>
+     <li><a href="inventory.html"> <span class="icon"><ion-icon name="cube-outline"></ion-icon></span> <span class="title">Inventory</span> </a></li>
+     <li class="hovered"><a href="public.html"> <span class="icon"><ion-icon name="globe-outline"></ion-icon></span> <span class="title">Public Profile</span> </a></li>
+    </ul>
+   </div>
+
+   <div class="main">
+    <div class="topbar">
+     <div class="toggle"><ion-icon name="menu-outline"></ion-icon></div>
+     <div class="mobile-brand">
+      <h1 style="color: black;">Track<span style="color: purple;">nrent</span></h1>
+     </div>
+     <div class="user">
+      <div id="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: purple; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">?</div>
+     </div>
+    </div>
+
+    <section class="dashboard">
+     <h2 class="page-title">Public Business Profile</h2>
+
+     <div class="profile-card bg-purple-50 border border-purple-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+       <div>
+         <h4 class="font-bold text-purple-900">Your profile is currently live!</h4>
+         <p class="text-xs text-purple-700">Share this link with your potential clients or paste it on your social media bios.</p>
+       </div>
+       <a id="liveProfileLink" href="#" target="_blank" class="bg-purple-700 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-purple-800 transition">View Live Store</a>
+     </div>
+<div class="profile-card">
+  <h3>🌐 Google Discovery & Event Storefront Setup</h3>
+  
+  <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl mb-4 border border-gray-200">
+    <input type="checkbox" id="publicProfileToggle" class="w-4 h-4 accent-purple-700">
+    <div>
+      <label for="publicProfileToggle" class="font-bold text-gray-800 m-0 text-sm">List on Google Search</label>
+      <span class="text-xs text-gray-500 block">When enabled, your event equipment can be found online by search engines.</span>
+    </div>
+  </div>
+
+  <label>
+    Claim Your Custom URL Handle
+    <div class="flex items-center mt-1">
+      <span class="bg-gray-100 border border-r-0 border-gray-300 p-3 rounded-l-lg text-sm text-gray-500">tracknrent.app/p/</span>
+      <input id="profileSlug" type="text" placeholder="your-business-slug" class="rounded-l-none w-full" style="margin-bottom: 0;">
+    </div>
+  </label>
+
+  <label class="mt-3">
+    Business Bio / Tagline (Google Snippet Description)
+    <textarea id="businessBio" rows="3" placeholder="Describe your service... e.g., Premium event decorations, canopies, and sound system rentals in Enugu. Perfect for weddings and corporate setups."></textarea>
+  </label>
+
+  <h4 class="font-bold text-purple-700 text-sm mt-6 mb-3 border-b pb-2">📞 Public Contact Details</h4>
+  
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <label>
+      Phone Number
+      <input id="publicPhone" type="tel" placeholder="+234...">
+    </label>
+    <label>
+      WhatsApp Number (For Direct Booking Chats)
+      <input id="publicWhatsapp" type="tel" placeholder="Include country code, e.g., 23480...">
+    </label>
+  </div>
+  <label class="mt-2">
+    Physical Office / Warehouse Address
+    <input id="publicAddress" type="text" placeholder="No 12. Ogui Road, Enugu">
+  </label>
+
+  <h4 class="font-bold text-purple-700 text-sm mt-6 mb-3 border-b pb-2">🖼️ Gallery / Event Showcase Images</h4>
+  <p class="text-xs text-gray-500 mb-3">Upload high-quality images of your tents, setups, canopies, or decor to display on your public search page.</p>
+  
+  <div class="border-2 border-dashed border-purple-300 rounded-xl p-6 text-center bg-purple-50/50 hover:bg-purple-50 transition relative cursor-pointer mb-4">
+    <input type="file" id="galleryUploadInput" multiple accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer">
+    <ion-icon name="cloud-upload-outline" style="font-size: 2.5rem; color: purple;"></ion-icon>
+    <p class="text-sm font-semibold text-purple-900 mt-2">Click to upload showcase photos</p>
+    <p class="text-xs text-gray-400 mt-1">PNG, JPG up to 5MB each (Select multiple items)</p>
+  </div>
+
+  <div id="imagePreviewGrid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 mb-6">
+    </div>
+
+  <button id="savePublicSettings" class="primary-btn mt-2">Update Storefront Data</button>
+</div>
+   <nav class="bottom-nav">
+    <ul>
+     <li><a href="dashboard.html"> <span class="icon"><ion-icon name="home-outline"></ion-icon></span> <span class="title">Dashboard</span> </a></li>
+     <li><a href="bookings.html"> <span class="icon"><ion-icon name="calendar-outline"></ion-icon></span> <span class="title">Bookings</span> </a></li>
+     <li><a href="add.html"> <span class="icon"><ion-icon name="add-circle-outline"></ion-icon></span> <span class="title">Add</span> </a></li>
+     <li><a href="inventory.html"> <span class="icon"><ion-icon name="cube-outline"></ion-icon></span> <span class="title">Inventory</span> </a></li>
+     <li class="active"><a href="public.html"> <span class="icon"><ion-icon name="globe-outline"></ion-icon></span> <span class="title">Public Profile</span> </a></li>
+    </ul>
+   </nav>
+  </div>
+
+  <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+  <script>
+    // Sidebar active controller
+    let toggle = document.querySelector(".toggle");
+    let navigation = document.querySelector(".navigation");
+    let main = document.querySelector(".main");
+
+    if(toggle) {
+        toggle.onclick = function () {
+            navigation.classList.toggle("active");
+            main.classList.toggle("active");
+        };
+    } 
+  </script>
+  <script type="module" src="assets/js/public-profile.js"></script>
+ </body>
+</html>

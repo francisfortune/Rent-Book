@@ -1007,13 +1007,19 @@
                         <h3>Event Details</h3>
                         <div class="form-group">
                             <label>Event Type</label>
-                            <select id="eventType">
-                                <option>Wedding</option>
-                                <option>Birthday</option>
-                                <option>Burial</option>
-                                <option>Conference</option>
-                                <option>Other</option>
-                            </select>
+                    <input 
+  id="eventType" 
+  list="eventTypeOptions"
+  placeholder="Select or type event type"
+  class="p-3 border rounded-xl w-full"
+/>
+
+<datalist id="eventTypeOptions">
+  <option value="Wedding">
+  <option value="Birthday">
+  <option value="Burial">
+  <option value="Conference">
+</datalist>
                         </div>
 
 
@@ -1024,7 +1030,7 @@
                         </div>
 
                         <div class="form-group">
-  <label>Delivery Date & Time (Pickup)</label>
+  <label>Delivery Date & Time</label>
   <input type="datetime-local" id="deliveryDate">
 </div>
 
@@ -1095,7 +1101,7 @@
                         </div> -->
 
                         <div class="form-group">
-                            <label>Notes</label>
+                            <label>Notes (Optional)</label>
                             <textarea id="notes"></textarea>
                         </div>
 
