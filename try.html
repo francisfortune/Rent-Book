@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple form</title>
+
+<style>
+    body{
+        padding: 0%;
+        margin: 0%;
+        box-sizing: border-box;
+        scroll-behavior: smooth;
+    }
+    .imgcon{
+        height: 100%;
+        width: 400px;
+        float: left;
+    }
+    .conta{
+                height: 30%;
+        width: 600px;
+        float: right;
+        margin-top: 5rem;
+        margin-bottom: 20rem;
+    }
+    form{
+        padding-top: 10px;
+        height: 28rem;
+        width: 550px;
+        background-color: aliceblue;
+        box-shadow: navy 1px 1px 2px 2px;
+        display: block;
+        border-radius: 25px;
+}
+input{
+display: block;
+margin: 28px;
+padding: 12px 50px 14px 50px;
+border-radius: 40px;
+box-shadow: blue 1px 1px 2px 2px;
+margin-left: 70px;
+
+border: none;
+}
+textarea{
+display: block;
+margin: 20px;
+border-radius: 40px;
+border: none;
+box-shadow: blue 1px 1px 2px 2px;
+margin-left: 70px;
+}
+
+
+h1{
+    text-align: center;
+    font-weight: 600;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+color: blue;
+}
+
+input::placeholder, textarea::placeholder{
+ color: blue;
+ font-size: 18px;
+ font-weight: 300;
+ font-family: Arial, Helvetica, sans-serif;  
+}
+textarea::placeholder{
+    text-indent: 25px;
+    padding-top: 10px;
+}
+</style>
+
+
+
+</head>
+<body>
+    <div class="imgcon">
+        <img src="assets/header.png" alt="">
+    </div>
+
+
+
+
+    <div class="conta">
+        <form action="">
+<h1>Welcome to Evisco market</h1>
+
+<input type="text" name="fname" id="fname" placeholder="Input Username" size="40">
+
+<input type="email" name="email" id="email" placeholder="Input Email" size="40">
+
+<textarea name="mess" id="mess" cols="54" rows="9" placeholder="Input Query">
+</textarea>
+        </form>
+    </div>
+</body>
+</html>
