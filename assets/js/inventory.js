@@ -91,24 +91,35 @@ function renderInventory(filteredItems, allItems) {
   inventoryList.innerHTML = "";
   calcItem.innerHTML = "";
 
-  let totalAvailableQty = 0;
-  let totalOutQty = 0;
+  let totalAssetsValue = 0;
+let totalAvailableQty = 0;
+let totalOutQty = 0;
 
-  // Totals & dropdown
-  allItems.forEach(item => {
-    totalAvailableQty += item.availableQuantity;
-    totalOutQty += (item.totalQuantity - item.availableQuantity);
+// Totals & dropdown
+allItems.forEach(item => {
+  const totalQty = Number(item.totalQuantity || 0);
+  const availableQty = Number(item.availableQuantity || 0);
+  const price = Number(item.price || 0);
 
-    calcItem.innerHTML += `
-      <option value="${item.availableQuantity}">
-        ${item.name} (${item.availableQuantity} avail)
-      </option>
-    `;
-  });
+  totalAvailableQty += availableQty;
+  totalOutQty += (totalQty - availableQty);
 
-  totalItemsEl.textContent = allItems.length;
-  availableItemsEl.textContent = totalAvailableQty;
-  outItemsEl.textContent = totalOutQty;
+  // Asset value calculation
+  totalAssetsValue += totalQty * price;
+
+  calcItem.innerHTML += `
+    <option value="${availableQty}">
+      ${item.name} (${availableQty} avail)
+    </option>
+  `;
+});
+
+// Dashboard stats
+totalItemsEl.textContent = `₦${totalAssetsValue.toLocaleString()}`;
+availableItemsEl.textContent = totalAvailableQty.toLocaleString();
+outItemsEl.textContent = totalOutQty.toLocaleString();
+
+
 
   // Inventory list
   filteredItems.forEach(item => {

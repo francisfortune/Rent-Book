@@ -100,7 +100,7 @@ function recalcTotal() {
   `Balance: ₦${balance.toLocaleString()}\n\n` +
 `Thank you for choosing ${currentBusinessName}!\n\n` +
   `--- \n` + 
-  `_Generated via Tracknrent Booking Confirmation_ \n` + 
+  `_Powered by Tracknrent_ \n` + 
   `👉 https://tracknrent.vercel.app`;
   ;
   const previewBox = document.getElementById("liveReceiptText");
