@@ -27,6 +27,21 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="shortcut icon" href="favicon.ico">
 
+<!-- push notification -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+
+<script>
+window.OneSignalDeferred = window.OneSignalDeferred || [];
+
+OneSignalDeferred.push(async function(OneSignal) {
+  await OneSignal.init({
+    appId: "539d08e3-cada-4b7e-88c3-f89af30ff7f9",
+  });
+});
+</script>
+
+
+
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
