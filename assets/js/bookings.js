@@ -1,4 +1,6 @@
 import { auth, db } from "./firebase.js";
+import { sendPush } from "./onesignal.js";
+
 import {
   collection,
   query,
@@ -1364,20 +1366,66 @@ window.openBookingById = async function (id, businessId) {
 async function checkAndNotifyStatusChange(booking, id, businessId) {
   const calculated = getCalculatedStatus(booking);
 
-  if (booking.status !== calculated) {
-    await updateDoc(doc(db, "businesses", businessId, "bookings", id), {
-      status: calculated
-    });
+  const bookingRef = doc(db, "businesses", businessId, "bookings", id);
 
-await sendNotification(
-  businessId,
-  `Booking for ${booking.client.name} is now ${calculated.toUpperCase()}`,
-  auth.currentUser.email,
-  "status_change",
-  id
-);
+  const isOverbooked = booking.items?.some(i => (i.shortage || 0) > 0);
+
+  const updates = {};
+
+  // =========================
+  // 1. STATUS CHANGE LOGIC
+  // =========================
+  if (booking.status !== calculated) {
+    updates.status = calculated;
+
+    if (calculated === "overdue" && !booking.overdueNotified) {
+      await sendNotification(
+        businessId,
+        `⚠️ Booking for ${booking.client.name} is OVERDUE`,
+        auth.currentUser.email,
+        "booking_overdue",
+        id
+      );
+      updates.overdueNotified = true;
+    }
+
+    if (calculated === "returned" && !booking.returnNotified) {
+      await sendNotification(
+        businessId,
+        `✅ Booking for ${booking.client.name} has been RETURNED`,
+        auth.currentUser.email,
+        "booking_returned",
+        id
+      );
+      updates.returnNotified = true;
+    }
+  }
+
+  // =========================
+  // 2. OVERBOOKED ALERT
+  // =========================
+  if (isOverbooked && !booking.overbookedNotified) {
+    await sendNotification(
+      businessId,
+      `⚠️ Booking for ${booking.client.name} is OVERBOOKED (vendor stock used)`,
+      auth.currentUser.email,
+      "booking_overbooked",
+      id
+    );
+
+    updates.overbookedNotified = true;
+  }
+
+  // =========================
+  // 3. APPLY UPDATES ONCE
+  // =========================
+  if (Object.keys(updates).length > 0) {
+    await updateDoc(bookingRef, updates);
   }
 }
+
+
+
 /* =========================
    AUTH GUARD + LIVE DATA
 ========================= */
@@ -1525,3 +1573,93 @@ window.getCalculatedStatus = function(booking) {
   const returnTime = new Date(returnDate);
   return now > returnTime ? "overdue" : "active";
 };
+
+
+
+
+
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
+admin.initializeApp();
+
+exports.autoBookingEngine = functions.pubsub
+  .schedule("every 10 minutes")
+  .onRun(async () => {
+
+    const now = new Date();
+
+    const bookingsSnap = await admin.firestore()
+      .collectionGroup("bookings")
+      .get();
+
+    for (const docSnap of bookingsSnap.docs) {
+
+      const booking = docSnap.data();
+      const ref = docSnap.ref;
+
+      const updates = {};
+      let shouldNotify = false;
+      let messages = [];
+
+      // =========================
+      // 1. OVERDUE CHECK
+      // =========================
+      const returnDate = booking?.event?.returnDate;
+
+      if (returnDate) {
+        const isOverdue = new Date(returnDate) < now;
+
+        if (isOverdue && !booking.overdueNotified) {
+          updates.status = "overdue";
+          updates.overdueNotified = true;
+
+          messages.push(`⚠️ ${booking.client.name} is OVERDUE`);
+          shouldNotify = true;
+        }
+      }
+
+      // =========================
+      // 2. OVERBOOKED CHECK
+      // =========================
+      const items = booking.items || [];
+
+      const isOverbooked = items.some(i => (i.shortage || 0) > 0);
+
+      if (isOverbooked && !booking.overbookedNotified) {
+        updates.overbookedNotified = true;
+
+        messages.push(`⚠️ ${booking.client.name} is OVERBOOKED`);
+        shouldNotify = true;
+      }
+
+      // =========================
+      // 3. APPLY UPDATES
+      // =========================
+      if (Object.keys(updates).length > 0) {
+        await ref.update(updates);
+      }
+
+      // =========================
+      // 4. SEND NOTIFICATION ONCE
+      // =========================
+      if (shouldNotify) {
+        const businessId = booking.businessId;
+
+        for (const msg of messages) {
+          await admin.firestore()
+            .collection("businesses")
+            .doc(businessId)
+            .collection("notifications")
+            .add({
+              message: msg,
+              type: "auto_system",
+              bookingId: docSnap.id,
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+              readBy: [],
+              deletedFor: []
+            });
+        }
+      }
+    }
+
+  });

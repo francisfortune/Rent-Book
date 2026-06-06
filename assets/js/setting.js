@@ -1,5 +1,9 @@
 // assets/js/settings.js
 import { auth, db } from "./firebase.js";
+import { sendPush } from "./onesignal.js";
+
+
+
 import {
   doc,
   getDoc,
@@ -76,6 +80,15 @@ onSnapshot(query(membersRef, where("businessId", "==", businessId)), (snapshot) 
           createdAt: serverTimestamp(),
           readBy: []
         });
+
+
+        // onesignal push notification
+        await sendPush(`🎉 ${data.email} has joined your business!`, "/settings.html");
+
+        
+
+
+        
         // Flag it so it doesn't notify again if you change their role later
         await updateDoc(doc(db, "businessMembers", change.doc.id), { notifiedAccepted: true });
       }
@@ -184,6 +197,11 @@ if (notifCheckbox && soundCheckbox) {
       readBy: []
     });
 
+    // onesignal push notification
+    await sendPush(`Business name updated to: "${newName}"`, "/settings.html");
+
+
+
         saveBusinessBtn.textContent = "Saved!";
         setTimeout(() => {
           saveBusinessBtn.textContent = "Save Changes";
@@ -241,6 +259,10 @@ if (inviteForm) {
       createdAt: serverTimestamp(),
       readBy: []
     });
+
+    // onesignal push notification
+    await sendPush(`✉️ Invite Sent: ${email} has been invited as a ${role}.`, "/settings.html");
+
 
     inviteForm.reset();
     alert(`Invite sent to ${email} ✅`);
@@ -349,6 +371,13 @@ document.getElementById("savePartnerChanges").onclick = async () => {
       readBy: []
     });
 
+    // onesignal push notification
+    await sendPush(`⚙️ Team member updated: ${email} is now a ${role}`, "/settings.html");
+
+
+
+
+
     document.getElementById("editPartnerModal").classList.add("hidden");
 
   } catch (err) {
@@ -389,6 +418,10 @@ document.getElementById("confirmDeletePartner").onclick = async () => {
       createdAt: serverTimestamp(),
       readBy: []
     });
+
+
+    // onesignal push notification
+    await sendPush(`🚫 Member Removed: ${selectedPartnerEmail} was removed from the business.`, "/settings.html");
 
     document.getElementById("deletePartnerModal").classList.add("hidden");
 
