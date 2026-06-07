@@ -37,9 +37,8 @@ const STATIC_ASSETS = [
 // External CDN resources to cache
 const CDN_ASSETS = [
     'https://cdn.tailwindcss.com',
-    'https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js',
-    'https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap',
-    'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'
+    'https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Raleway+Dots&family=Roboto:wght@300;400;500;700&display=swap',
+    'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200'
 ];
 
 
@@ -258,13 +257,14 @@ self.addEventListener('notificationclick', (event) => {
 // Periodic background sync for reminders
 self.addEventListener('periodicsync', (event) => {
     if (event.tag === 'check-reminders') {
-        event.waitUntil(checkReminders());
+        event.waitUntil(
+            self.clients.matchAll().then(allClients => {
+                allClients.forEach(client => {
+                    client.postMessage({ type: 'TRIGGER_AUTO_CHECKS' });
+                });
+            })
+        );
     }
 });
-
-async function checkReminders() {
-    // Check for upcoming return dates and send notifications
-    console.log('[ServiceWorker] Checking reminders...');
-}
 
 console.log('[ServiceWorker] Service Worker loaded');

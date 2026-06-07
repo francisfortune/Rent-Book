@@ -120,89 +120,191 @@ export async function deleteInventoryItem(businessId, itemId) {
 }
 
 /**
- * Deduct inventory when booking is created
+ * Deduct inventory when booking is created (transactional & safe)
  * @param {string} businessId 
- * @param {Array} items - [{itemId, quantity}]
+ * @param {Array} items - Array of items to deduct, supporting both ID-based and name-based schemas
  * @returns {Promise<void>}
  */
 export async function deductInventory(businessId, items) {
     try {
         await runTransaction(db, async (transaction) => {
-            // Read all items first
-            const itemRefs = items.map(item =>
-                doc(db, "businesses", businessId, "inventory", item.itemId)
-            );
+            const names = [];
+            const ids = [];
 
-            const itemDocs = await Promise.all(
-                itemRefs.map(ref => transaction.get(ref))
-            );
+            for (const item of items) {
+                const name = item.name || item.itemName;
+                const id = item.itemId || item.id;
+                const qty = item.qty || item.quantity || 0;
 
-            // Check availability
-            for (let i = 0; i < itemDocs.length; i++) {
-                const itemDoc = itemDocs[i];
-                const requestedQty = items[i].quantity;
+                if (id) {
+                    ids.push({ id, qty });
+                } else if (name) {
+                    names.push({ name: name.trim(), qty });
+                }
+            }
 
-                if (!itemDoc.exists()) {
-                    throw new Error(`Item ${items[i].itemId} not found`);
+            const inventoryColl = collection(db, "businesses", businessId, "inventory");
+            const inventoryMap = new Map();
+
+            // Fetch by ID
+            for (const itemInfo of ids) {
+                const ref = doc(inventoryColl, itemInfo.id);
+                const snap = await transaction.get(ref);
+                if (snap.exists()) {
+                    inventoryMap.set(itemInfo.id, { ref, data: snap.data(), qty: itemInfo.qty });
+                } else {
+                    throw new Error(`Inventory item ID ${itemInfo.id} not found.`);
+                }
+            }
+
+            // Fetch by Name
+            if (names.length > 0) {
+                const nameList = names.map(n => n.name);
+                const chunkSize = 30;
+                const snaps = [];
+                for (let i = 0; i < nameList.length; i += chunkSize) {
+                    const chunk = nameList.slice(i, i + chunkSize);
+                    const q = query(inventoryColl, where("name", "in", chunk));
+                    const querySnap = await getDocs(q);
+                    snaps.push(querySnap);
                 }
 
-                const currentAvailable = itemDoc.data().availableQuantity;
-
-                if (currentAvailable < requestedQty) {
-                    throw new Error(`Insufficient quantity for ${itemDoc.data().name}. Available: ${currentAvailable}, Requested: ${requestedQty}`);
+                for (const querySnap of snaps) {
+                    for (const docSnap of querySnap.docs) {
+                        const freshSnap = await transaction.get(docSnap.ref);
+                        if (freshSnap.exists()) {
+                            const nameLower = freshSnap.data().name.toLowerCase();
+                            const matchingNameInfos = names.filter(n => n.name.toLowerCase() === nameLower);
+                            for (const matchingNameInfo of matchingNameInfos) {
+                                inventoryMap.set(freshSnap.id, {
+                                    ref: docSnap.ref,
+                                    data: freshSnap.data(),
+                                    qty: matchingNameInfo.qty
+                                });
+                            }
+                        }
+                    }
                 }
             }
 
             // Deduct quantities
-            for (let i = 0; i < itemRefs.length; i++) {
-                const currentAvailable = itemDocs[i].data().availableQuantity;
-                const newAvailable = currentAvailable - items[i].quantity;
+            for (const [id, entry] of inventoryMap.entries()) {
+                const currentAvailable = entry.data.availableQuantity || 0;
+                const requestedQty = entry.qty;
 
-                transaction.update(itemRefs[i], {
+                // Safe shortage logic
+                const shortage = Math.max(0, requestedQty - currentAvailable);
+                const usableQty = requestedQty - shortage;
+                const newAvailable = Math.max(0, currentAvailable - usableQty);
+
+                transaction.update(entry.ref, {
                     availableQuantity: newAvailable,
                     updatedAt: serverTimestamp()
                 });
+
+                // Set shortage back in items array
+                const matchedItems = items.filter(item => 
+                    (item.itemId === id) || 
+                    (item.id === id) ||
+                    ((item.name || item.itemName)?.trim().toLowerCase() === entry.data.name.toLowerCase())
+                );
+                for (const matchedItem of matchedItems) {
+                    matchedItem.shortage = shortage;
+                }
             }
         });
     } catch (error) {
-        console.error("Error deducting inventory:", error);
+        console.error("Error deducting inventory transactionally:", error);
         throw error;
     }
 }
 
 /**
- * Restore inventory when booking is completed/cancelled
+ * Restore inventory when booking is completed/cancelled (transactional & safe)
  * @param {string} businessId 
- * @param {Array} items - [{itemId, quantity}]
+ * @param {Array} items - Array of items to restore
  * @returns {Promise<void>}
  */
 export async function restoreInventory(businessId, items) {
     try {
         await runTransaction(db, async (transaction) => {
-            const itemRefs = items.map(item =>
-                doc(db, "businesses", businessId, "inventory", item.itemId)
-            );
+            const names = [];
+            const ids = [];
 
-            const itemDocs = await Promise.all(
-                itemRefs.map(ref => transaction.get(ref))
-            );
+            for (const item of items) {
+                const name = item.name || item.itemName;
+                const id = item.itemId || item.id;
+                const qty = item.qty || item.quantity || 0;
+                const shortage = item.shortage || 0;
+                const restorable = Math.max(0, qty - shortage);
+
+                if (restorable <= 0) continue;
+
+                if (id) {
+                    ids.push({ id, restorable });
+                } else if (name) {
+                    names.push({ name: name.trim(), restorable });
+                }
+            }
+
+            if (ids.length === 0 && names.length === 0) return;
+
+            const inventoryColl = collection(db, "businesses", businessId, "inventory");
+            const inventoryMap = new Map();
+
+            // Fetch by ID
+            for (const itemInfo of ids) {
+                const ref = doc(inventoryColl, itemInfo.id);
+                const snap = await transaction.get(ref);
+                if (snap.exists()) {
+                    inventoryMap.set(itemInfo.id, { ref, data: snap.data(), restorable: itemInfo.restorable });
+                }
+            }
+
+            // Fetch by Name
+            if (names.length > 0) {
+                const nameList = names.map(n => n.name);
+                const chunkSize = 30;
+                const snaps = [];
+                for (let i = 0; i < nameList.length; i += chunkSize) {
+                    const chunk = nameList.slice(i, i + chunkSize);
+                    const q = query(inventoryColl, where("name", "in", chunk));
+                    const querySnap = await getDocs(q);
+                    snaps.push(querySnap);
+                }
+
+                for (const querySnap of snaps) {
+                    for (const docSnap of querySnap.docs) {
+                        const freshSnap = await transaction.get(docSnap.ref);
+                        if (freshSnap.exists()) {
+                            const nameLower = freshSnap.data().name.toLowerCase();
+                            const matchingNameInfos = names.filter(n => n.name.toLowerCase() === nameLower);
+                            for (const matchingNameInfo of matchingNameInfos) {
+                                inventoryMap.set(freshSnap.id, {
+                                    ref: docSnap.ref,
+                                    data: freshSnap.data(),
+                                    restorable: matchingNameInfo.restorable
+                                });
+                            }
+                        }
+                    }
+                }
+            }
 
             // Restore quantities
-            for (let i = 0; i < itemRefs.length; i++) {
-                if (!itemDocs[i].exists()) continue;
+            for (const [id, entry] of inventoryMap.entries()) {
+                const currentAvailable = entry.data.availableQuantity || 0;
+                const totalQuantity = entry.data.totalQuantity || 0;
+                const newAvailable = Math.min(currentAvailable + entry.restorable, totalQuantity);
 
-                const currentAvailable = itemDocs[i].data().availableQuantity;
-                const totalQuantity = itemDocs[i].data().totalQuantity;
-                const newAvailable = Math.min(currentAvailable + items[i].quantity, totalQuantity);
-
-                transaction.update(itemRefs[i], {
+                transaction.update(entry.ref, {
                     availableQuantity: newAvailable,
                     updatedAt: serverTimestamp()
                 });
             }
         });
     } catch (error) {
-        console.error("Error restoring inventory:", error);
+        console.error("Error restoring inventory transactionally:", error);
         throw error;
     }
 }
@@ -337,4 +439,85 @@ export async function getInventorySummary(businessId) {
         console.error("Error getting inventory summary:", error);
         throw new Error("Failed to get inventory summary.");
     }
+}
+
+/**
+ * Transactional helper to calculate and update inventory quantities based on booking edits.
+ * Must be called INSIDE an active Firestore transaction!
+ * @param {Transaction} transaction
+ * @param {string} businessId
+ * @param {Array} originalItems - [{name, qty, shortage}]
+ * @param {Array} updatedItems - [{name, qty, price, supplier}]
+ * @returns {Promise<Array>} updatedItems with shortage calculated
+ */
+export async function updateInventoryDiff(transaction, businessId, originalItems, updatedItems) {
+    const nameMap = new Map();
+    originalItems.forEach(item => nameMap.set((item.name || item.itemName).trim().toLowerCase(), (item.name || item.itemName).trim()));
+    updatedItems.forEach(item => nameMap.set((item.name || item.itemName).trim().toLowerCase(), (item.name || item.itemName).trim()));
+
+    const names = Array.from(nameMap.values());
+    if (names.length === 0) return updatedItems;
+
+    // 1. Fetch item document references outside transaction read locks first
+    const inventoryColl = collection(db, "businesses", businessId, "inventory");
+    
+    // Chunk names array if it exceeds Firestore "in" limit of 30 items
+    const querySnaps = [];
+    const chunkSize = 30;
+    for (let i = 0; i < names.length; i += chunkSize) {
+        const chunk = names.slice(i, i + chunkSize);
+        const q = query(inventoryColl, where("name", "in", chunk));
+        const snap = await getDocs(q);
+        querySnaps.push(snap);
+    }
+
+    // 2. Perform transactional gets to lock documents and read latest state
+    const inventoryMap = {};
+    for (const snap of querySnaps) {
+        for (const docSnap of snap.docs) {
+            const freshSnap = await transaction.get(docSnap.ref);
+            if (freshSnap.exists()) {
+                inventoryMap[freshSnap.data().name.toLowerCase()] = {
+                    ref: freshSnap.ref,
+                    data: freshSnap.data()
+                };
+            }
+        }
+    }
+
+    // 3. Stage reversion of previously reserved pool (return old items back to pool)
+    for (const oldItem of originalItems) {
+        const key = (oldItem.name || oldItem.itemName).toLowerCase();
+        if (inventoryMap[key]) {
+            const oldQty = oldItem.qty || oldItem.quantity || 0;
+            const actualRestored = Math.max(0, oldQty - (oldItem.shortage || 0));
+            inventoryMap[key].data.availableQuantity += actualRestored;
+        }
+    }
+
+    // 4. Evaluate new demands against the pool
+    for (const newItem of updatedItems) {
+        const key = (newItem.name || newItem.itemName).toLowerCase();
+        if (inventoryMap[key]) {
+            const newItemQty = newItem.qty || newItem.quantity || 0;
+            const currentPool = inventoryMap[key].data.availableQuantity;
+            const short = Math.max(0, newItemQty - currentPool);
+            const usable = newItemQty - short;
+
+            inventoryMap[key].data.availableQuantity = Math.max(0, currentPool - usable);
+            newItem.shortage = short;
+        } else {
+            newItem.shortage = newItem.qty || newItem.quantity || 0;
+        }
+    }
+
+    // 5. Commit inventory quantity updates inside the transaction
+    for (const key in inventoryMap) {
+        transaction.update(inventoryMap[key].ref, {
+            availableQuantity: inventoryMap[key].data.availableQuantity,
+            updatedAt: serverTimestamp()
+        });
+    }
+
+    return updatedItems;
 }

@@ -16,10 +16,11 @@ import {
     limit,
     onSnapshot,
     serverTimestamp,
-    Timestamp
+    Timestamp,
+    runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-import { deductInventory, restoreInventory, checkAvailability } from "./inventoryService.js";
+import { deductInventory, restoreInventory, checkAvailability, updateInventoryDiff } from "./inventoryService.js";
 
 /**
  * Create a new booking
@@ -362,5 +363,43 @@ export async function searchBookings(businessId, searchTerm) {
     } catch (error) {
         console.error("Error searching bookings:", error);
         throw new Error("Failed to search bookings.");
+    }
+}
+
+/**
+ * Atomically updates a booking document and adjusts inventory levels using a transaction.
+ * @param {string} businessId
+ * @param {string} bookingId
+ * @param {Object} updatedBookingData - Full/partial updates to the booking doc
+ * @param {Array} originalItems - The items array from the booking prior to edit
+ * @param {Array} updatedItems - The new items array to write
+ * @returns {Promise<Array>} The updatedItems with calculated shortage properties
+ */
+export async function editBookingTransaction(businessId, bookingId, updatedBookingData, originalItems, updatedItems) {
+    try {
+        let finalItems = [];
+        await runTransaction(db, async (transaction) => {
+            const bookingRef = doc(db, "businesses", businessId, "bookings", bookingId);
+            
+            // 1. Lock the booking document by reading it within the transaction
+            const bookingSnap = await transaction.get(bookingRef);
+            if (!bookingSnap.exists()) {
+                throw new Error("Booking not found");
+            }
+
+            // 2. Perform the transactional inventory calculations and updates
+            finalItems = await updateInventoryDiff(transaction, businessId, originalItems, updatedItems);
+
+            // 3. Write updates to the booking doc
+            transaction.update(bookingRef, {
+                ...updatedBookingData,
+                items: finalItems,
+                updatedAt: serverTimestamp()
+            });
+        });
+        return finalItems;
+    } catch (error) {
+        console.error("Error executing editBookingTransaction:", error);
+        throw error;
     }
 }

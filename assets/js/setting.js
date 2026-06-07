@@ -43,28 +43,70 @@ let currentRole = "viewer";
 
 // ===== UTILS =====
 async function getBusinessId(email) {
-  const snap = await getDocs(query(collection(db, "businessMembers"), where("email", "==", email)));
-  if (snap.empty) throw new Error("No business found for this user");
-  return snap.docs[0].data().businessId;
+  const user = auth.currentUser;
+  if (!user) throw new Error("No user");
+  const cacheKey = `businessId_${user.uid}`;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) return cached;
+
+  let businessId = null;
+  if (user.email) {
+    const q = query(collection(db, "businessMembers"), where("email", "==", user.email.toLowerCase().trim()));
+    const snap = await getDocs(q);
+    if (!snap.empty) businessId = snap.docs[0].data().businessId;
+  }
+  if (!businessId && user.phoneNumber) {
+    const q = query(collection(db, "businessMembers"), where("phone", "==", user.phoneNumber.trim()));
+    const snap = await getDocs(q);
+    if (!snap.empty) businessId = snap.docs[0].data().businessId;
+  }
+
+  if (!businessId) {
+    if (!navigator.onLine) {
+      if (cached) return cached;
+      throw new Error("OFFLINE_NO_CACHE");
+    }
+    throw new Error("No business found for this user");
+  }
+
+  localStorage.setItem(cacheKey, businessId);
+  return businessId;
 }
 
 
 
+
+function showOfflineBanner() {
+  if (document.getElementById("offlineBanner")) return;
+  const banner = document.createElement("div");
+  banner.id = "offlineBanner";
+  banner.style.cssText = "position: fixed; top: 0; left: 0; right: 0; background: rgba(128, 0, 128, 0.95); backdrop-filter: blur(10px); color: white; text-align: center; padding: 12px; z-index: 99999; font-weight: 500; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; gap: 8px;";
+  banner.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px; vertical-align: middle;">wifi_off</span> Offline Mode — Using cached local data`;
+  document.body.appendChild(banner);
+}
 
 // ===== AUTH GUARD =====
 onAuthStateChanged(auth, async (user) => {
   if (!user) return window.location.href = "signup.html";
 
   try {
-// ... inside try block
-const businessId = await getBusinessId(user.email);
-const businessRef = doc(db, "businesses", businessId);
-const membersRef = collection(db, "businessMembers");
+    const businessId = await getBusinessId(user.email);
+    if (!navigator.onLine) {
+      showOfflineBanner();
+    }
+    const businessRef = doc(db, "businesses", businessId);
+    const membersRef = collection(db, "businessMembers");
 
-const memberSnap = await getDocs(query(membersRef, where("email", "==", user.email)));
-if (!memberSnap.empty) {
-  currentRole = memberSnap.docs[0].data().role;
-}
+    let memberQuery;
+    if (user.email) {
+      memberQuery = query(membersRef, where("email", "==", user.email.toLowerCase().trim()));
+    } else if (user.phoneNumber) {
+      memberQuery = query(membersRef, where("phone", "==", user.phoneNumber.trim()));
+    }
+    const memberSnap = memberQuery ? await getDocs(memberQuery) : { empty: true };
+    if (!memberSnap.empty) {
+      currentRole = memberSnap.docs[0].data().role;
+    }
 
 // ✅ TRIGGER 1: WATCH FOR ACCEPTANCE
 onSnapshot(query(membersRef, where("businessId", "==", businessId)), (snapshot) => {
@@ -463,8 +505,12 @@ document.getElementById("confirmDeletePartner").onclick = async () => {
 
   } catch (err) {
     console.error(err);
-    alert("Error loading settings. Redirecting...");
-    window.location.href = "setup.html";
+    if (!navigator.onLine || err.message === "OFFLINE_NO_CACHE") {
+      showOfflineBanner();
+    } else {
+      alert("Error loading settings. Redirecting...");
+      window.location.href = "setup.html";
+    }
   }
 });
 // // ===== DYNAMIC BUY ME A COFFEE BUTTON WITH FLOATING ANIMATION =====
@@ -599,4 +645,3 @@ document.getElementById("confirmDeletePartner").onclick = async () => {
 //   updateBtnSize();
 //   */
 // })();
-juiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii9

@@ -20,6 +20,7 @@ import {
 
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getMessaging, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+import { runAutomatedChecks } from "./services/reminderService.js";
 
 /* =========================
    HELPERS
@@ -51,10 +52,33 @@ function isWithinThisWeek(dateValue) {
    BUSINESS LOOKUP
 ========================= */
 async function getBusinessIdByEmail(email) {
-  const q = query(collection(db, "businessMembers"), where("email", "==", email));
-  const snap = await getDocs(q);
-  if (snap.empty) throw new Error("No business");
-  return snap.docs[0].data().businessId;
+  const user = auth.currentUser;
+  if (!user) throw new Error("No user");
+  const cacheKey = `businessId_${user.uid}`;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) return cached;
+
+  let businessId = null;
+  if (user.email) {
+    const q = query(collection(db, "businessMembers"), where("email", "==", user.email.toLowerCase().trim()));
+    const snap = await getDocs(q);
+    if (!snap.empty) businessId = snap.docs[0].data().businessId;
+  }
+  if (!businessId && user.phoneNumber) {
+    const q = query(collection(db, "businessMembers"), where("phone", "==", user.phoneNumber.trim()));
+    const snap = await getDocs(q);
+    if (!snap.empty) businessId = snap.docs[0].data().businessId;
+  }
+
+  if (!businessId) {
+    if (!navigator.onLine) {
+      throw new Error("OFFLINE_NO_CACHE");
+    }
+    throw new Error("No business");
+  }
+
+  localStorage.setItem(cacheKey, businessId);
+  return businessId;
 }
 
 /* =========================
@@ -243,19 +267,46 @@ function listenToInventory(businessId) {
    AUTH GUARD
 ========================= */
 
+function showOfflineBanner() {
+  if (document.getElementById("offlineBanner")) return;
+  const banner = document.createElement("div");
+  banner.id = "offlineBanner";
+  banner.style.cssText = "position: fixed; top: 0; left: 0; right: 0; background: rgba(128, 0, 128, 0.95); backdrop-filter: blur(10px); color: white; text-align: center; padding: 12px; z-index: 99999; font-weight: 500; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; gap: 8px;";
+  banner.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px; vertical-align: middle;">wifi_off</span> Offline Mode — Using cached local data`;
+  document.body.appendChild(banner);
+}
+
 onAuthStateChanged(auth, async user => {
   if (!user) { window.location.href = "signup.html"; return; }
   try {
     const businessId = await getBusinessIdByEmail(user.email);
+    if (!navigator.onLine) {
+      showOfflineBanner();
+    }
+    
+    // Trigger automated notification checks (throttled to 15 minutes)
+    runAutomatedChecks(businessId).catch(err => console.error("Error running auto checks:", err));
+
+    // Register service worker notification trigger
+    navigator.serviceWorker?.addEventListener('message', (event) => {
+      if (event.data?.type === 'TRIGGER_AUTO_CHECKS') {
+        runAutomatedChecks(businessId).catch(err => console.error(err));
+      }
+    });
+
     await loadDashboardUI(businessId);
     listenToInventoryCount(businessId);
     listenToBookingStats(businessId);
     listenToRecentBookings(businessId);
     listenToInventory(businessId);
-    listenToNotifications(businessId); // ✅ make sure this is here
+    listenToNotifications(businessId);
   } catch (err) {
     console.error("Dashboard error:", err);
-    window.location.href = "setup.html";
+    if (!navigator.onLine || err.message === "OFFLINE_NO_CACHE") {
+      showOfflineBanner();
+    } else {
+      window.location.href = "setup.html";
+    }
   }
 
 

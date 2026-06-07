@@ -16,6 +16,10 @@ serverTimestamp,
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { editBookingTransaction } from "./services/bookingService.js";
+import { deductInventory, restoreInventory } from "./services/inventoryService.js";
+import { generateReceiptImage } from "./pdf.js";
+import { runAutomatedChecks } from "./services/reminderService.js";
 
 let currentRole = "viewer";
 let currentBusinessName = ""; // Global role tracker
@@ -116,88 +120,58 @@ async function loadInventory(businessId) {
    BUSINESS LOOKUP
 ========================= */
 async function getBusinessIdByEmail(email) {
-  const q = query(
-    collection(db, "businessMembers"),
-    where("email", "==", email)
-  );
+  const user = auth.currentUser;
+  if (!user) throw new Error("No user");
+  const cacheKey = `businessId_${user.uid}`;
+  const cached = localStorage.getItem(cacheKey);
+  const cachedRole = localStorage.getItem(`cachedMemberRole_${user.uid}`);
+  const cachedName = localStorage.getItem(`cachedBusinessName_${user.uid}`);
 
-  const snap = await getDocs(q);
+  if (cached && cachedRole && cachedName) {
+    currentRole = cachedRole;
+    currentBusinessName = cachedName;
+    return cached;
+  }
 
-  if (snap.empty) throw new Error("No business");
+  let data = null;
+  if (user.email) {
+    const q = query(collection(db, "businessMembers"), where("email", "==", user.email.toLowerCase().trim()));
+    const snap = await getDocs(q);
+    if (!snap.empty) data = snap.docs[0].data();
+  }
+  if (!data && user.phoneNumber) {
+    const q = query(collection(db, "businessMembers"), where("phone", "==", user.phoneNumber.trim()));
+    const snap = await getDocs(q);
+    if (!snap.empty) data = snap.docs[0].data();
+  }
 
-  const data = snap.docs[0].data();
+  if (!data) {
+    if (!navigator.onLine) {
+      if (cached) {
+        currentRole = cachedRole || "viewer";
+        currentBusinessName = cachedName || "Tracknrent";
+        return cached;
+      }
+      throw new Error("OFFLINE_NO_CACHE");
+    }
+    throw new Error("No business");
+  }
 
   currentRole = data.role;
+  localStorage.setItem(`cachedMemberRole_${user.uid}`, data.role);
 
   const businessRef = doc(db, "businesses", data.businessId);
   const businessSnap = await getDoc(businessRef);
 
   if (businessSnap.exists()) {
     currentBusinessName = businessSnap.data().name;
+    localStorage.setItem(`cachedBusinessName_${user.uid}`, currentBusinessName);
     console.log("Business Name Loaded:", currentBusinessName);
   }
 
+  localStorage.setItem(cacheKey, data.businessId);
   return data.businessId;
 }
-
-/* =========================
-   INVENTORY RESTORE
-========================= */
-async function restoreInventory(businessId, items) {
-  const invSnap = await getDocs(collection(db, "businesses", businessId, "inventory"));
-
-  for (const item of items) {
-  const match = invSnap.docs.find(
-    d => d.data().name.toLowerCase() === item.name.toLowerCase()
-  );
-
-  if (!match) continue;
-
-  const restorableQty = Math.max(0, item.qty - (item.shortage || 0));
-  if (restorableQty === 0) continue;
-
-  const currentQty = match.data().availableQuantity || 0;
-
-  await updateDoc(match.ref, {
-    availableQuantity: currentQty + restorableQty
-  });
-}
-
-  }
-
-/* =========================
-   INVENTORY DEDUCT
-========================= */
-async function deductInventory(businessId, items) {
-
-  const invSnap = await getDocs(
-    collection(db, "businesses", businessId, "inventory")
-  );
-for (const item of items) {
-  const match = invSnap.docs.find(
-    d => d.data().name.toLowerCase() === item.name.toLowerCase()
-  );
-
-  if (!match) continue;
-
-  const currentQty = match.data().availableQuantity || 0;
-
-  const requestedQty = item.qty || 0;
-
-  // 🔥 SAFE SHORTAGE LOGIC
-  const shortage = Math.max(0, requestedQty - currentQty);
-  const usableQty = requestedQty - shortage;
-
-  const newQty = Math.max(0, currentQty - usableQty);
-
-  await updateDoc(match.ref, {
-    availableQuantity: newQty
-  });
-
-  // store shortage back into item (IMPORTANT)
-  item.shortage = shortage;
-}
-  }
 
 
 
@@ -797,7 +771,18 @@ modalContent.innerHTML = `
       <ion-icon name="logo-whatsapp" class="text-xl"></ion-icon>
 
       <span class="text-sm sm:text-base text-center">
-        Share Receipt via WhatsApp
+        Share Receipt
+      </span>
+    </button>
+
+    <button
+      id="downloadReceiptImgBtn"
+      class="flex-1 min-h-[55px] px-4 bg-purple-600 hover:bg-purple-700 transition text-white rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg">
+
+      <span class="material-symbols-outlined text-xl">image</span>
+
+      <span class="text-sm sm:text-base text-center">
+        Download Receipt Image
       </span>
     </button>
 
@@ -856,6 +841,13 @@ modalContent.innerHTML = `
 
 bookingModal.style.display = "flex";
 document.body.style.overflow = "hidden";
+
+const dlBtn = document.getElementById("downloadReceiptImgBtn");
+if (dlBtn) {
+  dlBtn.addEventListener("click", () => {
+    generateReceiptImage(booking, currentBusinessName);
+  });
+}
 
 setTimeout(() => {
 document.querySelectorAll("#editItemsContainer .item-name").forEach(select => {
@@ -1169,53 +1161,6 @@ window.saveEdit = async function (id, businessId, originalItems) {
       return;
     }
 
-    // ========================================================
-    // 🔥 START OF SPECIFIC DIFF LOGIC PLACE
-    // ========================================================
-    
-    // A. Fetch a fresh visual map of item entries from your Firestore inventory collection
-    const invSnap = await getDocs(collection(db, "businesses", businessId, "inventory"));
-    const inventoryMap = {};
-    invSnap.docs.forEach(doc => {
-      inventoryMap[doc.data().name.toLowerCase()] = { ref: doc.ref, data: doc.data() };
-    });
-
-    // B. Stage reversion of previously reserved pool (add old quantities back to the temporary pool)
-    for (const oldItem of originalItems) {
-      const key = oldItem.name.toLowerCase();
-      if (inventoryMap[key]) {
-        const actualRestored = Math.max(0, oldItem.qty - (oldItem.shortage || 0));
-        inventoryMap[key].data.availableQuantity += actualRestored;
-      }
-    }
-
-    // C. Evaluate new demands against the modified pool & write fresh shortage metrics
-    for (const newItem of updatedItems) {
-      const key = newItem.name.toLowerCase();
-      if (inventoryMap[key]) {
-        const currentPool = inventoryMap[key].data.availableQuantity;
-        const short = Math.max(0, newItem.qty - currentPool);
-        const usable = newItem.qty - short;
-
-        inventoryMap[key].data.availableQuantity = Math.max(0, currentPool - usable);
-        newItem.shortage = short;
-      } else {
-        newItem.shortage = newItem.qty; 
-      }
-    }
-
-    // D. Batch execute updates out to Firestore collections for quantities
-    for (const key in inventoryMap) {
-      await updateDoc(inventoryMap[key].ref, {
-        availableQuantity: inventoryMap[key].data.availableQuantity
-      });
-    }
-
-    // ========================================================
-    // 💾 END OF INVENTORY DIFF LOGIC PLACE (Now saving Document data)
-    // ========================================================
-
-    const bookingRef = doc(db, "businesses", businessId, "bookings", id);
     const updatedBookingData = {
       "client.name": document.getElementById("editName").value.trim(),
       "client.phone": document.getElementById("editPhone").value.trim(),
@@ -1227,12 +1172,10 @@ window.saveEdit = async function (id, businessId, originalItems) {
       "event.location": document.getElementById("editLocation").value.trim(),
       "payment.total": Number(document.getElementById("editTotal").value || 0),
       "payment.paid": Number(document.getElementById("editPaid").value || 0),
-      items: updatedItems,
-      notes: document.getElementById("editNotes").value.trim(),
-      updatedAt: serverTimestamp()
+      notes: document.getElementById("editNotes").value.trim()
     };
 
-    await updateDoc(bookingRef, updatedBookingData);
+    await editBookingTransaction(businessId, id, updatedBookingData, originalItems, updatedItems);
 
     alert("Booking updated successfully! ✅");
     closeModal();
@@ -1421,14 +1364,15 @@ async function checkAndNotifyStatusChange(booking, id, businessId) {
   // =========================
   if (Object.keys(updates).length > 0) {
     await updateDoc(bookingRef, updates);
-  }
+  }function showOfflineBanner() {
+  if (document.getElementById("offlineBanner")) return;
+  const banner = document.createElement("div");
+  banner.id = "offlineBanner";
+  banner.style.cssText = "position: fixed; top: 0; left: 0; right: 0; background: rgba(128, 0, 128, 0.95); backdrop-filter: blur(10px); color: white; text-align: center; padding: 12px; z-index: 99999; font-weight: 500; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; gap: 8px;";
+  banner.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px; vertical-align: middle;">wifi_off</span> Offline Mode — Using cached local data`;
+  document.body.appendChild(banner);
 }
 
-
-
-/* =========================
-   AUTH GUARD + LIVE DATA
-========================= */
 onAuthStateChanged(auth, async (user) => {
   if (!user) { 
     window.location.href = "signup.html"; 
@@ -1437,6 +1381,20 @@ onAuthStateChanged(auth, async (user) => {
 
   try {
     const businessId = await getBusinessIdByEmail(user.email);
+    if (!navigator.onLine) {
+      showOfflineBanner();
+    }
+    
+    // Trigger automated notification checks (throttled to 15 minutes)
+    runAutomatedChecks(businessId).catch(err => console.error("Error running auto checks:", err));
+
+    // Register service worker notification trigger
+    navigator.serviceWorker?.addEventListener('message', (event) => {
+      if (event.data?.type === 'TRIGGER_AUTO_CHECKS') {
+        runAutomatedChecks(businessId).catch(err => console.error(err));
+      }
+    });
+
     const tbody = document.getElementById("bookingsTable");
     const q = query(collection(db, "businesses", businessId, "bookings"), orderBy("createdAt", "desc"));
 
@@ -1455,7 +1413,7 @@ onAuthStateChanged(auth, async (user) => {
         const filtered = allBookingsGlobal.filter(({ data }) => {
           const currentStatus = getCalculatedStatus(data);
           
-          // 1. Calculate Overbooked status based on internal item shortages safely
+          // 1. Calculate Overbooked status based on item shortages safely
           const isOverbooked = data.items?.some(i => {
             const shortageNum = Number(i.shortage);
             return !isNaN(shortageNum) && shortageNum > 0;
@@ -1464,17 +1422,17 @@ onAuthStateChanged(auth, async (user) => {
           // 2. Status Match Controller
           let matchesStatus = false;
           if (!sFilter) {
-            matchesStatus = true; // "All Status" selected
+            matchesStatus = true;
           } else if (sFilter === "overbooked") {
             matchesStatus = isOverbooked;
           } else {
             matchesStatus = (currentStatus === sFilter);
           }
 
-          // 3. Date Match Controller (Using the core Event Date)
+          // 3. Date Match Controller
           const matchesDate = !dFilter || data.event?.date === dFilter;
 
-          // 4. Client Search Match Controller
+          // 4. Client Search Match
           const matchesSearch = !search || data.client?.name?.toLowerCase().includes(search);
 
           return matchesStatus && matchesDate && matchesSearch;
@@ -1487,12 +1445,10 @@ onAuthStateChanged(auth, async (user) => {
 
         filtered.forEach(({ id, data }) => {
           tbody.innerHTML += renderRow(data, id, businessId);
-          // ✅ Background status update sync
           checkAndNotifyStatusChange(data, id, businessId);
         });
       }
 
-      // Attach / Re-bind Filter Event Listeners
       const sF = document.getElementById("filterStatus");
       const dF = document.getElementById("filterDate");
       const sI = document.getElementById("searchInput");
@@ -1501,18 +1457,20 @@ onAuthStateChanged(auth, async (user) => {
       if (dF) dF.onchange = filterAndRender;
       if (sI) sI.oninput = filterAndRender;
 
-      // Execute on baseline data load
       filterAndRender();
-    }); // End onSnapshot
+    });
+
+    await loadInventory(businessId);
 
   } catch (err) {
     console.error("Dashboard Load Error:", err);
-    // If business lookup fails, they might need to set up their profile
-    // window.location.href = "setup.html"; 
-  } // End try-catch
-  const businessId = await getBusinessIdByEmail(user.email);
-await loadInventory(businessId);
-}); // End onAuthStateChanged
+    if (!navigator.onLine || err.message === "OFFLINE_NO_CACHE") {
+      showOfflineBanner();
+    } else {
+      window.location.href = "setup.html";
+    }
+  }
+});
 
 
 /* =========================
@@ -1578,88 +1536,4 @@ window.getCalculatedStatus = function(booking) {
 
 
 
-const functions = require("firebase-functions");
-const admin = require("firebase-admin");
-admin.initializeApp();
-
-exports.autoBookingEngine = functions.pubsub
-  .schedule("every 10 minutes")
-  .onRun(async () => {
-
-    const now = new Date();
-
-    const bookingsSnap = await admin.firestore()
-      .collectionGroup("bookings")
-      .get();
-
-    for (const docSnap of bookingsSnap.docs) {
-
-      const booking = docSnap.data();
-      const ref = docSnap.ref;
-
-      const updates = {};
-      let shouldNotify = false;
-      let messages = [];
-
-      // =========================
-      // 1. OVERDUE CHECK
-      // =========================
-      const returnDate = booking?.event?.returnDate;
-
-      if (returnDate) {
-        const isOverdue = new Date(returnDate) < now;
-
-        if (isOverdue && !booking.overdueNotified) {
-          updates.status = "overdue";
-          updates.overdueNotified = true;
-
-          messages.push(`⚠️ ${booking.client.name} is OVERDUE`);
-          shouldNotify = true;
-        }
-      }
-
-      // =========================
-      // 2. OVERBOOKED CHECK
-      // =========================
-      const items = booking.items || [];
-
-      const isOverbooked = items.some(i => (i.shortage || 0) > 0);
-
-      if (isOverbooked && !booking.overbookedNotified) {
-        updates.overbookedNotified = true;
-
-        messages.push(`⚠️ ${booking.client.name} is OVERBOOKED`);
-        shouldNotify = true;
-      }
-
-      // =========================
-      // 3. APPLY UPDATES
-      // =========================
-      if (Object.keys(updates).length > 0) {
-        await ref.update(updates);
-      }
-
-      // =========================
-      // 4. SEND NOTIFICATION ONCE
-      // =========================
-      if (shouldNotify) {
-        const businessId = booking.businessId;
-
-        for (const msg of messages) {
-          await admin.firestore()
-            .collection("businesses")
-            .doc(businessId)
-            .collection("notifications")
-            .add({
-              message: msg,
-              type: "auto_system",
-              bookingId: docSnap.id,
-              createdAt: admin.firestore.FieldValue.serverTimestamp(),
-              readBy: [],
-              deletedFor: []
-            });
-        }
-      }
-    }
-
-  });
+// Background tasks are processed client-side via sw.js and reminderService.js to comply with Firebase Spark free limits.

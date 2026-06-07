@@ -15,14 +15,24 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/f
 /* =========================
    GUARD: ENSURE USER HAS NO BUSINESS
 ========================= */
-async function ensureNoExistingBusiness(email) {
-  const q = query(
-    collection(db, "businessMembers"),
-    where("email", "==", email)
-  );
-
-  const snap = await getDocs(q);
-  return snap.empty;
+async function ensureNoExistingBusiness(user) {
+  if (user.email) {
+    const q = query(
+      collection(db, "businessMembers"),
+      where("email", "==", user.email.toLowerCase().trim())
+    );
+    const snap = await getDocs(q);
+    if (!snap.empty) return false;
+  }
+  if (user.phoneNumber) {
+    const q = query(
+      collection(db, "businessMembers"),
+      where("phone", "==", user.phoneNumber.trim())
+    );
+    const snap = await getDocs(q);
+    if (!snap.empty) return false;
+  }
+  return true;
 }
 
 /* =========================
@@ -74,7 +84,8 @@ async function createInitialInventory(businessId) {
     await addDoc(collection(db, "businessMembers"), {
       businessId: businessRef.id,
       uid: user.uid,
-      email: user.email,
+      email: user.email || null,
+      phone: user.phoneNumber || null,
       role: "owner",
       addedAt: serverTimestamp()
     });
@@ -124,7 +135,7 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  const allowed = await ensureNoExistingBusiness(user.email);
+  const allowed = await ensureNoExistingBusiness(user);
 
   if (!allowed) {
     window.location.href = "dashboard.html";

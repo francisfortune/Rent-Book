@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>RentBook Concurrency Test Suite</title>
+    <style>
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: #f7fafc;
+            color: #2d3748;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-family: 'Raleway Dots', cursive;
+            color: purple;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 25px;
+        }
+        .btn {
+            background-color: purple;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background-color: #6b21a8;
+        }
+        .log {
+            font-family: 'Inter', monospace;
+            background: #1a202c;
+            color: #a0aec0;
+            padding: 20px;
+            border-radius: 8px;
+            height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 20px;
+        }
+        .status-pass {
+            color: #48bb78;
+            font-weight: bold;
+        }
+        .status-fail {
+            color: #f56565;
+            font-weight: bold;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;700&family=Raleway+Dots&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <h1>RentBook Concurrency Test Suite</h1>
+    <div class="card">
+        <p>This test suite runs concurrent transactional booking edits against your Firestore database to verify that inventory is managed atomically and no double-deductions occur.</p>
+        <button id="runBtn" class="btn">Run Concurrency Tests</button>
+        <div id="logArea" class="log">Click "Run Concurrency Tests" to start...</div>
+    </div>
+
+    <script type="module">
+        import { db } from "../assets/js/firebase.js";
+        import { collection, doc, setDoc, getDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { editBookingTransaction } from "../assets/js/services/bookingService.js";
+
+        const logArea = document.getElementById("logArea");
+        const runBtn = document.getElementById("runBtn");
+
+        function log(msg, type = "") {
+            let prefix = "";
+            if (type === "pass") prefix = "[PASS] ";
+            if (type === "fail") prefix = "[FAIL] ";
+            const span = document.createElement("span");
+            if (type === "pass") span.className = "status-pass";
+            if (type === "fail") span.className = "status-fail";
+            span.textContent = prefix + msg + "\n";
+            logArea.appendChild(span);
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        runBtn.addEventListener("click", async () => {
+            logArea.textContent = "";
+            runBtn.disabled = true;
+            runBtn.textContent = "Running...";
+
+            const testBusinessId = "test_biz_" + Date.now();
+            const testItemId = "test_item_" + Date.now();
+            const testBooking1Id = "test_b1_" + Date.now();
+            const testBooking2Id = "test_b2_" + Date.now();
+
+            try {
+                log("1. Setting up mock business & inventory...");
+                // Create mock business
+                const businessRef = doc(db, "businesses", testBusinessId);
+                await setDoc(businessRef, {
+                    name: "Test Concurrency Business",
+                    createdAt: new Date()
+                });
+
+                // Create mock inventory item (Total: 10, Available: 4, meaning 6 already booked/deducted)
+                // Let's create Booking 1 (books 3 chairs) and Booking 2 (books 3 chairs)
+                // Total booked: 6. Remaining available: 4.
+                const itemRef = doc(db, "businesses", testBusinessId, "inventory", testItemId);
+                await setDoc(itemRef, {
+                    name: "Test Chair",
+                    totalQuantity: 10,
+                    availableQuantity: 4,
+                    warningThreshold: 2
+                });
+
+                log("2. Creating two existing active bookings...");
+                const booking1Ref = doc(db, "businesses", testBusinessId, "bookings", testBooking1Id);
+                await setDoc(booking1Ref, {
+                    eventName: "Wedding Party 1",
+                    client: { name: "Client A" },
+                    status: "active",
+                    items: [{ name: "Test Chair", qty: 3, shortage: 0 }]
+                });
+
+                const booking2Ref = doc(db, "businesses", testBusinessId, "bookings", testBooking2Id);
+                await setDoc(booking2Ref, {
+                    eventName: "Wedding Party 2",
+                    client: { name: "Client B" },
+                    status: "active",
+                    items: [{ name: "Test Chair", qty: 3, shortage: 0 }]
+                });
+
+                log("Inventory state: Total = 10, Available = 4. Bookings 1 & 2 each holding 3.");
+
+                log("3. Triggering concurrent edits simultaneously...");
+                log("   - User A changes Booking 1 qty from 3 to 5 (needs +2 chairs).");
+                log("   - User B changes Booking 2 qty from 3 to 5 (needs +2 chairs).");
+                log("   Since only 4 chairs are available, both edits require +2, which totals exactly 4.");
+                log("   Both should succeed and inventory should end up exactly at 0.");
+
+                const updatedBooking1 = { eventName: "Wedding Party 1 (Edited)" };
+                const originalItems1 = [{ name: "Test Chair", qty: 3, shortage: 0 }];
+                const newItems1 = [{ name: "Test Chair", qty: 5, shortage: 0 }];
+
+                const updatedBooking2 = { eventName: "Wedding Party 2 (Edited)" };
+                const originalItems2 = [{ name: "Test Chair", qty: 3, shortage: 0 }];
+                const newItems2 = [{ name: "Test Chair", qty: 5, shortage: 0 }];
+
+                // Run them concurrently
+                log("   Executing editBookingTransaction promises in parallel...");
+                const p1 = editBookingTransaction(testBusinessId, testBooking1Id, updatedBooking1, originalItems1, newItems1);
+                const p2 = editBookingTransaction(testBusinessId, testBooking2Id, updatedBooking2, originalItems2, newItems2);
+
+                await Promise.all([p1, p2]);
+                log("   Both transactions completed.", "pass");
+
+                log("4. Verifying results...");
+                const itemSnap = await getDoc(itemRef);
+                const finalAvailable = itemSnap.data().availableQuantity;
+                log(`   Final available inventory of 'Test Chair': ${finalAvailable}`);
+
+                if (finalAvailable === 0) {
+                    log("Inventory resolved to exactly 0. Concurrency safety verified successfully! ✅", "pass");
+                } else {
+                    log(`Unexpected available inventory: ${finalAvailable}. Expected 0.`, "fail");
+                }
+
+            } catch (err) {
+                log("Test suite failed: " + err.message, "fail");
+                console.error(err);
+            } finally {
+                // Cleanup database
+                log("5. Cleaning up test documents...");
+                try {
+                    await deleteDoc(doc(db, "businesses", testBusinessId, "inventory", testItemId));
+                    await deleteDoc(doc(db, "businesses", testBusinessId, "bookings", testBooking1Id));
+                    await deleteDoc(doc(db, "businesses", testBusinessId, "bookings", testBooking2Id));
+                    await deleteDoc(doc(db, "businesses", testBusinessId));
+                    log("Cleanup finished.");
+                } catch (cleanErr) {
+                    log("Cleanup failed: " + cleanErr.message);
+                }
+                runBtn.disabled = false;
+                runBtn.textContent = "Run Concurrency Tests";
+            }
+        });
+    </script>
+</body>
+</html>

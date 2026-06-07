@@ -2,19 +2,22 @@
     // Handles reminders and alerts generation
 
     import { db } from "../firebase.js";
-    import {
-        collection,
-        doc,
-        setDoc,
-        getDocs,
-        updateDoc,
-        deleteDoc,
-        query,
-        where,
-        orderBy,
-        onSnapshot,
-        serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+    collection,
+    doc,
+    setDoc,
+    getDoc,
+    addDoc,
+    getDocs,
+    updateDoc,
+    deleteDoc,
+    query,
+    where,
+    orderBy,
+    onSnapshot,
+    serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { sendPush } from "../onesignal.js";
 
     import { getLowStockItems } from "./inventoryService.js";
     import { getUpcomingBookings } from "./bookingService.js";
@@ -327,3 +330,159 @@
             console.error("Error listening to reminders changes:", error);
         });
     }
+
+/**
+ * Throttled background engine checks (runs on client/PWA sync every 15 mins)
+ * Performs automated overdue booking scans, stock checks, and returns reminders.
+ * @param {string} businessId
+ */
+export async function runAutomatedChecks(businessId) {
+    try {
+        const businessRef = doc(db, "businesses", businessId);
+        const businessSnap = await getDoc(businessRef);
+        if (!businessSnap.exists()) return;
+
+        const businessData = businessSnap.data();
+        const lastCheck = businessData.lastEngineCheck;
+        const now = new Date();
+
+        if (lastCheck) {
+            const lastCheckTime = lastCheck.toDate ? lastCheck.toDate() : new Date(lastCheck);
+            const timeDiff = now.getTime() - lastCheckTime.getTime();
+            const fifteenMinutes = 15 * 60 * 1000;
+            if (timeDiff < fifteenMinutes) {
+                console.log(`Automated checks throttled. Last run: ${Math.round(timeDiff / 1000)}s ago.`);
+                return;
+            }
+        }
+
+        console.log("Running automated alerts and notifications engine...");
+        // Set last check timestamp immediately to prevent concurrent runs
+        await updateDoc(businessRef, {
+            lastEngineCheck: serverTimestamp()
+        });
+
+        const notificationsRef = collection(db, "businesses", businessId, "notifications");
+
+        // 1. OVERDUE & RETURN REMINDERS CHECK
+        const bookingsRef = collection(db, "businesses", businessId, "bookings");
+        const bookingsQuery = query(bookingsRef, where("status", "in", ["active", "overdue"]));
+        const bookingsSnap = await getDocs(bookingsQuery);
+
+        for (const bookingDoc of bookingsSnap.docs) {
+            const booking = bookingDoc.data();
+            const bookingId = bookingDoc.id;
+            const returnDateStr = booking.event?.returnDate;
+            if (!returnDateStr) continue;
+
+            const returnDate = new Date(returnDateStr);
+            const timeDiff = returnDate.getTime() - now.getTime(); // positive if in future, negative if in past
+
+            // Check if overdue
+            if (timeDiff < 0) {
+                if (booking.status !== "overdue" || !booking.overdueNotified) {
+                    await updateDoc(bookingDoc.ref, {
+                        status: "overdue",
+                        overdueNotified: true,
+                        updatedAt: serverTimestamp()
+                    });
+
+                    const msg = `⚠️ Return Overdue: ${booking.client?.name || 'Client'} has not returned items for event '${booking.eventName || 'Booking'}'. Due date was ${returnDateStr}.`;
+                    await addDoc(notificationsRef, {
+                        message: msg,
+                        type: "overdue_rental",
+                        bookingId: bookingId,
+                        createdAt: serverTimestamp(),
+                        readBy: [],
+                        deletedFor: []
+                    });
+
+                    await sendPush(msg, `/bookings.html?highlight=${bookingId}`);
+                }
+            } else {
+                // Return reminders (24h, 12h, 1h)
+                const hoursRemaining = timeDiff / (1000 * 60 * 60);
+
+                if (hoursRemaining <= 1 && !booking.returnReminder1Sent) {
+                    await updateDoc(bookingDoc.ref, {
+                        returnReminder1Sent: true,
+                        updatedAt: serverTimestamp()
+                    });
+
+                    const msg = `⏰ 1 Hour Reminder: Rental items for '${booking.eventName || 'Booking'}' (${booking.client?.name || 'Client'}) are due back in 1 hour.`;
+                    await addDoc(notificationsRef, {
+                        message: msg,
+                        type: "rental_return_reminder",
+                        bookingId: bookingId,
+                        createdAt: serverTimestamp(),
+                        readBy: [],
+                        deletedFor: []
+                    });
+
+                    await sendPush(msg, `/bookings.html?highlight=${bookingId}`);
+                } else if (hoursRemaining <= 12 && !booking.returnReminder12Sent) {
+                    await updateDoc(bookingDoc.ref, {
+                        returnReminder12Sent: true,
+                        updatedAt: serverTimestamp()
+                    });
+
+                    const msg = `⏰ 12 Hours Reminder: Rental items for '${booking.eventName || 'Booking'}' (${booking.client?.name || 'Client'}) are due back in 12 hours.`;
+                    await addDoc(notificationsRef, {
+                        message: msg,
+                        type: "rental_return_reminder",
+                        bookingId: bookingId,
+                        createdAt: serverTimestamp(),
+                        readBy: [],
+                        deletedFor: []
+                    });
+
+                    await sendPush(msg, `/bookings.html?highlight=${bookingId}`);
+                } else if (hoursRemaining <= 24 && !booking.returnReminder24Sent) {
+                    await updateDoc(bookingDoc.ref, {
+                        returnReminder24Sent: true,
+                        updatedAt: serverTimestamp()
+                    });
+
+                    const msg = `⏰ 24 Hours Reminder: Rental items for '${booking.eventName || 'Booking'}' (${booking.client?.name || 'Client'}) are due back tomorrow.`;
+                    await addDoc(notificationsRef, {
+                        message: msg,
+                        type: "rental_return_reminder",
+                        bookingId: bookingId,
+                        createdAt: serverTimestamp(),
+                        readBy: [],
+                        deletedFor: []
+                    });
+
+                    await sendPush(msg, `/bookings.html?highlight=${bookingId}`);
+                }
+            }
+        }
+
+        // 2. LOW STOCK CHECK
+        const lowStockItems = await getLowStockItems(businessId);
+        for (const item of lowStockItems) {
+            if (!item.lowStockNotified) {
+                const itemRef = doc(db, "businesses", businessId, "inventory", item.id);
+                await updateDoc(itemRef, {
+                    lowStockNotified: true,
+                    updatedAt: serverTimestamp()
+                });
+
+                const msg = `⚠️ Low Stock Alert: '${item.name}' has only ${item.availableQuantity} left (Threshold: ${item.warningThreshold}).`;
+                await addDoc(notificationsRef, {
+                    message: msg,
+                    type: "low_stock",
+                    itemId: item.id,
+                    createdAt: serverTimestamp(),
+                    readBy: [],
+                    deletedFor: []
+                });
+
+                await sendPush(msg, "/inventory.html");
+            }
+        }
+
+    } catch (error) {
+        console.error("Error running automated background engine checks:", error);
+    }
+}

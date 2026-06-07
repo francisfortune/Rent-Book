@@ -49,8 +49,9 @@ service cloud.firestore {
     
     // Businesses collection
     match /businesses/{businessId} {
-      // Members can read their business
-      allow read: if isAuthenticated() && isMember(businessId);
+      // Members can read their business, or public visitors if the storefront is enabled
+      allow read: if (isAuthenticated() && isMember(businessId)) || 
+        (resource != null && resource.data.publicProfile.enabled == true);
       
       // Only authenticated users can create a business (during setup)
       allow create: if isAuthenticated();
@@ -63,8 +64,9 @@ service cloud.firestore {
       
       // Inventory subcollection
       match /inventory/{itemId} {
-        // All members can read inventory
-        allow read: if isAuthenticated() && isMember(businessId);
+        // All members can read inventory, or public visitors if storefront is enabled
+        allow read: if (isAuthenticated() && isMember(businessId)) || 
+          (get(/databases/$(database)/documents/businesses/$(businessId)).data.publicProfile.enabled == true);
         
         // Staff with editInventory permission can create/update/delete
         allow create, update, delete: if isAuthenticated() && 
@@ -128,6 +130,18 @@ service cloud.firestore {
         // Only owners can delete reminders
         allow delete: if isAuthenticated() && isOwner(businessId);
       }
+    }
+
+    // Business Members collection
+    match /businessMembers/{memberId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Public Slugs registry
+    match /publicSlugs/{slug} {
+      allow read: if true;
+      allow write: if isAuthenticated();
     }
     
     // Deny all other access

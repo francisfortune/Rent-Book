@@ -1,4 +1,5 @@
 import { auth, db, storage } from "./firebase.js";
+import { deductInventory } from "./services/inventoryService.js";
 
 import {
   collection,
@@ -41,13 +42,34 @@ async function sendNotification(businessId, message, userEmail, type = "general"
    BUSINESS LOOKUP
 ========================= */
 async function getBusinessIdByEmail(email) {
-  const q = query(
-    collection(db, "businessMembers"),
-    where("email", "==", email)
-  );
-  const snap = await getDocs(q);
-  if (snap.empty) throw new Error("No business");
-  return snap.docs[0].data().businessId;
+  const user = auth.currentUser;
+  if (!user) throw new Error("No user");
+  const cacheKey = `businessId_${user.uid}`;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) return cached;
+
+  let businessId = null;
+  if (user.email) {
+    const q = query(collection(db, "businessMembers"), where("email", "==", user.email.toLowerCase().trim()));
+    const snap = await getDocs(q);
+    if (!snap.empty) businessId = snap.docs[0].data().businessId;
+  }
+  if (!businessId && user.phoneNumber) {
+    const q = query(collection(db, "businessMembers"), where("phone", "==", user.phoneNumber.trim()));
+    const snap = await getDocs(q);
+    if (!snap.empty) businessId = snap.docs[0].data().businessId;
+  }
+
+  if (!businessId) {
+    if (!navigator.onLine) {
+      if (cached) return cached;
+      throw new Error("OFFLINE_NO_CACHE");
+    }
+    throw new Error("No business");
+  }
+
+  localStorage.setItem(cacheKey, businessId);
+  return businessId;
 }
 
 /* =========================
@@ -186,30 +208,6 @@ window.addItemRow = function () {
 };
 
 /* =========================
-   INVENTORY DEDUCTION
-========================= */
-async function deductInventory(businessId, items) {
-  const invSnap = await getDocs(
-    collection(db, "businesses", businessId, "inventory")
-  );
-
-  for (const item of items) {
-    const match = invSnap.docs.find(d =>
-      d.data().name.toLowerCase() === item.name.toLowerCase()
-    );
-
-    if (!match) continue;
-
-    const current = match.data().availableQuantity;
-
-    await updateDoc(match.ref, {
-availableQuantity: Math.max(0, current - Math.min(item.qty, current))
-
-    });
-  }
-}
-
-/* =========================
    RECEIPT IMAGE UPLOAD
 ========================= */
 async function uploadReceiptImage(businessId, file) {
@@ -231,6 +229,15 @@ let currentUser = null;
    AUTH + SUBMIT
 ========================= */
 
+function showOfflineBanner() {
+  if (document.getElementById("offlineBanner")) return;
+  const banner = document.createElement("div");
+  banner.id = "offlineBanner";
+  banner.style.cssText = "position: fixed; top: 0; left: 0; right: 0; background: rgba(128, 0, 128, 0.95); backdrop-filter: blur(10px); color: white; text-align: center; padding: 12px; z-index: 99999; font-weight: 500; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; gap: 8px;";
+  banner.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px; vertical-align: middle;">wifi_off</span> Offline Mode — Using cached local data`;
+  document.body.appendChild(banner);
+}
+
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "signup.html";
@@ -240,6 +247,9 @@ onAuthStateChanged(auth, async (user) => {
   try {
     currentUser = user; // ✅ SAVE USER
     businessId = await getBusinessIdByEmail(user.email); // ✅ NO const
+    if (!navigator.onLine) {
+      showOfflineBanner();
+    }
 
     const bizSnap = await getDoc(doc(db, "businesses", businessId));
     if (bizSnap.exists()) {
@@ -270,6 +280,11 @@ onAuthStateChanged(auth, async (user) => {
 
   } catch (error) {
     console.error("Auth Init Error:", error);
+    if (!navigator.onLine || error.message === "OFFLINE_NO_CACHE") {
+      showOfflineBanner();
+    } else {
+      window.location.href = "setup.html";
+    }
   }
 });
   // 3. Receipt image preview handler
