@@ -25,8 +25,8 @@ const userInput = document.getElementById("userInput");
 const sendBtn = document.getElementById("sendBtn");
 
 // Initialize API Key from LocalStorage
-let geminiApiKey = localStorage.getItem("gemini_api_key") || "";
-if (geminiApiKey) {
+let openRouterApiKey = localStorage.getItem("openrouter_api_key") || "";
+if (openRouterApiKey) {
   apiKeyInput.value = "••••••••••••••••";
   apiKeyBanner.classList.add("hidden"); // Hide banner if already set
 }
@@ -72,15 +72,15 @@ if (saveKeyBtn) {
   saveKeyBtn.addEventListener("click", () => {
     const key = apiKeyInput.value.trim();
     if (!key) {
-      localStorage.removeItem("gemini_api_key");
-      geminiApiKey = "";
+      localStorage.removeItem("openrouter_api_key");
+      openRouterApiKey = "";
       alert("API Key removed.");
     } else {
-      localStorage.setItem("gemini_api_key", key);
-      geminiApiKey = key;
+      localStorage.setItem("openrouter_api_key", key);
+      openRouterApiKey = key;
       apiKeyInput.value = "••••••••••••••••";
       apiKeyBanner.classList.add("hidden");
-      alert("Gemini API Key saved successfully! 🔑");
+      alert("OpenRouter API Key saved successfully! 🔑");
     }
   });
 }
@@ -235,34 +235,46 @@ async function runLocalNlp(prompt) {
     return res;
   }
 
-  return "I didn't recognize that command in local mode. Please use standard phrases like 'list inventory', 'adjust Canopy by 5', or input a Gemini API Key to enable general conversation.";
+  return "I didn't recognize that command in local mode. Please use standard phrases like 'list inventory', 'adjust Canopy by 5', or input an OpenRouter API Key to enable general conversation.";
 }
 
 /* =========================
-   GEMINI API REQUEST WITH TOOLS
+   OPENROUTER REQUEST WITH FALLBACKS & TOOLS
 ========================= */
-async function runGeminiWithTools(prompt) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
+const fallbackModels = [
+  "openrouter/free",
+  "meta-llama/llama-3-8b-instruct:free",
+  "google/gemma-2-9b-it:free",
+  "mistralai/mistral-7b-instruct:free",
+  "nvidia/nemotron-3-ultra-550b-a55b:free"
+];
+
+async function runOpenRouterWithTools(prompt) {
+  const url = "https://openrouter.ai/api/v1/chat/completions";
+  const systemContent = "You are an AI business assistant for Tracknrent rental business owners. You can read inventory, update stock counts, view bookings, and cancel them. When the user asks you to perform database actions, ALWAYS use the provided function tool call rather than writing instructions. Be polite, concise, and helpful.";
   
-  // Define tools schemas
-  const tools = [{
-    functionDeclarations: [
-      {
+  const tools = [
+    {
+      type: "function",
+      function: {
         name: "get_inventory",
         description: "Fetch all current items in the inventory, including quantities, price, and availability."
-      },
-      {
+      }
+    },
+    {
+      type: "function",
+      function: {
         name: "adjust_inventory_count",
         description: "Modify the quantity of a specific inventory item. For example, to adjust count or decrease/increase stock.",
         parameters: {
-          type: "OBJECT",
+          type: "object",
           properties: {
             name: {
-              type: "STRING",
+              type: "string",
               description: "The name of the inventory item (e.g. Canopy, Chair, Table)"
             },
             adjustment: {
-              type: "INTEGER",
+              type: "integer",
               description: "The net adjustment to apply (e.g. 5 to add 5 items, -3 to subtract 3 items)"
             }
           },
@@ -270,110 +282,135 @@ async function runGeminiWithTools(prompt) {
         }
       },
       {
-        name: "get_bookings",
-        description: "List recent client event bookings including date, client details, payment, status."
+        type: "function",
+        function: {
+          name: "get_bookings",
+          description: "List recent client event bookings including date, client details, payment, status."
+        }
       },
       {
-        name: "cancel_booking",
-        description: "Cancel a booking by its ID.",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            bookingId: {
-              type: "STRING",
-              description: "The unique ID of the booking to cancel."
-            }
-          },
-          required: ["bookingId"]
+        type: "function",
+        function: {
+          name: "cancel_booking",
+          description: "Cancel a booking by its ID.",
+          parameters: {
+            type: "object",
+            properties: {
+              bookingId: {
+                type: "string",
+                description: "The unique ID of the booking to cancel."
+              }
+            },
+            required: ["bookingId"]
+          }
         }
       }
-    ]
-  }];
-
-  const systemInstruction = {
-    parts: [{
-      text: "You are an AI business assistant for Tracknrent rental business owners. You can read inventory, update stock counts, view bookings, and cancel them. When the user asks you to perform database actions, ALWAYS use the provided function tool call rather than writing instructions. Be polite, concise, and helpful."
-    }]
-  };
-
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        tools: tools,
-        systemInstruction: systemInstruction
-      })
-    });
-
-    const data = await response.json();
-    if (data.error) {
-      throw new Error(data.error.message);
     }
+  ];
 
-    const candidate = data.candidates?.[0];
-    const part = candidate?.content?.parts?.[0];
-
-    // Check if the model wants to call a tool
-    if (part?.functionCall) {
-      const call = part.functionCall;
-      const toolName = call.name;
-      const args = call.args || {};
-
-      let resultText = "";
-      if (toolName === "get_inventory") {
-        appendToolCard("AI triggered Tool: Fetching inventory listing...");
-        resultText = await getInventoryAction();
-      } else if (toolName === "adjust_inventory_count") {
-        appendToolCard(`AI triggered Tool: Adjusting '${args.name}' count by ${args.adjustment}...`);
-        resultText = await adjustInventoryAction(args.name, args.adjustment);
-      } else if (toolName === "get_bookings") {
-        appendToolCard("AI triggered Tool: Fetching client bookings...");
-        resultText = await getBookingsAction();
-      } else if (toolName === "cancel_booking") {
-        appendToolCard(`AI triggered Tool: Cancelling booking ID ${args.bookingId}...`);
-        resultText = await cancelBookingAction(args.bookingId);
-      }
-
-      // Feed function result back to model to get final text response
-      const followUpResponse = await fetch(url, {
+  for (const model of fallbackModels) {
+    try {
+      console.log(`Attempting OpenRouter request with model: ${model}`);
+      const response = await fetch(url, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${openRouterApiKey}`,
+          "HTTP-Referer": "https://rentbook.app",
+          "X-Title": "Tracknrent AI Assistant"
         },
         body: JSON.stringify({
-          contents: [
-            { role: "user", parts: [{ text: prompt }] },
-            candidate.content, // Model's function call message
-            {
-              role: "function",
-              parts: [{
-                functionResponse: {
-                  name: toolName,
-                  response: { result: resultText }
-                }
-              }]
-            }
+          model: model,
+          messages: [
+            { role: "system", content: systemContent },
+            { role: "user", content: prompt }
           ],
-          tools: tools,
-          systemInstruction: systemInstruction
+          tools: tools
         })
       });
 
-      const followUpData = await followUpResponse.json();
-      const finalCandidate = followUpData.candidates?.[0];
-      return finalCandidate?.content?.parts?.[0]?.text || resultText;
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errText}`);
+      }
+
+      const data = await response.json();
+      if (data.error) {
+        throw new Error(data.error.message || JSON.stringify(data.error));
+      }
+
+      const message = data.choices?.[0]?.message;
+      if (!message) {
+        throw new Error("Empty response from OpenRouter model.");
+      }
+
+      // Check if the model triggered a tool call
+      if (message.tool_calls && message.tool_calls.length > 0) {
+        const toolCall = message.tool_calls[0];
+        const toolName = toolCall.function.name;
+        let args = {};
+        try {
+          args = JSON.parse(toolCall.function.arguments || "{}");
+        } catch (e) {
+          console.warn("Failed to parse tool arguments:", e);
+        }
+
+        let resultText = "";
+        if (toolName === "get_inventory") {
+          appendToolCard(`AI triggered Tool: Fetching inventory listing (model: ${model})...`);
+          resultText = await getInventoryAction();
+        } else if (toolName === "adjust_inventory_count") {
+          appendToolCard(`AI triggered Tool: Adjusting '${args.name}' count by ${args.adjustment} (model: ${model})...`);
+          resultText = await adjustInventoryAction(args.name, args.adjustment);
+        } else if (toolName === "get_bookings") {
+          appendToolCard(`AI triggered Tool: Fetching client bookings (model: ${model})...`);
+          resultText = await getBookingsAction();
+        } else if (toolName === "cancel_booking") {
+          appendToolCard(`AI triggered Tool: Cancelling booking ID ${args.bookingId} (model: ${model})...`);
+          resultText = await cancelBookingAction(args.bookingId);
+        }
+
+        // Send tool results back to OpenRouter to format final response
+        const followUpResponse = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${openRouterApiKey}`,
+            "HTTP-Referer": "https://rentbook.app",
+            "X-Title": "Tracknrent AI Assistant"
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              { role: "system", content: systemContent },
+              { role: "user", content: prompt },
+              message, // Assistant message with tool_calls
+              {
+                role: "tool",
+                tool_call_id: toolCall.id,
+                name: toolName,
+                content: resultText
+              }
+            ]
+          })
+        });
+
+        if (!followUpResponse.ok) {
+          return resultText; // Return raw tool output if follow-up format fails
+        }
+
+        const followUpData = await followUpResponse.json();
+        return followUpData.choices?.[0]?.message?.content || resultText;
+      }
+
+      return message.content || "No message content returned.";
+    } catch (err) {
+      console.warn(`Error using model ${model}:`, err.message);
+      // Continue to next model in the fallback list
     }
-
-    return part?.text || "I was unable to complete this query.";
-
-  } catch (err) {
-    console.error("Gemini API Error:", err);
-    return `Failed to contact Gemini: ${err.message}. Running query in local mode instead...`;
   }
+
+  throw new Error("All OpenRouter models failed to respond.");
 }
 
 /* =========================
@@ -387,12 +424,12 @@ async function handleSend() {
   userInput.value = "";
 
   let aiResponse = "";
-  if (geminiApiKey) {
-    appendSystemMessage("Contacting Gemini neural engine...");
-    aiResponse = await runGeminiWithTools(text);
-    
-    // Check if Gemini failed, fall back to local NLP
-    if (aiResponse.includes("Failed to contact Gemini")) {
+  if (openRouterApiKey) {
+    appendSystemMessage("Contacting OpenRouter neural engine...");
+    try {
+      aiResponse = await runOpenRouterWithTools(text);
+    } catch (err) {
+      appendSystemMessage(`OpenRouter Error: ${err.message}. Retrying locally...`);
       aiResponse = await runLocalNlp(text);
     }
   } else {
