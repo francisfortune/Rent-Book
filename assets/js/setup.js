@@ -7,7 +7,9 @@ import {
   serverTimestamp,
   query,
   where,
-  getDocs
+  getDocs,
+  doc,
+  setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -96,6 +98,11 @@ async function createInitialInventory(businessId) {
       role: "owner",
       addedAt: serverTimestamp()
     });
+
+    // Update users/{uid} document with businessId
+    await setDoc(doc(db, "users", user.uid), {
+      businessId: businessRef.id
+    }, { merge: true });
 
     // 3️⃣ SAVE INVENTORY (NESTED)
     const items = document.querySelectorAll(".inventory-item");

@@ -1,6 +1,7 @@
 // assets/js/ai-assistant.js
 import { auth, db } from "./firebase.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getBusinessIdByEmail } from "./shared.js";
 import {
   collection,
   doc,
@@ -42,28 +43,14 @@ onAuthStateChanged(auth, async (user) => {
 
   currentUserName = user.displayName || user.email || "User";
   try {
-    currentBusinessId = await getBusinessIdByUid(user.uid);
+    currentBusinessId = await getBusinessIdByEmail(user.email, user);
   } catch (err) {
     console.error("AI Assistant Auth Error:", err);
     appendSystemMessage("Error authenticating. Make sure your business profile is set up.");
   }
 });
 
-async function getBusinessIdByUid(uid) {
-  const cacheKey = `businessId_${uid}`;
-  const cached = localStorage.getItem(cacheKey);
-  if (cached) return cached;
 
-  const q = query(
-    collection(db, "businessMembers"),
-    where("uid", "==", uid)
-  );
-  const snap = await getDocs(q);
-  if (snap.empty) throw new Error("NO_BUSINESS");
-  const businessId = snap.docs[0].data().businessId;
-  localStorage.setItem(cacheKey, businessId);
-  return businessId;
-}
 
 /* =========================
    API KEY EVENTS

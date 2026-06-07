@@ -1,5 +1,6 @@
 import { auth, db } from "./firebase.js";
 import { sendPush } from "./onesignal.js";
+import { getBusinessIdByEmail } from "./shared.js";
 
 
 import {
@@ -51,40 +52,7 @@ function isWithinThisWeek(dateValue) {
 /* =========================
    BUSINESS LOOKUP
 ========================= */
-async function getBusinessIdByEmail(email) {
-  const user = auth.currentUser;
-  if (!user) throw new Error("No user");
-  const cacheKey = `businessId_${user.uid}`;
-  const cached = localStorage.getItem(cacheKey);
-  if (cached) return cached;
 
-  let businessId = null;
-  if (user.email) {
-    const emailLower = user.email.toLowerCase().trim();
-    const q = query(collection(db, "businessMembers"), where("email", "==", emailLower));
-    let snap = await getDocs(q);
-    if (snap.empty && user.email.trim() !== emailLower) {
-      const qRaw = query(collection(db, "businessMembers"), where("email", "==", user.email.trim()));
-      snap = await getDocs(qRaw);
-    }
-    if (!snap.empty) businessId = snap.docs[0].data().businessId;
-  }
-  if (!businessId && user.phoneNumber) {
-    const q = query(collection(db, "businessMembers"), where("phone", "==", user.phoneNumber.trim()));
-    const snap = await getDocs(q);
-    if (!snap.empty) businessId = snap.docs[0].data().businessId;
-  }
-
-  if (!businessId) {
-    if (!navigator.onLine) {
-      throw new Error("OFFLINE_NO_CACHE");
-    }
-    throw new Error("No business");
-  }
-
-  localStorage.setItem(cacheKey, businessId);
-  return businessId;
-}
 
 /* =========================
    LOAD DASHBOARD UI
@@ -281,10 +249,19 @@ function showOfflineBanner() {
   document.body.appendChild(banner);
 }
 
+function showErrorBanner(message) {
+  if (document.getElementById("errorBanner")) return;
+  const banner = document.createElement("div");
+  banner.id = "errorBanner";
+  banner.style.cssText = "position: fixed; top: 0; left: 0; right: 0; background: rgba(220, 38, 38, 0.95); backdrop-filter: blur(10px); color: white; text-align: center; padding: 12px; z-index: 99999; font-weight: 500; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; gap: 8px;";
+  banner.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px; vertical-align: middle;">error</span> Error: ${message}. Please refresh or try logging out.`;
+  document.body.appendChild(banner);
+}
+
 onAuthStateChanged(auth, async user => {
   if (!user) { window.location.href = "signup.html"; return; }
   try {
-    const businessId = await getBusinessIdByEmail(user.email);
+    const businessId = await getBusinessIdByEmail(user.email, user);
     if (!navigator.onLine) {
       showOfflineBanner();
     }
@@ -309,8 +286,13 @@ onAuthStateChanged(auth, async user => {
     console.error("Dashboard error:", err);
     if (!navigator.onLine || err.message === "OFFLINE_NO_CACHE") {
       showOfflineBanner();
-    } else {
+    } else if (err.message === "NO_BUSINESS") {
       window.location.href = "setup.html";
+    } else {
+      if (user && user.uid) {
+        localStorage.removeItem(`businessId_${user.uid}`);
+      }
+      showErrorBanner(err.message || err);
     }
   }
 

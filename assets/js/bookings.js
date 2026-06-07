@@ -1,5 +1,6 @@
 import { auth, db } from "./firebase.js";
 import { sendPush } from "./onesignal.js";
+import { getBusinessIdByEmail } from "./shared.js";
 
 import {
   collection,
@@ -119,63 +120,35 @@ async function loadInventory(businessId) {
 /* =========================
    BUSINESS LOOKUP
 ========================= */
-async function getBusinessIdByEmail(email) {
-  const user = auth.currentUser;
-  if (!user) throw new Error("No user");
-  const cacheKey = `businessId_${user.uid}`;
-  const cached = localStorage.getItem(cacheKey);
+async function loadBusinessMetadata(user, businessId) {
   const cachedRole = localStorage.getItem(`cachedMemberRole_${user.uid}`);
   const cachedName = localStorage.getItem(`cachedBusinessName_${user.uid}`);
-
-  if (cached && cachedRole && cachedName) {
+  if (cachedRole && cachedName) {
     currentRole = cachedRole;
     currentBusinessName = cachedName;
-    return cached;
+    return;
   }
-
-  let data = null;
-  if (user.email) {
-    const emailLower = user.email.toLowerCase().trim();
-    const q = query(collection(db, "businessMembers"), where("email", "==", emailLower));
-    let snap = await getDocs(q);
-    if (snap.empty && user.email.trim() !== emailLower) {
-      const qRaw = query(collection(db, "businessMembers"), where("email", "==", user.email.trim()));
-      snap = await getDocs(qRaw);
-    }
-    if (!snap.empty) data = snap.docs[0].data();
+  
+  let role = "viewer";
+  const emailLower = user.email ? user.email.toLowerCase().trim() : "";
+  const q = query(collection(db, "businessMembers"), where("businessId", "==", businessId), where("email", "==", emailLower));
+  const snap = await getDocs(q);
+  if (!snap.empty) {
+    role = snap.docs[0].data().role;
+  } else if (user.phoneNumber) {
+    const q2 = query(collection(db, "businessMembers"), where("businessId", "==", businessId), where("phone", "==", user.phoneNumber.trim()));
+    const snap2 = await getDocs(q2);
+    if (!snap2.empty) role = snap2.docs[0].data().role;
   }
-  if (!data && user.phoneNumber) {
-    const q = query(collection(db, "businessMembers"), where("phone", "==", user.phoneNumber.trim()));
-    const snap = await getDocs(q);
-    if (!snap.empty) data = snap.docs[0].data();
-  }
+  currentRole = role;
+  localStorage.setItem(`cachedMemberRole_${user.uid}`, role);
 
-  if (!data) {
-    if (!navigator.onLine) {
-      if (cached) {
-        currentRole = cachedRole || "viewer";
-        currentBusinessName = cachedName || "Tracknrent";
-        return cached;
-      }
-      throw new Error("OFFLINE_NO_CACHE");
-    }
-    throw new Error("No business");
-  }
-
-  currentRole = data.role;
-  localStorage.setItem(`cachedMemberRole_${user.uid}`, data.role);
-
-  const businessRef = doc(db, "businesses", data.businessId);
+  const businessRef = doc(db, "businesses", businessId);
   const businessSnap = await getDoc(businessRef);
-
   if (businessSnap.exists()) {
     currentBusinessName = businessSnap.data().name;
     localStorage.setItem(`cachedBusinessName_${user.uid}`, currentBusinessName);
-    console.log("Business Name Loaded:", currentBusinessName);
   }
-
-  localStorage.setItem(cacheKey, data.businessId);
-  return data.businessId;
 }
 
 
@@ -1378,6 +1351,15 @@ async function checkAndNotifyStatusChange(booking, id, businessId) {
   document.body.appendChild(banner);
 }
 
+function showErrorBanner(message) {
+  if (document.getElementById("errorBanner")) return;
+  const banner = document.createElement("div");
+  banner.id = "errorBanner";
+  banner.style.cssText = "position: fixed; top: 0; left: 0; right: 0; background: rgba(220, 38, 38, 0.95); backdrop-filter: blur(10px); color: white; text-align: center; padding: 12px; z-index: 99999; font-weight: 500; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; gap: 8px;";
+  banner.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px; vertical-align: middle;">error</span> Error: ${message}. Please refresh or try logging out.`;
+  document.body.appendChild(banner);
+}
+
 onAuthStateChanged(auth, async (user) => {
   if (!user) { 
     window.location.href = "signup.html"; 
@@ -1385,7 +1367,8 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   try {
-    const businessId = await getBusinessIdByEmail(user.email);
+    const businessId = await getBusinessIdByEmail(user.email, user);
+    await loadBusinessMetadata(user, businessId);
     if (!navigator.onLine) {
       showOfflineBanner();
     }
@@ -1471,8 +1454,13 @@ onAuthStateChanged(auth, async (user) => {
     console.error("Dashboard Load Error:", err);
     if (!navigator.onLine || err.message === "OFFLINE_NO_CACHE") {
       showOfflineBanner();
-    } else {
+    } else if (err.message === "NO_BUSINESS") {
       window.location.href = "setup.html";
+    } else {
+      if (user && user.uid) {
+        localStorage.removeItem(`businessId_${user.uid}`);
+      }
+      showErrorBanner(err.message || err);
     }
   }
 });
