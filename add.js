@@ -1,4 +1,6 @@
 import { auth, db, storage } from "./firebase.js";
+import { deductInventory } from "./services/inventoryService.js";
+
 import {
   collection,
   addDoc,
@@ -40,13 +42,39 @@ async function sendNotification(businessId, message, userEmail, type = "general"
    BUSINESS LOOKUP
 ========================= */
 async function getBusinessIdByEmail(email) {
-  const q = query(
-    collection(db, "businessMembers"),
-    where("email", "==", email)
-  );
-  const snap = await getDocs(q);
-  if (snap.empty) throw new Error("No business");
-  return snap.docs[0].data().businessId;
+  const user = auth.currentUser;
+  if (!user) throw new Error("No user");
+  const cacheKey = `businessId_${user.uid}`;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) return cached;
+
+  let businessId = null;
+  if (user.email) {
+    const emailLower = user.email.toLowerCase().trim();
+    const q = query(collection(db, "businessMembers"), where("email", "==", emailLower));
+    let snap = await getDocs(q);
+    if (snap.empty && user.email.trim() !== emailLower) {
+      const qRaw = query(collection(db, "businessMembers"), where("email", "==", user.email.trim()));
+      snap = await getDocs(qRaw);
+    }
+    if (!snap.empty) businessId = snap.docs[0].data().businessId;
+  }
+  if (!businessId && user.phoneNumber) {
+    const q = query(collection(db, "businessMembers"), where("phone", "==", user.phoneNumber.trim()));
+    const snap = await getDocs(q);
+    if (!snap.empty) businessId = snap.docs[0].data().businessId;
+  }
+
+  if (!businessId) {
+    if (!navigator.onLine) {
+      if (cached) return cached;
+      throw new Error("OFFLINE_NO_CACHE");
+    }
+    throw new Error("No business");
+  }
+
+  localStorage.setItem(cacheKey, businessId);
+  return businessId;
 }
 
 /* =========================
@@ -100,7 +128,7 @@ function recalcTotal() {
   `Balance: ₦${balance.toLocaleString()}\n\n` +
 `Thank you for choosing ${currentBusinessName}!\n\n` +
   `--- \n` + 
-  `_Generated via Tracknrent Booking Confirmation_ \n` + 
+  `_Powered by Tracknrent_ \n` + 
   `👉 https://tracknrent.vercel.app`;
   ;
   const previewBox = document.getElementById("liveReceiptText");
@@ -138,8 +166,9 @@ window.addItemRow = function () {
     <div class="vendor-container hidden w-full mt-2 p-3 border border-purple-200 bg-purple-50 rounded-lg">
         <label class="block text-[10px] font-bold text-purple-700 uppercase mb-1">Vendor Name (To borrow from):</label>
         <input class="vendor-name w-full p-2 border border-purple-300 rounded-md text-sm outline-none" 
-               placeholder="e.g. John Rentals">
+               placeholder="e.g. John Rentals" title='Vendor to borrow shortage from'>
     </div>
+    
     
     <button type="button" class="absolute top-2 right-2 sm:static w-10 h-10 flex items-center justify-center bg-red-50 text-red-600 rounded-lg">✕</button>
   `;
@@ -184,30 +213,6 @@ window.addItemRow = function () {
 };
 
 /* =========================
-   INVENTORY DEDUCTION
-========================= */
-async function deductInventory(businessId, items) {
-  const invSnap = await getDocs(
-    collection(db, "businesses", businessId, "inventory")
-  );
-
-  for (const item of items) {
-    const match = invSnap.docs.find(d =>
-      d.data().name.toLowerCase() === item.name.toLowerCase()
-    );
-
-    if (!match) continue;
-
-    const current = match.data().availableQuantity;
-
-    await updateDoc(match.ref, {
-availableQuantity: Math.max(0, current - Math.min(item.qty, current))
-
-    });
-  }
-}
-
-/* =========================
    RECEIPT IMAGE UPLOAD
 ========================= */
 async function uploadReceiptImage(businessId, file) {
@@ -229,6 +234,15 @@ let currentUser = null;
    AUTH + SUBMIT
 ========================= */
 
+function showOfflineBanner() {
+  if (document.getElementById("offlineBanner")) return;
+  const banner = document.createElement("div");
+  banner.id = "offlineBanner";
+  banner.style.cssText = "position: fixed; top: 0; left: 0; right: 0; background: rgba(128, 0, 128, 0.95); backdrop-filter: blur(10px); color: white; text-align: center; padding: 12px; z-index: 99999; font-weight: 500; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; gap: 8px;";
+  banner.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px; vertical-align: middle;">wifi_off</span> Offline Mode — Using cached local data`;
+  document.body.appendChild(banner);
+}
+
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "signup.html";
@@ -238,6 +252,9 @@ onAuthStateChanged(auth, async (user) => {
   try {
     currentUser = user; // ✅ SAVE USER
     businessId = await getBusinessIdByEmail(user.email); // ✅ NO const
+    if (!navigator.onLine) {
+      showOfflineBanner();
+    }
 
     const bizSnap = await getDoc(doc(db, "businesses", businessId));
     if (bizSnap.exists()) {
@@ -268,6 +285,11 @@ onAuthStateChanged(auth, async (user) => {
 
   } catch (error) {
     console.error("Auth Init Error:", error);
+    if (!navigator.onLine || error.message === "OFFLINE_NO_CACHE") {
+      showOfflineBanner();
+    } else {
+      window.location.href = "setup.html";
+    }
   }
 });
   // 3. Receipt image preview handler
@@ -297,18 +319,28 @@ onAuthStateChanged(auth, async (user) => {
       e.preventDefault();
 
       const submitBtn = e.target.querySelector('button[type="submit"]');
-      const originalText = submitBtn.textContent;
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Saving...";
+const originalText = submitBtn.textContent;
 
-      try {
-        /* ===== VALIDATION ===== */
-        if (new Date(returnDate.value) < new Date(eventDate.value)) {
-          alert("Return date cannot be before event date");
-          submitBtn.disabled = false;
-          submitBtn.textContent = originalText;
-          return;
-        }
+submitBtn.disabled = true;
+submitBtn.textContent = "Saving...";
+
+try {
+  /* ===== VALIDATION ===== */
+
+  const delivery = deliveryDate.value || eventDate.value;
+
+  if (new Date(returnDate.value) < new Date(delivery)) {
+    alert("Return date cannot be before delivery date");
+
+    // ✅ FIX: restore button
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+
+    return;
+  }
+
+  // ✅ REMOVE this completely (no longer needed)
+  // if (new Date(returnDate.value) < new Date(eventDate.value)) { ... }
 
         const items = [];
         document.querySelectorAll(".item-row").forEach(row => {
@@ -378,6 +410,7 @@ if (overbookedItems.length) {
           event: {
             type: eventType.value,
             date: eventDate.value,
+  deliveryDate: deliveryDate.value || "", // ✅ NEW
             returnDate: returnDate.value,
             location: eventLocation.value || ""
           },

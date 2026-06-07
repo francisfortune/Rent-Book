@@ -40,12 +40,20 @@ function setLoading(btn, loading) {
 /* =========================
    FIND BUSINESS MEMBER BY EMAIL
 ========================= */
-async function getMembershipByEmail(email) {
+async function getMembershipByEmail(email, rawEmail = null) {
+  const emailLower = email.toLowerCase().trim();
   const q = query(
     collection(db, "businessMembers"),
-    where("email", "==", email)
+    where("email", "==", emailLower)
   );
-  const snap = await getDocs(q);
+  let snap = await getDocs(q);
+  if (snap.empty && rawEmail && rawEmail.trim() !== emailLower) {
+    const qRaw = query(
+      collection(db, "businessMembers"),
+      where("email", "==", rawEmail.trim())
+    );
+    snap = await getDocs(qRaw);
+  }
   if (snap.empty) return null;
   return { id: snap.docs[0].id, ...snap.docs[0].data() };
 }
@@ -304,7 +312,7 @@ onAuthStateChanged(auth, async (user) => {
 
   try {
     if (user.email) {
-      membership = await getMembershipByEmail(user.email.toLowerCase().trim());
+      membership = await getMembershipByEmail(user.email.toLowerCase().trim(), user.email);
     }
     if (!membership && user.phoneNumber) {
       const q = query(

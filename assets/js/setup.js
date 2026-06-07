@@ -17,11 +17,19 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/f
 ========================= */
 async function ensureNoExistingBusiness(user) {
   if (user.email) {
+    const emailLower = user.email.toLowerCase().trim();
     const q = query(
       collection(db, "businessMembers"),
-      where("email", "==", user.email.toLowerCase().trim())
+      where("email", "==", emailLower)
     );
-    const snap = await getDocs(q);
+    let snap = await getDocs(q);
+    if (snap.empty && user.email.trim() !== emailLower) {
+      const qRaw = query(
+        collection(db, "businessMembers"),
+        where("email", "==", user.email.trim())
+      );
+      snap = await getDocs(qRaw);
+    }
     if (!snap.empty) return false;
   }
   if (user.phoneNumber) {
@@ -80,11 +88,10 @@ async function createInitialInventory(businessId) {
       createdAt: serverTimestamp()
     });
 
-    // 2️⃣ Attach owner
     await addDoc(collection(db, "businessMembers"), {
       businessId: businessRef.id,
       uid: user.uid,
-      email: user.email || null,
+      email: user.email ? user.email.toLowerCase().trim() : null,
       phone: user.phoneNumber || null,
       role: "owner",
       addedAt: serverTimestamp()
