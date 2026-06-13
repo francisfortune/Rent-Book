@@ -73,6 +73,7 @@ export async function getBusinessIdByEmail(email, user = null) {
     if (!snap2.empty) {
       businessId = snap2.docs[0].data().businessId;
     }
+  }
   if (!businessId && user && user.uid) {
     const q3 = query(
       collection(db, "businessMembers"),

@@ -813,15 +813,9 @@
                 <li><a href="inventory.html"> <span class="icon">
                             <span class="material-symbols-outlined" >inventory_2</span> </span> <span class="title">Inventory</span> </a>
                 </li>
-                <li><a href="public.html"> <span class="icon">
-                            <span class="material-symbols-outlined" >public</span> </span> <span class="title">Public Profile</span> </a>
-                </li>
                 <li><a href="ai-assistant.html"> <span class="icon">
                             <span class="material-symbols-outlined" >chat</span> </span> <span class="title">AI Assistant</span> </a>
                 </li>
-                <li><a href="settings.html"> <span class="icon">
-                            <span class="material-symbols-outlined" >settings</span> </span> <span class="title">Settings</span>
-                    </a></li>
             </ul>
         </div><!-- ========================= Main ==================== -->
         <div class="main">
@@ -863,37 +857,11 @@
 
   <!-- User Avatar -->
 
-<div class="relative inline-block text-left">
   <div 
     id="user-avatar" style="background-color: purple;"
     class="w-10 h-10 rounded-full text-white flex items-center justify-center font-bold cursor-pointer hover:bg-purple-700 transition-all shadow-md"
   >
-    </div>
-
-  <div 
-    id="user-dropdown" 
-    class="hidden absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden transform origin-top-right transition-all"
-  >
-    <div class="py-2">
-      <a href="analytics.html" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-purple hover:text-purple-600 transition-colors">
-        <span class="material-symbols-outlined" class="mr-3 text-lg">bar_chart</span>
-        Analytics
-      </a>
-      <a href="settings.html" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-purple hover:text-purple-600 transition-colors">
-        <span class="material-symbols-outlined" class="mr-3 text-lg">settings</span>
-        Settings
-      </a>
-      <hr class="my-1 border-gray-100">
-      <button 
-        id="logoutBtn" 
-        class="w-full flex items-center px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors logout-btn"
-      >
-        <span class="material-symbols-outlined" class="mr-3 text-lg">logout</span>
-        Logout
-      </button>
-    </div>
   </div>
-</div>
 
 
 
@@ -1170,6 +1138,7 @@
         
     </script>
     <script type="module" src="assets/js/firebase.js"></script>
+    <script type="module" src="assets/js/avatar.js"></script>
     <script type="module" src="assets/js/dashboard.js"></script>
     <script src="assets/js/pwa.js"></script>
 

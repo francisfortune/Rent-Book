@@ -513,29 +513,9 @@ else if (String(type).toLowerCase() === "settings") {
   }
 };
 
-// --- Avatar Dropdown Logic ---
-
-const userAvatar = document.getElementById('user-avatar');
-const userDropdown = document.getElementById('user-dropdown');
+// --- Avatar Dropdown Logic handled by avatar.js ---
 const notifBtn = document.getElementById('notifBtn');
 const notifModal = document.getElementById('notifModal');
-
-// Toggle Dropdown
-userAvatar.addEventListener('click', (e) => {
-    e.stopPropagation(); // Prevents immediate closing
-    
-    // Close notifications if they are open to avoid overlap
-    if (notifModal) notifModal.style.display = 'none';
-    
-    userDropdown.classList.toggle('hidden');
-});
-
-// Close dropdown when clicking outside
-window.addEventListener('click', (e) => {
-    if (userDropdown && !userDropdown.contains(e.target) && e.target !== userAvatar) {
-        userDropdown.classList.add('hidden');
-    }
-});
 
 // --- Dynamic Avatar Letter ---
 // If you have a function that loads user data, add this line inside it:

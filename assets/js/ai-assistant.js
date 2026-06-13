@@ -267,29 +267,29 @@ async function runOpenRouterWithTools(prompt) {
           },
           required: ["name", "adjustment"]
         }
-      },
-      {
-        type: "function",
-        function: {
-          name: "get_bookings",
-          description: "List recent client event bookings including date, client details, payment, status."
-        }
-      },
-      {
-        type: "function",
-        function: {
-          name: "cancel_booking",
-          description: "Cancel a booking by its ID.",
-          parameters: {
-            type: "object",
-            properties: {
-              bookingId: {
-                type: "string",
-                description: "The unique ID of the booking to cancel."
-              }
-            },
-            required: ["bookingId"]
-          }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "get_bookings",
+        description: "List recent client event bookings including date, client details, payment, status."
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "cancel_booking",
+        description: "Cancel a booking by its ID.",
+        parameters: {
+          type: "object",
+          properties: {
+            bookingId: {
+              type: "string",
+              description: "The unique ID of the booking to cancel."
+            }
+          },
+          required: ["bookingId"]
         }
       }
     }

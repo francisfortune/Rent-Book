@@ -64,6 +64,7 @@ async function getMembershipByEmail(email, rawEmail = null) {
 let registerConfirmationResult = null;
 let loginConfirmationResult = null;
 let recaptchaVerifier = null;
+let isRegistering = false;
 
 function initRecaptcha() {
   if (recaptchaVerifier) return;
@@ -77,7 +78,7 @@ if (sendRegisterOtpBtn) {
   sendRegisterOtpBtn.addEventListener("click", async () => {
     const phoneInput = document.getElementById("registerPhone");
     const countryCode = document.getElementById("registerCountryCode").value;
-    const phone = phoneInput.value.trim();
+    const phone = phoneInput.value.replace(/\D/g, '');
     if (!phone) return alert("Please enter your phone number.");
     const fullPhone = countryCode + phone.replace(/^0+/, '');
     
@@ -104,7 +105,7 @@ if (sendLoginOtpBtn) {
   sendLoginOtpBtn.addEventListener("click", async () => {
     const phoneInput = document.getElementById("loginPhone");
     const countryCode = document.getElementById("loginCountryCode").value;
-    const phone = phoneInput.value.trim();
+    const phone = phoneInput.value.replace(/\D/g, '');
     if (!phone) return alert("Please enter your phone number.");
     const fullPhone = countryCode + phone.replace(/^0+/, '');
     
@@ -146,6 +147,7 @@ if (registerForm) {
       const password = registerForm.registerPassword.value;
 
       try {
+        isRegistering = true;
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         await setDoc(doc(db, "users", user.uid), {
@@ -156,7 +158,9 @@ if (registerForm) {
           businessId: null,
           createdAt: serverTimestamp()
         });
+        window.location.href = "setup.html";
       } catch (err) {
+        isRegistering = false;
         showMessage(err.message);
         setLoading(btn, false);
       }
@@ -174,6 +178,7 @@ if (registerForm) {
       }
       
       try {
+        isRegistering = true;
         const userCredential = await registerConfirmationResult.confirm(otp);
         const user = userCredential.user;
         await setDoc(doc(db, "users", user.uid), {
@@ -184,7 +189,9 @@ if (registerForm) {
           businessId: null,
           createdAt: serverTimestamp()
         });
+        window.location.href = "setup.html";
       } catch (err) {
+        isRegistering = false;
         showMessage("Invalid verification code: " + err.message);
         setLoading(btn, false);
       }
@@ -281,6 +288,7 @@ async function handleGoogleAuth() {
     const userSnapshot = await getDoc(userDocRef);
 
     if (!userSnapshot.exists()) {
+      isRegistering = true;
       // Create user document for new signups
       await setDoc(userDocRef, {
         uid: user.uid,
@@ -290,8 +298,9 @@ async function handleGoogleAuth() {
         businessId: null,
         createdAt: serverTimestamp()
       });
+      window.location.href = "setup.html";
     }
-    // Auth listener will handle the redirect
+    // Auth listener will handle the redirect for existing users
   } catch (err) {
     console.error("Google Auth Error:", err);
     showMessage(err.message || "Google Login failed");
@@ -307,6 +316,10 @@ if (googleSignUp) googleSignUp.addEventListener("click", handleGoogleAuth);/* ==
 ========================= */
 onAuthStateChanged(auth, async (user) => {
   if (!user) return;
+  if (isRegistering) {
+    console.log("Registration process detected. Bypassing state redirect.");
+    return;
+  }
 
   let membership = null;
 

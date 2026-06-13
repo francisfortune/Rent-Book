@@ -4,25 +4,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Log in / Rent Book</title>
-<link rel="icon" href="public/favicon.ico" sizes="any">
-<link rel="icon" type="image/png" href="public/favicon.png">
-<link rel="shortcut icon" href="public/favicon.ico">
+    <title>Get Started | Tracknrent</title>
+    <link rel="canonical" href="https://tracknrent.vercel.app/" />
 
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="shortcut icon" href="favicon.ico">
+
+    <meta name="description" content="Log in or Register for a Tracknrent account to manage rentals, bookings, and inventory with ease.">
+    <meta name="keywords" content="Tracknrent signup, Tracknrent login, SaaS sign in, rental management, Circular economy dashboard">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Tracknrent",
+      "url": "https://tracknrent.vercel.app/"
+    }
+    </script>
+
+    <!-- Tailwind & FontAwesome -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
-    <style>
-        @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Raleway+Dots&family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
 
+    <style>
         :root {
-            --main: purple;
+            --primary: #7c3aed;
+            --primary-dark: #6d28d9;
+            --primary-light: #f5f3ff;
+            --text-dark: #1f2937;
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: poppins;
+            font-family: 'Inter', sans-serif;
         }
 
         body {
@@ -30,446 +52,491 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background: linear-gradient(90deg, #e2e2e2, #c9d6ff);
+            background: radial-gradient(circle at 10% 20%, #f3e8ff 0%, #faf5ff 100%);
+            padding: 20px;
         }
 
-        .container {
+        /* Glassmorphic card container */
+        .auth-container {
+            width: 100%;
+            max-width: 960px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(124, 58, 237, 0.08);
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            min-height: 620px;
+            transition: all 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .auth-container {
+                grid-template-columns: 1fr;
+                border-radius: 20px;
+            }
+            .brand-panel {
+                display: none !important;
+            }
+        }
+
+        .brand-panel {
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            padding: 40px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
             position: relative;
-            width: 850px;
-            height: 550px;
-            background: #ffff;
-            border-radius: 30px;
-            box-shadow: 0 0 30px rgba(0, 0, 0, .2);
-            margin: 20px;
             overflow: hidden;
         }
 
-        .form-box {
+        .brand-panel::before {
+            content: '';
             position: absolute;
-            right: 0;
-            width: 50%;
-            height: 100%;
-            background-color: transparent;
-            display: flex;
-            align-items: center;
-            color: #333;
-            text-align: center;
-            padding: 40px;
-            z-index: 1;
-            transition: .6s ease-in-out 1.2s, visibility 0s 1s;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
+            top: -50px;
+            left: -50px;
+            pointer-events: none;
         }
 
-        .container.active .form-box {
-            right: 50%;
+        .brand-logo-text {
+            font-family: 'Raleway Dots', cursive;
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: white;
         }
 
-        .form-box.register {
-            visibility: hidden;
-        }
-
-        .container.active .form-box.register {
-            visibility: visible;
-        }
-
-        .container.active .form-box.login {
-            visibility: hidden;
-        }
-
-        form {
-            width: 100%;
-        }
-
-        .container h1 {
-            font-size: 2.5rem;
-            font-weight: bold;
-            margin: -10px;
-        }
-
-        form h1 {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: var(--main);
-        }
-
-        .input-box {
+        /* Modern input styling */
+        .input-wrapper {
             position: relative;
-            margin: 30px 0;
+            margin-bottom: 18px;
         }
 
-        .input-box input {
+        .input-wrapper input, .input-wrapper select {
             width: 100%;
-            padding: 13px 50px 13px 20px;
-            background: #eee;
-            border-radius: 8px;
-            border: none;
+            padding: 12px 16px 12px 42px;
+            background: #fdfdfd;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 0.95rem;
             outline: none;
-            font-size: 16px;
-            font-weight: 500;
-            color: #333;
+            color: var(--text-dark);
+            transition: all 0.3s ease;
         }
 
-        .input-box select {
-            width: 100%;
-            padding: 13px 50px 13px 20px;
-            background: #eee;
-            border-radius: 8px;
-            border: none;
-            outline: none;
-            font-size: 16px;
-            font-weight: 500;
-            color: black;
-            text-transform: capitalize;
+        .input-wrapper input:focus, .input-wrapper select:focus {
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 3.5px rgba(124, 58, 237, 0.12);
         }
 
-        .input-box select:hover {
-            cursor: pointer;
-        }
-
-        .input-box option {
+        .input-wrapper i {
             position: absolute;
-            color: black;
-            font-weight: 400;
-            font-size: 15px;
-            top: 100%;
-            left: 0;
-            right: 0;
-            z-index: 99;
-        }
-
-        .input-box input::placeholder {
-            color: black;
-            font-weight: 400;
-        }
-
-        .input-box i {
-            position: absolute;
-            right: 20px;
+            left: 15px;
             top: 50%;
             transform: translateY(-50%);
-            font-size: 20px;
-            color: #333;
+            color: #94a3b8;
+            font-size: 1.1rem;
+            transition: color 0.3s;
         }
 
-        .forgot-link {
-            margin: -25px 0 15px;
+        .input-wrapper input:focus ~ i, .input-wrapper select:focus ~ i {
+            color: var(--primary);
         }
 
-        .forgot-link a {
-            font-size: 14.5px;
-            color: #333;
-            text-decoration: none;
-        }
-
-        .btn {
-            width: 100%;
-            height: 48px;
-            background: var(--main);
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, .1);
-            border: none;
+        /* Password eye toggle */
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
             cursor: pointer;
-            font-size: 20px;
-            color: white;
-            font-weight: 600;
+            color: #94a3b8;
+            z-index: 10;
         }
 
-        .toggle-box {
-            position: absolute;
+        .password-toggle:hover {
+            color: var(--primary);
+        }
+
+        /* Tab Pill Selector */
+        .pill-tab {
+            display: inline-flex;
+            background: #f1f5f9;
+            padding: 4px;
+            border-radius: 10px;
             width: 100%;
-            height: 100%;
         }
 
-        .toggle-box::before {
-            content: "";
-            position: absolute;
-            left: -250%;
-            width: 300%;
-            height: 100%;
-            background-color: var(--main);
-            /* border-radius: 120px; */
-            z-index: 2;
-            transition: 1.8s ease-in-out;
+        .pill-tab button {
+            flex: 1;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 8px;
+            transition: all 0.25s ease;
         }
 
-        .container.active .toggle-box::before {
-            left: 50%;
+        .pill-tab button.active {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
-        .toggle-panel {
-            position: absolute;
-            width: 50%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 2;
-            transition: .6s ease-in-out;
+        .pill-tab button.inactive {
+            color: #64748b;
+        }
+
+        /* Submit Button Gradient */
+        .btn-gradient {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             color: white;
+            padding: 13px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            width: 100%;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
         }
 
-        .toggle-panel.toggle-left {
-            left: 0;
-            transition-delay: 1.2s;
+        .btn-gradient:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(124, 58, 237, 0.3);
         }
 
-        .container.active .toggle-panel.toggle-left {
-            left: -50%;
-            transition-delay: .6s;
+        .btn-gradient:active {
+            transform: translateY(0);
         }
 
-        .toggle-panel.toggle-right {
-            right: -50%;
-            transition-delay: .6s;
+        /* Animation */
+        .auth-card {
+            display: none;
+            animation: cardFade 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .container.active .toggle-panel.toggle-right {
-            right: 0;
-            transition-delay: 1.2s;
+        .active-card {
+            display: block !important;
         }
 
-        .toggle-panel p {
-            text-align: center;
-            margin: 15px;
-            font-size: 20px;
-        }
-
-        .toggle-panel h1 {
-            color: white;
-        }
-
-        .toggle-panel .btn {
-            width: 260px;
-            height: 46px;
-            background: transparent;
-            border: 2px solid #fff;
-            box-shadow: none;
-            border-radius: 20px;
-        }
-
-        /* Responsiveness */
-        @media screen and (max-width: 650px) {
-
-            .container {
-                height: calc(100vh - 10px);
+        @keyframes cardFade {
+            from {
+                opacity: 0;
+                transform: scale(0.98) translateY(8px);
             }
-
-            .toggle-panel .btn {
-                width: 130px;
-                height: 35px;
-                background: transparent;
-                border: 1px solid white;
-                border-radius: 20px;
-                font-size: 18px;
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
             }
-
-            .form-box {
-                bottom: 0;
-                width: 100%;
-                height: 70%;
-            }
-
-            .input-box {
-                position: relative;
-                margin: 40px 0;
-            }
-
-            .input-box input {
-                width: 100%;
-                padding: 18px 50px 18px 20px;
-            }
-
-            .container.active .form-box {
-                right: 0;
-                bottom: 30%;
-            }
-
-            .toggle-box::before {
-                left: 0;
-                top: -270%;
-                width: 100%;
-                height: 300%;
-                /* border-radius: 20vw; */
-            }
-
-            .container.active .toggle-box::before {
-                left: 0;
-                top: 70%;
-            }
-
-            .forgot-link {
-                margin-top: 2px;
-            }
-
-            .toggle-panel {
-                width: 100%;
-                height: 30%;
-            }
-
-            .toggle-panel p {
-                text-align: center;
-                margin: 20px;
-                font-size: 25px;
-            }
-
-            .toggle-panel h1 {
-                color: white;
-                font-size: 2.5rem;
-            }
-
-            .toggle-panel.toggle-left {
-                top: 0;
-            }
-
-            .container.active .toggle-panel.toggle-right {
-                bottom: 0;
-            }
-
-            .container.active .toggle-panel.toggle-left {
-                left: 0;
-                top: -30%;
-            }
-
-            .toggle-panel.toggle-right {
-                right: 0;
-                bottom: -30%;
-            }
-
-            form h1 {
-                font-size: 4rem;
-            }
-
-        }
-
-        @media screen and (max-width: 400px) {
-
-            .form-box {
-                padding: 20px;
-            }
-
-            .toggle-panel h1 {
-                font-size: 30px;
-            }
-
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <div class="form-box login">
-            <form action="">
-                <h1 style="font-size: 2.5rem;">Login</h1>
-                <div class="input-box">
-                    <input type="text" name="" id="" placeholder="Name" required>
-                    <i class="fas fa-user"></i>
-                </div>
-
-                <div class="input-box">
-                    <input type="email" name="" id="" placeholder="Email" required>
-                    <i class="fas fa-envelope"></i>
-                </div>
-
-
-                <div class="input-box">
-                    <input type="password" name="" id="" placeholder="Password" required>
-                    <i class="fas fa-lock"></i>
-                </div>
-                <div class="forgot-link">
-                    <a href="#">Forgot Password</a>
-                </div>
-                <button type="submit" class="btn">Login</button>
-
-                <div class="flex items-center my-4">
-                    <div class="flex-grow border-t border-gray-300"></div>
-                    <span class="mx-4 text-gray-500 text-sm">Or</span>
-                    <div class="flex-grow border-t border-gray-300"></div>
-                </div>
-
-                <button type="button" id="googleLogin"
-                    class="w-full flex items-center justify-center gap-2 py-3 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-all font-medium">
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18"
-                        alt="Google Logo">
-                    Continue with Google
-                </button>
-            </form>
+    <div class="auth-container" id="authContainer">
+        
+        <!-- Brand banner panel (Left Column) -->
+        <div class="brand-panel">
+            <div>
+                <div class="brand-logo-text">Track<span>nrent</span></div>
+            </div>
+            <div class="my-auto">
+                <h2 class="text-2xl font-bold leading-tight mb-4">Smarter Event Rentals</h2>
+                <p class="text-sm text-purple-100 leading-relaxed max-w-sm">
+                    Automate record-keeping, manage stock availability, send real-time client booking alerts, and track circular-economy workflows in one dashboard.
+                </p>
+            </div>
+            <div class="text-xs text-purple-200">
+                &copy; 2026 Tracknrent. All rights reserved.
+            </div>
         </div>
 
-        <div class="form-box register">
-            <form action="">
-                <h1>Register</h1>
-                <div class="input-box">
-                    <input type="text" name="" id="" placeholder="Name" required>
-                    <i class="fas fa-user"></i>
-                </div>
-
-                <div class="input-box">
-                    <input type="email" name="" id="" placeholder="Email" required>
-                    <i class="fas fa-envelope"></i>
-                </div>
-
-                <div class="input-box">
-                    <select name="" id="" required>
-                        <option value="">Register as</option>
-                        <option value="">Student</option>
-                        <option value="">Teacher</option>
-                    </select>
-                </div>
-
-                <div class="input-box">
-                    <input type="password" name="" id="" placeholder="Password" required>
-                    <i class="fas fa-lock"></i>
-                </div>
-                <div class="forgot-link">
-                    <input type="checkbox" class="form-check-input" id="terms" name="terms" required>
-                    <label for="terms" class="form-check-label">I agree to the
-                        <a href="#" style="color: navy;">Terms & Conditions</a>
-                    </label>
-                </div>
-                <button type="submit" class="btn">Register</button>
-
-                <div class="flex items-center my-4">
-                    <div class="flex-grow border-t border-gray-300"></div>
-                    <span class="mx-4 text-gray-500 text-sm">Or</span>
-                    <div class="flex-grow border-t border-gray-300"></div>
-                </div>
-
-                <button type="button" id="googleSignUp"
-                    class="w-full flex items-center justify-center gap-2 py-3 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-all font-medium">
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18"
-                        alt="Google Logo">
-                    Continue with Google
-                </button>
-            </form>
-        </div>
-
-        <div class="toggle-box">
-            <div class="toggle-panel toggle-left">
-                <h1>Hello, Welcome?</h1>
-                <p>Don't have an Account?</p>
-                <button class="btn register-btn">Register</button>
+        <!-- Form entry panel (Right Column) -->
+        <div class="p-8 md:p-10 flex flex-col justify-center">
+            
+            <!-- Main Login / Register switcher -->
+            <div class="flex bg-gray-100 p-1.5 rounded-xl mb-8">
+                <button id="toggleLoginBtn" class="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all text-purple-700 bg-white shadow-sm" onclick="showCard('login')">Log In</button>
+                <button id="toggleRegisterBtn" class="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all text-gray-500 hover:text-purple-700" onclick="showCard('register')">Register</button>
             </div>
-            <div class="toggle-panel toggle-right">
-                <h1>Welcome Back!</h1>
-                <p>Already have an Account?</p>
-                <button class="btn login-btn">Login</button>
+
+            <!-- REGISTER FORM CARD -->
+            <div id="registerCard" class="auth-card">
+                <form id="registerForm">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">Create Account</h2>
+                    <p class="text-xs text-gray-500 mb-6">Enter your details to register your rental business.</p>
+                    
+                    <!-- Segmented Email/Phone tab control -->
+                    <div class="pill-tab mb-5">
+                        <button type="button" id="register-email-btn" class="register-tab-btn active" onclick="switchAuthMode('register', 'email')">Email</button>
+                        <button type="button" id="register-phone-btn" class="register-tab-btn inactive" onclick="switchAuthMode('register', 'phone')">Phone SMS</button>
+                    </div>
+
+                    <input type="hidden" id="registerAuthMethod" value="email">
+
+                    <!-- Shared User Name -->
+                    <div class="input-wrapper">
+                        <input type="text" name="registerName" id="registerName" placeholder="Full Name" required>
+                        <i class="fas fa-user"></i>
+                    </div>
+
+                    <!-- Email Fields Container -->
+                    <div id="registerEmailFields">
+                        <div class="input-wrapper">
+                            <input type="email" id="registerEmail" placeholder="Email Address" required>
+                            <i class="fas fa-envelope"></i>
+                        </div>
+
+                        <div class="input-wrapper">
+                            <input type="password" id="registerPassword" placeholder="Create Password" required>
+                            <i class="fas fa-eye password-toggle" onclick="togglePassword('registerPassword', this)"></i>
+                            <i class="fas fa-lock"></i>
+                        </div>
+                    </div>
+
+                    <!-- Phone Fields Container -->
+                    <div id="registerPhoneFields" class="hidden">
+                        <div class="flex gap-2 mb-3">
+                            <select id="registerCountryCode" class="bg-gray-50 border border-gray-200 rounded-xl px-2 outline-none text-xs font-semibold" style="width: 35%; height: 48px;">
+                                <option value="+234">+234 (NG)</option>
+                                <option value="+1">+1 (US)</option>
+                                <option value="+44">+44 (UK)</option>
+                                <option value="+91">+91 (IN)</option>
+                            </select>
+                            <div class="input-wrapper flex-grow" style="margin-bottom: 0;">
+                                <input type="tel" id="registerPhone" placeholder="Phone Number" style="padding-left: 15px; height: 48px;">
+                            </div>
+                        </div>
+                        <button type="button" id="sendRegisterOtpBtn" class="w-full bg-purple-50 text-purple-700 py-2.5 rounded-xl text-xs font-bold hover:bg-purple-100 transition shadow-sm mb-4">Send Verification SMS</button>
+                        
+                        <div id="registerOtpContainer" class="hidden">
+                            <div class="input-wrapper">
+                                <input type="text" id="registerOtp" placeholder="6-Digit OTP Code">
+                                <i class="fas fa-key"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start mb-5 mt-2">
+                        <input type="checkbox" class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 mt-1 cursor-pointer" id="terms" name="terms" required>
+                        <label for="terms" class="text-xs text-gray-500 ml-2 cursor-pointer">
+                            I agree to the <a href="terms.html" class="text-purple-600 font-semibold hover:underline">Terms &amp; Conditions</a>.
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-gradient">Register Account</button>
+
+                    <div class="flex items-center my-5">
+                        <div class="flex-grow border-t border-gray-200"></div>
+                        <span class="mx-3 text-gray-400 text-xs font-semibold uppercase tracking-wider">Or</span>
+                        <div class="flex-grow border-t border-gray-200"></div>
+                    </div>
+
+                    <button type="button" id="googleSignUp"
+                        class="w-full flex items-center justify-center gap-3 py-3 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 transition-all font-semibold text-sm text-gray-700 shadow-sm">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18" alt="Google Logo">
+                        Continue with Google
+                    </button>
+                </form>
             </div>
+
+            <!-- LOGIN FORM CARD -->
+            <div id="loginCard" class="auth-card active-card">
+                <form id="loginForm">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">Welcome Back</h2>
+                    <p class="text-xs text-gray-500 mb-6">Log in to manage your rental operations.</p>
+
+                    <!-- Segmented Email/Phone tab control -->
+                    <div class="pill-tab mb-5">
+                        <button type="button" id="login-email-btn" class="login-tab-btn active" onclick="switchAuthMode('login', 'email')">Email</button>
+                        <button type="button" id="login-phone-btn" class="login-tab-btn inactive" onclick="switchAuthMode('login', 'phone')">Phone SMS</button>
+                    </div>
+
+                    <input type="hidden" id="loginAuthMethod" value="email">
+
+                    <!-- Email Fields Container -->
+                    <div id="loginEmailFields">
+                        <div class="input-wrapper">
+                            <input type="email" id="loginEmail" placeholder="Email Address" required>
+                            <i class="fas fa-envelope"></i>
+                        </div>
+
+                        <div class="input-wrapper">
+                            <input type="password" id="loginPassword" placeholder="Password" required>
+                            <i class="fas fa-eye password-toggle" onclick="togglePassword('loginPassword', this)"></i>
+                            <i class="fas fa-lock"></i>
+                        </div>
+                    </div>
+
+                    <!-- Phone Fields Container -->
+                    <div id="loginPhoneFields" class="hidden">
+                        <div class="flex gap-2 mb-3">
+                            <select id="loginCountryCode" class="bg-gray-50 border border-gray-200 rounded-xl px-2 outline-none text-xs font-semibold" style="width: 35%; height: 48px;">
+                                <option value="+234">+234 (NG)</option>
+                                <option value="+1">+1 (US)</option>
+                                <option value="+44">+44 (UK)</option>
+                                <option value="+91">+91 (IN)</option>
+                            </select>
+                            <div class="input-wrapper flex-grow" style="margin-bottom: 0;">
+                                <input type="tel" id="loginPhone" placeholder="Phone Number" style="padding-left: 15px; height: 48px;">
+                            </div>
+                        </div>
+                        <button type="button" id="sendLoginOtpBtn" class="w-full bg-purple-50 text-purple-700 py-2.5 rounded-xl text-xs font-bold hover:bg-purple-100 transition shadow-sm mb-4">Send Verification SMS</button>
+                        
+                        <div id="loginOtpContainer" class="hidden">
+                            <div class="input-wrapper">
+                                <input type="text" id="loginOtp" placeholder="6-Digit OTP Code">
+                                <i class="fas fa-key"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center mb-5">
+                        <div></div>
+                        <a href="#" id="forgotPassword" class="text-xs text-purple-600 font-semibold hover:underline">Forgot Password?</a>
+                    </div>
+
+                    <button type="submit" class="btn-gradient">Log In</button>
+
+                    <div class="flex items-center my-5">
+                        <div class="flex-grow border-t border-gray-200"></div>
+                        <span class="mx-3 text-gray-400 text-xs font-semibold uppercase tracking-wider">Or</span>
+                        <div class="flex-grow border-t border-gray-200"></div>
+                    </div>
+
+                    <button type="button" id="googleLogin"
+                        class="w-full flex items-center justify-center gap-3 py-3 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 transition-all font-semibold text-sm text-gray-700 shadow-sm">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18" alt="Google Logo">
+                        Continue with Google
+                    </button>
+                </form>
+            </div>
+
         </div>
     </div>
 
+    <!-- Hidden reCAPTCHA anchor required by Firebase Phone Auth -->
+    <div id="recaptcha-container"></div>
+
+    <!-- RESET PASSWORD MODAL -->
+    <div id="resetModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-white p-8 rounded-2xl w-full max-w-sm shadow-xl text-center border border-gray-100 animate-[cardFade_0.3s_ease]">
+            <span class="material-symbols-outlined text-purple-600 text-4xl mb-3">lock_reset</span>
+            <h2 class="text-xl font-bold text-gray-800 mb-2">Reset Password</h2>
+            <p class="text-xs text-gray-500 mb-5">
+                Enter your account email and we’ll send you a password reset link.
+            </p>
+            <div class="input-wrapper mb-4">
+                <input type="email" id="resetEmail" placeholder="Enter your email" style="padding-left: 15px;">
+            </div>
+            <button id="sendReset" class="btn-gradient mb-2">
+                Send Reset Link
+            </button>
+            <button id="closeReset" class="text-sm text-gray-500 font-semibold hover:text-gray-700 py-2">
+                Cancel
+            </button>
+        </div>
+    </div>
+
+    <!-- Script triggers and tab controllers -->
     <script>
-        const container = document.querySelector(".container");
-        const registerBtn = document.querySelector(".register-btn");
-        const loginBtn = document.querySelector(".login-btn");
+        function showCard(cardName) {
+            const loginCard = document.getElementById("loginCard");
+            const registerCard = document.getElementById("registerCard");
+            const toggleLoginBtn = document.getElementById("toggleLoginBtn");
+            const toggleRegisterBtn = document.getElementById("toggleRegisterBtn");
 
-        registerBtn.addEventListener("click", () => {
-            container.classList.add("active");
-        });
+            if (cardName === "login") {
+                loginCard.classList.add("active-card");
+                registerCard.classList.remove("active-card");
+                
+                toggleLoginBtn.className = "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all text-purple-700 bg-white shadow-sm";
+                toggleRegisterBtn.className = "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all text-gray-500 hover:text-purple-700";
+            } else {
+                registerCard.classList.add("active-card");
+                loginCard.classList.remove("active-card");
 
-        loginBtn.addEventListener("click", () => {
-            container.classList.remove("active");
+                toggleRegisterBtn.className = "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all text-purple-700 bg-white shadow-sm";
+                toggleLoginBtn.className = "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all text-gray-500 hover:text-purple-700";
+            }
+        }
+
+        function togglePassword(inputId, icon) {
+            const input = document.getElementById(inputId);
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.remove("fa-eye");
+                icon.classList.add("fa-eye-slash");
+            } else {
+                input.type = "password";
+                icon.classList.remove("fa-eye-slash");
+                icon.classList.add("fa-eye");
+            }
+        }
+
+        function switchAuthMode(formType, mode) {
+            const emailFields = document.getElementById(formType + 'EmailFields');
+            const phoneFields = document.getElementById(formType + 'PhoneFields');
+            const emailInput = document.getElementById(formType === 'register' ? 'registerEmail' : 'loginEmail');
+            const passwordInput = document.getElementById(formType === 'register' ? 'registerPassword' : 'loginPassword');
+            const phoneInput = document.getElementById(formType === 'register' ? 'registerPhone' : 'loginPhone');
+
+            const buttons = document.querySelectorAll(`.${formType}-tab-btn`);
+            buttons.forEach(btn => {
+                btn.className = `${formType}-tab-btn inactive`;
+            });
+
+            const activeBtn = document.getElementById(`${formType}-${mode}-btn`);
+            if (activeBtn) {
+                activeBtn.className = `${formType}-tab-btn active`;
+            }
+
+            if (mode === 'email') {
+                if (emailFields) emailFields.classList.remove('hidden');
+                if (phoneFields) phoneFields.classList.add('hidden');
+                if (emailInput) emailInput.required = true;
+                if (passwordInput) passwordInput.required = true;
+                if (phoneInput) phoneInput.required = false;
+                document.getElementById(formType + 'AuthMethod').value = 'email';
+            } else {
+                if (emailFields) emailFields.classList.add('hidden');
+                if (phoneFields) phoneFields.classList.remove('hidden');
+                if (emailInput) emailInput.required = false;
+                if (passwordInput) passwordInput.required = false;
+                if (phoneInput) phoneInput.required = true;
+                document.getElementById(formType + 'AuthMethod').value = 'phone';
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const resetModal = document.getElementById("resetModal");
+            const forgotPassword = document.getElementById("forgotPassword");
+            const closeReset = document.getElementById("closeReset");
+
+            if (forgotPassword && resetModal && closeReset) {
+                forgotPassword.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    resetModal.classList.remove("hidden");
+                    resetModal.classList.add("flex");
+                });
+                closeReset.addEventListener("click", () => {
+                    resetModal.classList.add("hidden");
+                    resetModal.classList.remove("flex");
+                });
+            }
         });
     </script>
+
+    <!-- Main Handlers -->
     <script type="module" src="assets/js/auth.js"></script>
+    <script src="assets/js/pwa.js"></script>
 </body>
 
 </html>
