@@ -4,8 +4,8 @@ import {
   query,
   where,
   getDocs
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) return;
