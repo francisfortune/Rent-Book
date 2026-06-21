@@ -203,7 +203,6 @@ async function runLocalNlp(prompt) {
   }
 
   // 2. Adjust Inventory
-  // Match e.g. "Adjust Canopy by -2" or "adjust chairs by 5"
   const adjustMatch = prompt.match(/adjust\s+([\w\s]+?)\s+by\s+(-?\d+)/i);
   if (adjustMatch) {
     const itemName = adjustMatch[1].trim();
@@ -229,7 +228,35 @@ async function runLocalNlp(prompt) {
     return res;
   }
 
-  return "I didn't recognize that command in local mode. Please use standard phrases like 'list inventory', 'adjust Canopy by 5', or input an OpenRouter API Key to enable general conversation.";
+  // 5. Features / General Documentation
+  if (/features|what\s+can\s+you\s+do|tracknrent\s+features|documentation/i.test(prompt)) {
+    return `**Tracknrent Core Features**:\n\n` +
+           `• **Smart Event Bookings**: Keep track of event schedules, client detail records, and payments. The system automatically monitors inventory shortages to prevent overbooking.\n` +
+           `• **Live Inventory Catalog**: Real-time asset levels are auto-deducted during active rental periods and restored when marked returned.\n` +
+           `• **Team Collaboration & Invites**: Add partner team members easily to help manage your business operations.\n` +
+           `• **Reminders & Push Alerts**: Real-time push alerts via OneSignal notifications and automated overdue collection reminders.\n` +
+           `• **Public Storefront Profile**: Share a customizable online catalog link with your clients.`;
+  }
+
+  // 6. Partner Invitation Guide
+  if (/invite\s+partner|add\s+team|how\s+to\s+invite|partner\s+invitation|invite\s+steps/i.test(prompt)) {
+    return `**Guide: How to Invite a Team Partner**:\n\n` +
+           `1. Click on your **User Avatar** (top-right of any dashboard page) and choose **Settings**.\n` +
+           `2. Scroll down to the **🤝 Invite Partner** card.\n` +
+           `3. Enter your partner's **Email Address or Phone Number**.\n` +
+           `4. Select their role (**Partner** for full edit permissions, or **Viewer** for read-only access).\n` +
+           `5. Click **Invite Partner**.\n` +
+           `6. The invited user can register or log in using that exact email or phone number to instantly join your business team.`;
+  }
+
+  // 7. Phone Number Invites Support
+  if (/phone\s+invite|phone\s+invitation|support\s+phone|phone\s+number\s+invite/i.test(prompt)) {
+    return `**Yes! Inviting team partners by phone number is fully supported.**\n\n` +
+           `To invite by phone, type their clean phone number (e.g. \`+2348037764808\`) in the partner input box on the Settings page.\n\n` +
+           `The partner can then register or log in using Phone SMS OTP. Tracknrent will automatically match their phone number to your team invitation.`;
+  }
+
+  return "I didn't recognize that command in local mode. Try asking about 'features', 'how to invite partner', 'phone invites support', or 'list inventory'. Enter an OpenRouter API Key to enable general conversation.";
 }
 
 /* =========================
@@ -245,7 +272,28 @@ const fallbackModels = [
 
 async function runOpenRouterWithTools(prompt) {
   const url = "https://openrouter.ai/api/v1/chat/completions";
-  const systemContent = "You are an AI business assistant for Tracknrent rental business owners. You can read inventory, update stock counts, view bookings, and cancel them. When the user asks you to perform database actions, ALWAYS use the provided function tool call rather than writing instructions. Be polite, concise, and helpful.";
+  const systemContent = `You are an AI business assistant for Tracknrent rental business owners.
+
+Here is the Tracknrent features and documentation Knowledge Base:
+1. Tracknrent Features:
+   - Smart Event Bookings: Manage schedules, payments, and client profiles. Monitors inventory items for shortages or overbooking.
+   - Live Inventory Catalog: Tracks asset counts in real-time, auto-deducting on bookings and restoring on returns.
+   - Team Collaboration: Invite partner team members to collaborate on your business.
+   - Reminders & Push Alerts: Sends push notifications and automated overdue alerts.
+   - Public Storefront: Host an online page showcasing your catalog items with custom URLs.
+
+2. Partner Invitation Steps:
+   - Click User Avatar (top-right of page) -> Select "Settings".
+   - Scroll to the "Invite Partner" section.
+   - Enter their Email or Phone Number, choose their Role, and click "Invite Partner".
+   - The partner accepts by signing up or logging in with that exact Email or Phone Number.
+
+3. Phone Invites Support:
+   - Yes! Phone invitations are fully supported.
+   - You can enter their phone number (e.g. +2348037764808) in the Settings invitation form.
+   - The invited partner signs up/logs in using Phone SMS OTP, and Tracknrent automatically matches the invite.
+
+When the user asks you to perform database actions (view/edit inventory or bookings), ALWAYS use the provided function tool call rather than writing instructions. For informational queries, use this documentation. Be polite, concise, and helpful.`;
   
   const tools = [
     {

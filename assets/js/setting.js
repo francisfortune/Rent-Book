@@ -233,18 +233,37 @@ if (notifCheckbox && soundCheckbox) {
       });
     }
 
-    // ===== 5. INVITE PARTNER (ANYONE CAN INVITE) =====
-// ===== 5. INVITE PARTNER =====
+    // ===== 5. INVITE PARTNER (ANYONE CAN// ===== 5. INVITE PARTNER =====
 if (inviteForm) {
   inviteForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const email = partnerEmailInput.value.trim().toLowerCase();
+    const inputVal = partnerEmailInput.value.trim();
     const role = partnerRoleInput.value;
-    if (!email) return alert("Enter an email");
+    if (!inputVal) return alert("Enter an email or phone number");
 
+    const isEmail = inputVal.includes("@");
+    let email = null;
+    let phone = null;
+
+    if (isEmail) {
+      email = inputVal.toLowerCase();
+    } else {
+      phone = inputVal.replace(/[\s\-\(\)]/g, "");
+      if (phone.length < 5) {
+        return alert("Please enter a valid phone number or email address.");
+      }
+    }
+
+    const currentInviter = auth.currentUser.email || auth.currentUser.phoneNumber || "Owner";
 
     // Prevent user joining another business
-    const globalSnap = await getDocs(query(membersRef, where("email", "==", email)));
+    let globalSnap;
+    if (isEmail) {
+      globalSnap = await getDocs(query(membersRef, where("email", "==", email)));
+    } else {
+      globalSnap = await getDocs(query(membersRef, where("phone", "==", phone)));
+    }
+    
     if (!globalSnap.empty) {
       const existing = globalSnap.docs[0].data();
       if (existing.businessId !== businessId) {
@@ -253,69 +272,88 @@ if (inviteForm) {
     }
 
     // Prevent duplicate in same business
-    const existsSnap = await getDocs(query(
-      membersRef,
-      where("email", "==", email),
-      where("businessId", "==", businessId)
-    ));
+    let existsSnap;
+    if (isEmail) {
+      existsSnap = await getDocs(query(
+        membersRef,
+        where("email", "==", email),
+        where("businessId", "==", businessId)
+      ));
+    } else {
+      existsSnap = await getDocs(query(
+        membersRef,
+        where("phone", "==", phone),
+        where("businessId", "==", businessId)
+      ));
+    }
 
     if (!existsSnap.empty) {
       return alert("User already added.");
     }
 
     // Add partner doc
-    await addDoc(membersRef, {
-      email,
+    const newMemberDoc = {
       role,
       status: "pending",
-      invitedBy: auth.currentUser.email,
+      invitedBy: currentInviter,
       businessId,
-      notifiedAccepted: false, // 👈 CRITICAL: This allows the watcher to work
+      notifiedAccepted: false,
       createdAt: serverTimestamp()
-    });
+    };
+    if (isEmail) {
+      newMemberDoc.email = email;
+    } else {
+      newMemberDoc.phone = phone;
+    }
+    
+    await addDoc(membersRef, newMemberDoc);
+
+    const displayId = email || phone;
 
     // ✅ TRIGGER 2: NOTIFICATION FOR INVITE SENT
     await addDoc(collection(db, "businesses", businessId, "notifications"), {
-      message: `✉️ Invite Sent: ${email} has been invited as a ${role}.`,
+      message: `✉️ Invite Sent: ${displayId} has been invited as a ${role}.`,
       type: "invite_pending",
-      triggeredBy: auth.currentUser.email,
+      triggeredBy: currentInviter,
       createdAt: serverTimestamp(),
       readBy: []
     });
 
     // onesignal push notification
-    await sendPush(`✉️ Invite Sent: ${email} has been invited as a ${role}.`, "/settings.html");
-
+    await sendPush(`✉️ Invite Sent: ${displayId} has been invited as a ${role}.`, "/settings.html");
 
     inviteForm.reset();
-    alert(`Invite sent to ${email} ✅`);
+    alert(`Invite sent to ${displayId} ✅`);
   });
 }
 
-    // ===== 6. LOAD PARTNERS (LIVE WITH EDIT/DELETE) =====
-    function listenToPartners() {
-      const q = query(membersRef, where("businessId", "==", businessId));
-      onSnapshot(q, (snap) => {
-        partnersList.innerHTML = "";
-        
-        snap.forEach(docSnap => {
-          const p = docSnap.data();
-          const pId = docSnap.id;
-          const status = p.status || "accepted";
-          const isOwner = (currentRole === "owner");
+// ===== 6. LOAD PARTNERS (LIVE WITH EDIT/DELETE) =====
+function listenToPartners() {
+  const q = query(membersRef, where("businessId", "==", businessId));
+  onSnapshot(q, (snap) => {
+    partnersList.innerHTML = "";
+    
+    snap.forEach(docSnap => {
+      const p = docSnap.data();
+      const pId = docSnap.id;
+      const status = p.status || "accepted";
+      const isOwner = (currentRole === "owner");
+      
+      const identifier = p.email || p.phone || "Unknown Partner";
+      const firstChar = identifier.charAt(0).toUpperCase();
 
-          const div = document.createElement("div");
-          div.className = "p-3 bg-gray-50 border border-gray-200 rounded mb-2 flex justify-between items-center shadow-sm hover:shadow-md transition-shadow";
+      const div = document.createElement("div");
+      div.className = "p-3 bg-gray-50 border border-gray-200 rounded mb-2 flex justify-between items-center shadow-sm hover:shadow-md transition-shadow";
 
-          div.innerHTML = `
-            <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs uppercase">
-                ${p.email.charAt(0)}
-              </div>
-              <div>
-                <p class="font-bold text-gray-800 text-sm mb-0">${p.email}</p>
-                <div class="flex items-center gap-2">
-                   <span class="px-2 py-[2px] rounded-full text-[10px] font-bold ${
+      div.innerHTML = `
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs uppercase">
+            ${firstChar}
+          </div>
+          <div>
+            <p class="font-bold text-gray-800 text-sm mb-0">${identifier}</p>
+            <div class="flex items-center gap-2">
+               <span class="px-2 py-[2px] rounded-full text-[10px] font-bold ${
   p.role === "owner"
     ? "bg-purple-100 text-purple-700"
     : p.role === "partner"
@@ -324,44 +362,45 @@ if (inviteForm) {
 }">
   ${p.role}
 </span>
-                   <span class="w-1 h-1 bg-gray-300 rounded-full"></span>
-                   <span class="${status === 'pending' ? 'text-yellow-600' : 'text-green-600'} text-[10px] font-bold uppercase">${status}</span>
-                </div>
-              </div>
+               <span class="w-1 h-1 bg-gray-300 rounded-full"></span>
+               <span class="${status === 'pending' ? 'text-yellow-600' : 'text-green-600'} text-[10px] font-bold uppercase">${status}</span>
             </div>
-            <div class="flex gap-1">
-              ${isOwner ? `
-                <button onclick="editPartner('${pId}', '${p.email}', '${p.role}')" class="p-2 text-blue-500 hover:bg-blue-50 rounded-lg">
-                  <span class="material-symbols-outlined">edit</span>
-                </button>
-                <button onclick="deletePartner('${pId}', '${p.email}')" class="p-2 text-red-500 hover:bg-red-50 rounded-lg">
-                  <span class="material-symbols-outlined">delete</span>
-                </button>
-              ` : `<span class="text-[8px] text-gray-300 font-bold uppercase mr-2 italic">Protected</span>`}
-            </div>
-          `;
-          partnersList.appendChild(div);
-        });
-        
-        if (snap.empty) {
-          partnersList.innerHTML = `<p class="text-center py-4 text-gray-400 text-sm">No partners invited yet.</p>`;
-        }
-      });
+          </div>
+        </div>
+        <div class="flex gap-1">
+          ${isOwner ? `
+            <button onclick="editPartner('${pId}', '${p.email || ''}', '${p.phone || ''}', '${p.role}')" class="p-2 text-blue-500 hover:bg-blue-50 rounded-lg">
+              <span class="material-symbols-outlined">edit</span>
+            </button>
+            <button onclick="deletePartner('${pId}', '${identifier}')" class="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+              <span class="material-symbols-outlined">delete</span>
+            </button>
+          ` : `<span class="text-[8px] text-gray-300 font-bold uppercase mr-2 italic">Protected</span>`}
+        </div>
+      `;
+      partnersList.appendChild(div);
+    });
+    
+    if (snap.empty) {
+      partnersList.innerHTML = `<p class="text-center py-4 text-gray-400 text-sm">No partners invited yet.</p>`;
     }
-    listenToPartners();
+  });
+}
 
+listenToPartners();
 
-    // ===== MODAL STATE =====
+// ===== MODAL STATE =====
 let selectedPartnerId = null;
 let selectedPartnerEmail = null;
 
 // ===== EDIT PARTNER =====
-window.editPartner = function (docId, email, role) {
+window.editPartner = function (docId, email, phone, role) {
   if (currentRole !== "owner") return;
 
   selectedPartnerId = docId;
+  const identifier = email || phone;
 
-  document.getElementById("editPartnerEmail").value = email;
+  document.getElementById("editPartnerEmail").value = identifier;
   document.getElementById("editPartnerRole").value = role;
 
   document.getElementById("editPartnerModal").classList.remove("hidden");
@@ -374,32 +413,41 @@ document.getElementById("closeEditModal").onclick = () => {
 
 // SAVE EDIT
 document.getElementById("savePartnerChanges").onclick = async () => {
-  const email = document.getElementById("editPartnerEmail").value.trim().toLowerCase();
+  const inputVal = document.getElementById("editPartnerEmail").value.trim();
   const role = document.getElementById("editPartnerRole").value;
 
-  if (!email) return alert("Email required");
+  if (!inputVal) return alert("Email or Phone required");
+
+  const isEmail = inputVal.includes("@");
+  const updateData = { role };
+  
+  if (isEmail) {
+    updateData.email = inputVal.toLowerCase();
+    updateData.phone = null;
+  } else {
+    const cleanedPhone = inputVal.replace(/[\s\-\(\)]/g, "");
+    updateData.phone = cleanedPhone;
+    updateData.email = null;
+  }
+
+  const currentInviter = auth.currentUser.email || auth.currentUser.phoneNumber || "Owner";
 
   try {
-    await updateDoc(doc(db, "businessMembers", selectedPartnerId), {
-      email,
-      role
-    });
+    await updateDoc(doc(db, "businessMembers", selectedPartnerId), updateData);
 
-// 🔔 TRIGGER NOTIFICATION
+    const displayId = inputVal;
+
+    // 🔔 TRIGGER NOTIFICATION
     await addDoc(collection(db, "businesses", businessId, "notifications"), {
-      message: `⚙️ Team member updated: ${email} is now a ${role}`,
+      message: `⚙️ Team member updated: ${displayId} is now a ${role}`,
       type: "member_updated",
-      triggeredBy: auth.currentUser.email,
+      triggeredBy: currentInviter,
       createdAt: serverTimestamp(),
       readBy: []
     });
 
     // onesignal push notification
-    await sendPush(`⚙️ Team member updated: ${email} is now a ${role}`, "/settings.html");
-
-
-
-
+    await sendPush(`⚙️ Team member updated: ${displayId} is now a ${role}`, "/settings.html");
 
     document.getElementById("editPartnerModal").classList.add("hidden");
 
@@ -409,16 +457,15 @@ document.getElementById("savePartnerChanges").onclick = async () => {
   }
 };
 
-
 // ===== DELETE PARTNER =====
-window.deletePartner = function (docId, email) {
+window.deletePartner = function (docId, identifier) {
   if (currentRole !== "owner") return;
 
   selectedPartnerId = docId;
-  selectedPartnerEmail = email;
+  selectedPartnerEmail = identifier;
 
   document.getElementById("deletePartnerText").textContent =
-    `Are you sure you want to remove ${email}?`;
+    `Are you sure you want to remove ${identifier}?`;
 
   document.getElementById("deletePartnerModal").classList.remove("hidden");
 };
@@ -430,6 +477,7 @@ document.getElementById("cancelDeletePartner").onclick = () => {
 
 // CONFIRM DELETE
 document.getElementById("confirmDeletePartner").onclick = async () => {
+  const currentInviter = auth.currentUser.email || auth.currentUser.phoneNumber || "Owner";
   try {
     await deleteDoc(doc(db, "businessMembers", selectedPartnerId));
 
@@ -437,11 +485,10 @@ document.getElementById("confirmDeletePartner").onclick = async () => {
     await addDoc(collection(db, "businesses", businessId, "notifications"), {
       message: `🚫 Member Removed: ${selectedPartnerEmail} was removed from the business.`,
       type: "member_removed",
-      triggeredBy: auth.currentUser.email,
+      triggeredBy: currentInviter,
       createdAt: serverTimestamp(),
       readBy: []
     });
-
 
     // onesignal push notification
     await sendPush(`🚫 Member Removed: ${selectedPartnerEmail} was removed from the business.`, "/settings.html");

@@ -282,17 +282,23 @@ export async function getUpcomingBookings(businessId) {
 export async function getRecentBookings(businessId, limitCount = 10) {
     try {
         const bookingsRef = collection(db, "businesses", businessId, "bookings");
-        const q = query(
-            bookingsRef,
-            orderBy("createdAt", "desc"),
-            limit(limitCount)
-        );
-
-        const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => ({
+        const snapshot = await getDocs(bookingsRef);
+        const bookings = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
         }));
+        bookings.sort((a, b) => {
+            const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 
+                          (a.createdAt ? new Date(a.createdAt).getTime() : 
+                          (a.event?.date ? new Date(a.event.date).getTime() : 
+                          (a.date ? new Date(a.date).getTime() : 0)));
+            const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 
+                          (b.createdAt ? new Date(b.createdAt).getTime() : 
+                          (b.event?.date ? new Date(b.event.date).getTime() : 
+                          (b.date ? new Date(b.date).getTime() : 0)));
+            return timeB - timeA;
+        });
+        return bookings.slice(0, limitCount);
     } catch (error) {
         console.error("Error getting recent bookings:", error);
         throw new Error("Failed to load recent bookings.");

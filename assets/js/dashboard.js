@@ -156,38 +156,49 @@ function listenToRecentBookings(businessId) {
   if (!tbody) return;
 
   const q = query(
-    collection(db, "businesses", businessId, "bookings"),
-    orderBy("createdAt", "desc"),
-    limit(10)
+    collection(db, "businesses", businessId, "bookings")
   );
 
   onSnapshot(q, snap => {
     tbody.innerHTML = "";
     let hasEvent = false;
 
-    snap.forEach(docSnap => {
-      const b = docSnap.data();
-      if (!isWithinThisWeek(b.event?.date)) return;
+    let mapped = snap.docs.map(docSnap => ({ id: docSnap.id, data: docSnap.data() }));
+    mapped.sort((a, b) => {
+      const timeA = a.data.createdAt?.toDate ? a.data.createdAt.toDate().getTime() : 
+                    (a.data.createdAt ? new Date(a.data.createdAt).getTime() : 
+                    (a.data.event?.date ? new Date(a.data.event.date).getTime() : 
+                    (a.data.date ? new Date(a.data.date).getTime() : 0)));
+      const timeB = b.data.createdAt?.toDate ? b.data.createdAt.toDate().getTime() : 
+                    (b.data.createdAt ? new Date(b.data.createdAt).getTime() : 
+                    (b.data.event?.date ? new Date(b.data.event.date).getTime() : 
+                    (b.data.date ? new Date(b.data.date).getTime() : 0)));
+      return timeB - timeA;
+    });
+
+    const recentDocs = mapped.filter(({ data }) => isWithinThisWeek(data.event?.date)).slice(0, 10);
+
+    recentDocs.forEach(({ id, data: b }) => {
       hasEvent = true;
-tbody.innerHTML += `
-  <tr class="hover:bg-gray-50 border-b border-gray-100 transition-colors cursor-pointer">
-    <td class="py-4 px-4 text-sm font-semibold text-gray-800">
-      ${b.event?.date || "-"}
-    </td>
-    
-    <td class="py-4 px-2 text-sm text-gray-600">
-      <div class="flex flex-col">
-        <span class="font-medium text-gray-800">${b.client?.name || "-"}</span>
-        <span class="text-[10px] text-gray-400 opacity-80">${b.event?.location || "No Location"}</span>
-      </div>
-    </td>
-    
-    <td class="py-4 px-4 text-right">
-      <span class="status ${b.status} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
-        ${b.status || "active"}
-      </span>
-    </td>
-  </tr>`;
+      tbody.innerHTML += `
+        <tr class="hover:bg-gray-50 border-b border-gray-100 transition-colors cursor-pointer" onclick="window.location.href='bookings.html?id=${id}'">
+          <td class="py-4 px-4 text-sm font-semibold text-gray-800">
+            ${b.event?.date || "-"}
+          </td>
+          
+          <td class="py-4 px-2 text-sm text-gray-600">
+            <div class="flex flex-col">
+              <span class="font-medium text-gray-800">${b.client?.name || "-"}</span>
+              <span class="text-[10px] text-gray-400 opacity-80">${b.event?.location || "No Location"}</span>
+            </div>
+          </td>
+          
+          <td class="py-4 px-4 text-right">
+            <span class="status ${b.status} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
+              ${b.status || "active"}
+            </span>
+          </td>
+        </tr>`;
     });
 
     if (!hasEvent) {
@@ -282,6 +293,13 @@ onAuthStateChanged(auth, async user => {
     listenToRecentBookings(businessId);
     listenToInventory(businessId);
     listenToNotifications(businessId);
+
+    // Trigger onboarding tour if not completed
+    if (localStorage.getItem("tracknrent_onboarding_completed") !== "true") {
+      import("./onboarding.js").then((mod) => {
+        mod.startOnboardingTour();
+      }).catch(err => console.error("Failed to load onboarding tour:", err));
+    }
   } catch (err) {
     console.error("Dashboard error:", err);
     if (!navigator.onLine || err.message === "OFFLINE_NO_CACHE") {

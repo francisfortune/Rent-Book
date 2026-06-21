@@ -1404,10 +1404,22 @@ onAuthStateChanged(auth, async (user) => {
     });
 
     const tbody = document.getElementById("bookingsTable");
-    const q = query(collection(db, "businesses", businessId, "bookings"), orderBy("createdAt", "desc"));
+    const q = query(collection(db, "businesses", businessId, "bookings"));
 
     onSnapshot(q, (snap) => {
-      allBookingsGlobal = snap.docs.map(d => ({ id: d.id, data: d.data() }));
+      let mapped = snap.docs.map(d => ({ id: d.id, data: d.data() }));
+      mapped.sort((a, b) => {
+        const timeA = a.data.createdAt?.toDate ? a.data.createdAt.toDate().getTime() : 
+                      (a.data.createdAt ? new Date(a.data.createdAt).getTime() : 
+                      (a.data.event?.date ? new Date(a.data.event.date).getTime() : 
+                      (a.data.date ? new Date(a.data.date).getTime() : 0)));
+        const timeB = b.data.createdAt?.toDate ? b.data.createdAt.toDate().getTime() : 
+                      (b.data.createdAt ? new Date(b.data.createdAt).getTime() : 
+                      (b.data.event?.date ? new Date(b.data.event.date).getTime() : 
+                      (b.data.date ? new Date(b.data.date).getTime() : 0)));
+        return timeB - timeA;
+      });
+      allBookingsGlobal = mapped;
 
       function filterAndRender() {
         const sFilter = document.getElementById("filterStatus")?.value || "";

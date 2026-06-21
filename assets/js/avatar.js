@@ -10,8 +10,10 @@ async function initAvatarAndDropdown() {
 
   // 1. Ensure the parent of avatar has relative styling so dropdown is positioned correctly
   const parent = avatarEl.parentElement;
-  if (parent) {
-    parent.style.position = "relative";
+  const isWrapped = parent && parent.classList.contains("user");
+  const relativeContainer = isWrapped ? parent.parentElement : parent;
+  if (relativeContainer) {
+    relativeContainer.style.position = "relative";
   }
 
   // 2. Create the dropdown element if it doesn't exist
@@ -58,7 +60,11 @@ async function initAvatarAndDropdown() {
         </button>
       </div>
     `;
-    avatarEl.after(dropdownEl);
+    if (isWrapped) {
+      parent.after(dropdownEl);
+    } else {
+      avatarEl.after(dropdownEl);
+    }
   }
 
   // 3. Handle click event on avatar

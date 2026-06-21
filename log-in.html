@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Get Started | Tracknrent</title>
+    <title>Register | Tracknrent</title>
     <link rel="canonical" href="https://tracknrent.vercel.app/" />
 
     <link rel="icon" href="favicon.ico" sizes="any">
@@ -263,12 +263,12 @@
             
             <!-- Main Login / Register switcher -->
             <div class="flex bg-gray-100 p-1.5 rounded-xl mb-8">
-                <button id="toggleLoginBtn" class="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all text-purple-700 bg-white shadow-sm" onclick="showCard('login')">Log In</button>
-                <button id="toggleRegisterBtn" class="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all text-gray-500 hover:text-purple-700" onclick="showCard('register')">Register</button>
+                <button id="toggleLoginBtn" class="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all text-gray-500 hover:text-purple-700" onclick="showCard('login')">Log In</button>
+                <button id="toggleRegisterBtn" class="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all text-purple-700 bg-white shadow-sm" onclick="showCard('register')">Register</button>
             </div>
 
             <!-- REGISTER FORM CARD -->
-            <div id="registerCard" class="auth-card">
+            <div id="registerCard" class="auth-card active-card">
                 <form id="registerForm">
                     <h2 class="text-2xl font-bold text-gray-800 mb-2">Create Account</h2>
                     <p class="text-xs text-gray-500 mb-6">Enter your details to register your rental business.</p>
@@ -348,7 +348,7 @@
             </div>
 
             <!-- LOGIN FORM CARD -->
-            <div id="loginCard" class="auth-card active-card">
+            <div id="loginCard" class="auth-card">
                 <form id="loginForm">
                     <h2 class="text-2xl font-bold text-gray-800 mb-2">Welcome Back</h2>
                     <p class="text-xs text-gray-500 mb-6">Log in to manage your rental operations.</p>

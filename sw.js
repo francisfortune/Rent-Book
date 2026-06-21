@@ -1,5 +1,5 @@
 // RentBook Service Worker - Production Level PWA
-const CACHE_NAME = 'Tracknrent-v1.0.3';
+const CACHE_NAME = 'Tracknrent-v1.0.4';
 const DYNAMIC_CACHE = 'Tracknrent-dynamic-v1';
 
 // Core assets to cache for offline use
@@ -25,6 +25,7 @@ const STATIC_ASSETS = [
     '/assets/js/add.js',
     '/assets/js/inventory.js',
     '/assets/js/avatar.js',
+    '/assets/js/onboarding.js',
     '/assets/js/shared.js',
     '/assets/imgs/logo.png',
     '/assets/imgs/logo.ico',

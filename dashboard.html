@@ -342,9 +342,21 @@
         }
 
         .card .iconBx {
-            font-size: 3.5rem;
+            font-size: 3rem;
             color: purple;
-            opacity: 0.2;
+        }
+
+        .card .iconBx span.material-symbols-outlined {
+            font-size: 3.2rem;
+            color: purple;
+            opacity: 0.85;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card:hover .iconBx span.material-symbols-outlined {
+            transform: scale(1.18);
+            opacity: 1;
+            color: #540b9e;
         }
 
         /* Details Section */
