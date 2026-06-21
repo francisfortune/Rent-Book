@@ -1369,7 +1369,10 @@ async function checkAndNotifyStatusChange(booking, id, businessId) {
   // =========================
   if (Object.keys(updates).length > 0) {
     await updateDoc(bookingRef, updates);
-  }function showOfflineBanner() {
+  }
+}
+
+function showOfflineBanner() {
   if (document.getElementById("offlineBanner")) return;
   const banner = document.createElement("div");
   banner.id = "offlineBanner";
@@ -1472,6 +1475,9 @@ onAuthStateChanged(auth, async (user) => {
     if (!navigator.onLine || err.message === "OFFLINE_NO_CACHE") {
       showOfflineBanner();
     } else {
+      if (user && user.uid) {
+        localStorage.removeItem(`businessId_${user.uid}`);
+      }
       window.location.href = "setup.html";
     }
   }

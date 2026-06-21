@@ -46,7 +46,14 @@ onAuthStateChanged(auth, async (user) => {
     currentBusinessId = await getBusinessIdByEmail(user.email, user);
   } catch (err) {
     console.error("AI Assistant Auth Error:", err);
-    appendSystemMessage("Error authenticating. Make sure your business profile is set up.");
+    if (err.message === "NO_BUSINESS" || err.message === "Business not found") {
+      if (user && user.uid) {
+        localStorage.removeItem(`businessId_${user.uid}`);
+      }
+      window.location.href = "setup.html";
+    } else {
+      appendSystemMessage("Error authenticating. Make sure your business profile is set up.");
+    }
   }
 });
 

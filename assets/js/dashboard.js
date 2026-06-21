@@ -286,7 +286,10 @@ onAuthStateChanged(auth, async user => {
     console.error("Dashboard error:", err);
     if (!navigator.onLine || err.message === "OFFLINE_NO_CACHE") {
       showOfflineBanner();
-    } else if (err.message === "NO_BUSINESS") {
+    } else if (err.message === "NO_BUSINESS" || err.message === "Business not found") {
+      if (user && user.uid) {
+        localStorage.removeItem(`businessId_${user.uid}`);
+      }
       window.location.href = "setup.html";
     } else {
       if (user && user.uid) {
@@ -404,11 +407,11 @@ function listenToNotifications(businessId) {
     notifList.innerHTML = notifications.map(n => {
       const isRead = n.readBy?.includes(user?.uid);
 
-      let icon = "notifications-outline";
-      if (n.type?.includes("booking")) icon = "calendar-outline";
-      else if (n.type === "add") icon = "add-circle-outline";
-      else if (n.type === "welcome") icon = "sparkles-outline";
-      else if (n.type === "inventory") icon = "cube-outline";
+      let icon = "notifications";
+      if (n.type?.includes("booking")) icon = "calendar_today";
+      else if (n.type === "add") icon = "add_circle";
+      else if (n.type === "welcome") icon = "auto_awesome";
+      else if (n.type === "inventory") icon = "inventory_2";
 
       let bgColor = isRead ? "bg-green-50" : "bg-purple-50";
       let borderColor = isRead ? "border-green-200" : "border-purple-300";
@@ -416,13 +419,13 @@ function listenToNotifications(businessId) {
 
       // UNREAD: One purple tick | READ: Two green ticks
       let tickIcon = isRead
-        ? `<ion-icon name="checkmark-done" style="color:green;"></ion-icon>`
-        : `<ion-icon name="checkmark" style="color:purple;"></ion-icon>`;
+        ? `<span class="material-symbols-outlined" style="font-size: 14px; color:green; vertical-align: middle;">done_all</span>`
+        : `<span class="material-symbols-outlined" style="font-size: 14px; color:purple; vertical-align: middle;">check</span>`;
 
       return `
         <div class="p-3 border-b ${borderColor} ${bgColor} flex items-start gap-3">
           <div onclick="markNotificationReadAndRedirect('${businessId}', '${n.id}', '${n.type}', '${n.bookingId || ""}')" class="flex flex-1 gap-3 cursor-pointer">
-            <ion-icon name="${icon}" style="font-size:1.5rem; color:purple;"></ion-icon>
+            <span class="material-symbols-outlined" style="font-size:1.5rem; color:purple;">${icon}</span>
             <div class="flex-1">
               <p class="text-sm ${textWeight}">${n.message}</p>
               <p class="text-[10px] text-gray-500">By: ${n.triggeredBy || "Unknown"}</p>

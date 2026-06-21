@@ -1,6 +1,7 @@
 import { auth, db, storage } from "./firebase.js";
 import { deductInventory } from "./services/inventoryService.js";
 import { getBusinessIdByEmail } from "./shared.js";
+import { sendPush } from "./onesignal.js";
 
 import {
   collection,
@@ -263,7 +264,10 @@ onAuthStateChanged(auth, async (user) => {
     console.error("Auth Init Error:", error);
     if (!navigator.onLine || error.message === "OFFLINE_NO_CACHE") {
       showOfflineBanner();
-    } else if (error.message === "NO_BUSINESS") {
+    } else if (error.message === "NO_BUSINESS" || error.message === "Business not found") {
+      if (user && user.uid) {
+        localStorage.removeItem(`businessId_${user.uid}`);
+      }
       window.location.href = "setup.html";
     } else {
       if (user && user.uid) {
@@ -434,6 +438,12 @@ await sendNotification(
   currentUser.email, // ✅ FIXED
   "booking_added",      // type
   bookingRef.id         // bookingId
+);
+
+// Send real-time OneSignal push notification
+await sendPush(
+  `New booking added for ${bookingData.client.name} on ${bookingData.event.date}`,
+  `/bookings.html?highlight=${bookingRef.id}`
 );
 
 // 🎇 2. WELCOME NOTIFICATION (Add this part)

@@ -85,6 +85,17 @@ export async function getBusinessIdByEmail(email, user = null) {
     }
   }
 
+  if (businessId && navigator.onLine) {
+    try {
+      const bizSnap = await getDoc(doc(db, "businesses", businessId));
+      if (!bizSnap.exists()) {
+        businessId = null;
+      }
+    } catch (e) {
+      console.error("Error verifying business existence:", e);
+    }
+  }
+
   if (!businessId) {
     throw new Error("NO_BUSINESS");
   }

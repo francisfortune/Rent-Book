@@ -528,7 +528,7 @@ modalContent.innerHTML = `
         </p>
 
         <p class="text-xs sm:text-sm opacity-90 italic flex items-center gap-2">
-          <ion-icon name="call-outline" class="text-sm"></ion-icon>
+          <span class="material-symbols-outlined text-sm">call</span>
           <a href="tel:+${booking.client.phone}" class="break-all">
             ${booking.client.phone}
           </a>
@@ -563,7 +563,7 @@ modalContent.innerHTML = `
       </p>
 
       <div class="flex items-center gap-2 mt-1">
-        <ion-icon name="sparkles-outline" class="text-purple-600"></ion-icon>
+        <span class="material-symbols-outlined text-purple-600">auto_awesome</span>
 
         <p class="font-black text-gray-800 text-sm sm:text-base break-words">
           ${booking.event.type || "Other"}
@@ -578,7 +578,7 @@ modalContent.innerHTML = `
       </p>
 
       <div class="flex items-center gap-2 mt-1">
-        <ion-icon name="calendar-outline" class="text-purple-600"></ion-icon>
+        <span class="material-symbols-outlined text-purple-600">calendar_today</span>
 
         <p class="font-black text-gray-800 text-sm sm:text-base break-all">
           ${booking.event.date || "Not set"}
@@ -597,7 +597,7 @@ modalContent.innerHTML = `
       </p>
 
       <div class="flex items-start gap-2 mt-1">
-        <ion-icon name="cube-outline" class="text-purple-600 mt-1"></ion-icon>
+        <span class="material-symbols-outlined text-purple-600 mt-1">inventory_2</span>
 
         <p class="font-black text-gray-800 text-sm break-all leading-relaxed">
           ${formatDateTime(booking.event.deliveryDate || booking.event.date)}
@@ -616,12 +616,10 @@ modalContent.innerHTML = `
       </p>
 
       <div class="flex items-start gap-2 mt-1">
-        <ion-icon 
-          name="return-up-back-outline" 
-          class="${status === "overdue"
+        <span 
+          class="material-symbols-outlined ${status === "overdue"
             ? "text-red-600"
-            : "text-purple-600"} mt-1">
-        </ion-icon>
+            : "text-purple-600"} mt-1">assignment_return</span>
 
         <p class="font-black text-sm break-all leading-relaxed ${
           status === "overdue"
@@ -642,7 +640,7 @@ modalContent.innerHTML = `
   <!-- RENTAL ITEMS -->
   <div>
     <h4 class="flex items-center gap-2 font-bold text-purple-800 mb-3 text-base">
-      <ion-icon name="cart"></ion-icon>
+      <span class="material-symbols-outlined">shopping_cart</span>
       Rental Items
     </h4>
 
@@ -746,7 +744,7 @@ modalContent.innerHTML = `
       onclick="shareToWhatsApp('${booking.client.phone}', \`${receiptText}\`)"
       class="flex-1 min-h-[55px] px-4 bg-green-500 hover:bg-green-600 transition text-white rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg">
 
-      <ion-icon name="logo-whatsapp" class="text-xl"></ion-icon>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" class="w-5 h-5" style="width: 20px; height: 20px;"><path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7 .9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/></svg>
 
       <span class="text-sm sm:text-base text-center">
         Share Receipt
@@ -806,7 +804,7 @@ modalContent.innerHTML = `
       <button
         onclick='deleteBooking("${id}", "${businessId}")'
         class="sm:w-auto w-full px-6 py-3 bg-red-100 text-red-600 rounded-xl shadow-sm hover:bg-red-600 hover:text-white transition flex items-center justify-center gap-2">
-        <ion-icon name="trash-outline"></ion-icon>
+        <span class="material-symbols-outlined" style="font-size: 1.25rem;">delete</span>
         Delete
       </button>
     ` : ""}
@@ -874,7 +872,7 @@ window.openEditModal = async function (booking, id, businessId) {
       </div>
     </div>
     <div style="width:36px;height:36px;border-radius:8px;background:#f5f0ff;border:0.5px solid #d8b4fe;display:flex;align-items:center;justify-content:center;">
-      <ion-icon name="create-outline" style="font-size:18px;color:purple;"></ion-icon>
+      <span class="material-symbols-outlined" style="font-size:18px;color:purple;">edit</span>
     </div>
   </div>
 
@@ -884,7 +882,7 @@ window.openEditModal = async function (booking, id, businessId) {
     <!-- Customer -->
     <div style="background:#f9fafb;border-radius:12px;border:0.5px solid #e5e5e5;padding:1rem 1.25rem;display:flex;flex-direction:column;gap:12px;">
       <div style="display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:0.5px solid #e5e5e5;">
-        <ion-icon name="person-outline" style="font-size:16px;color:purple;"></ion-icon>
+        <span class="material-symbols-outlined" style="font-size:16px;color:purple;">person</span>
         <span style="font-size:12px;font-weight:600;color:purple;text-transform:uppercase;letter-spacing:.04em;">Customer</span>
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;">
@@ -909,7 +907,7 @@ window.openEditModal = async function (booking, id, businessId) {
     <!-- Logistics -->
     <div style="background:#f9fafb;border-radius:12px;border:0.5px solid #e5e5e5;padding:1rem 1.25rem;display:flex;flex-direction:column;gap:12px;">
       <div style="display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:0.5px solid #e5e5e5;">
-        <ion-icon name="calendar-clear-outline" style="font-size:16px;color:purple;"></ion-icon>
+        <span class="material-symbols-outlined" style="font-size:16px;color:purple;">calendar_today</span>
         <span style="font-size:12px;font-weight:600;color:purple;text-transform:uppercase;letter-spacing:.04em;">Logistics</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -952,7 +950,7 @@ window.openEditModal = async function (booking, id, businessId) {
   <div style="background:#f9fafb;border-radius:12px;border:0.5px solid #e5e5e5;padding:1rem 1.25rem;display:flex;flex-direction:column;gap:10px;">
     <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;border-bottom:0.5px solid #e5e5e5;">
       <div style="display:flex;align-items:center;gap:8px;">
-        <ion-icon name="list-baggage-outline" style="font-size:16px;color:purple;"></ion-icon>
+        <span class="material-symbols-outlined" style="font-size:16px;color:purple;">format_list_bulleted</span>
         <span style="font-size:12px;font-weight:600;color:purple;text-transform:uppercase;letter-spacing:.04em;">Items</span>
       </div>
       <button type="button" onclick="addEditItem()"
@@ -1342,7 +1340,10 @@ async function checkAndNotifyStatusChange(booking, id, businessId) {
   // =========================
   if (Object.keys(updates).length > 0) {
     await updateDoc(bookingRef, updates);
-  }function showOfflineBanner() {
+  }
+}
+
+function showOfflineBanner() {
   if (document.getElementById("offlineBanner")) return;
   const banner = document.createElement("div");
   banner.id = "offlineBanner";
@@ -1454,7 +1455,10 @@ onAuthStateChanged(auth, async (user) => {
     console.error("Dashboard Load Error:", err);
     if (!navigator.onLine || err.message === "OFFLINE_NO_CACHE") {
       showOfflineBanner();
-    } else if (err.message === "NO_BUSINESS") {
+    } else if (err.message === "NO_BUSINESS" || err.message === "Business not found") {
+      if (user && user.uid) {
+        localStorage.removeItem(`businessId_${user.uid}`);
+      }
       window.location.href = "setup.html";
     } else {
       if (user && user.uid) {

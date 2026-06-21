@@ -332,10 +332,10 @@ if (inviteForm) {
             <div class="flex gap-1">
               ${isOwner ? `
                 <button onclick="editPartner('${pId}', '${p.email}', '${p.role}')" class="p-2 text-blue-500 hover:bg-blue-50 rounded-lg">
-                  <ion-icon name="create-outline"></ion-icon>
+                  <span class="material-symbols-outlined">edit</span>
                 </button>
                 <button onclick="deletePartner('${pId}', '${p.email}')" class="p-2 text-red-500 hover:bg-red-50 rounded-lg">
-                  <ion-icon name="trash-outline"></ion-icon>
+                  <span class="material-symbols-outlined">delete</span>
                 </button>
               ` : `<span class="text-[8px] text-gray-300 font-bold uppercase mr-2 italic">Protected</span>`}
             </div>
@@ -488,7 +488,10 @@ document.getElementById("confirmDeletePartner").onclick = async () => {
     console.error(err);
     if (!navigator.onLine || err.message === "OFFLINE_NO_CACHE") {
       showOfflineBanner();
-    } else if (err.message === "NO_BUSINESS") {
+    } else if (err.message === "NO_BUSINESS" || err.message === "Business not found") {
+      if (user && user.uid) {
+        localStorage.removeItem(`businessId_${user.uid}`);
+      }
       alert("No business setup found. Redirecting to setup...");
       window.location.href = "setup.html";
     } else {

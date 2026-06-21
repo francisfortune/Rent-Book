@@ -9,6 +9,7 @@ import {
   where,
   getDocs,
   doc,
+  getDoc,
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -18,6 +19,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/f
    GUARD: ENSURE USER HAS NO BUSINESS
 ========================= */
 async function ensureNoExistingBusiness(user) {
+  let businessId = null;
   if (user.email) {
     const emailLower = user.email.toLowerCase().trim();
     const q = query(
@@ -32,15 +34,31 @@ async function ensureNoExistingBusiness(user) {
       );
       snap = await getDocs(qRaw);
     }
-    if (!snap.empty) return false;
+    if (!snap.empty) {
+      businessId = snap.docs[0].data().businessId;
+    }
   }
-  if (user.phoneNumber) {
+  if (!businessId && user.phoneNumber) {
     const q = query(
       collection(db, "businessMembers"),
       where("phone", "==", user.phoneNumber.trim())
     );
     const snap = await getDocs(q);
-    if (!snap.empty) return false;
+    if (!snap.empty) {
+      businessId = snap.docs[0].data().businessId;
+    }
+  }
+
+  if (businessId && navigator.onLine) {
+    try {
+      const bizSnap = await getDoc(doc(db, "businesses", businessId));
+      if (bizSnap.exists()) {
+        return false;
+      }
+    } catch (e) {
+      console.error("Error verifying existing business doc:", e);
+      return false;
+    }
   }
   return true;
 }

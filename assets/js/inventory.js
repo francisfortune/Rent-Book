@@ -132,7 +132,7 @@ outItemsEl.textContent = totalOutQty.toLocaleString();
         <span class="text-purple-600">₦${item.price} / unit</span>
       </div>
       <button class="edit-btn text-purple-600">
-        <ion-icon name="create-outline"></ion-icon>
+        <span class="material-symbols-outlined">edit</span>
       </button>
     `;
     div.querySelector(".edit-btn").onclick = () => openEditModal(item);
@@ -220,7 +220,7 @@ outItemsEl.textContent = totalOutQty.toLocaleString();
               ${b.client?.name || "Client"}
             </p>
             <p class="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
-              <ion-icon name="calendar-outline"></ion-icon>
+              <span class="material-symbols-outlined" style="font-size: 14px;">calendar_today</span>
               ${b.event?.date || "No Date"}
             </p>
           </div>
@@ -371,7 +371,10 @@ deleteItemBtn.onclick = async () => {
     console.error(err);
     if (!navigator.onLine || err.message === "OFFLINE_NO_CACHE") {
       showOfflineBanner();
-    } else if (err.message === "NO_BUSINESS") {
+    } else if (err.message === "NO_BUSINESS" || err.message === "Business not found") {
+      if (user && user.uid) {
+        localStorage.removeItem(`businessId_${user.uid}`);
+      }
       window.location.href = "setup.html";
     } else {
       if (user && user.uid) {

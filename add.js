@@ -288,6 +288,9 @@ onAuthStateChanged(auth, async (user) => {
     if (!navigator.onLine || error.message === "OFFLINE_NO_CACHE") {
       showOfflineBanner();
     } else {
+      if (user && user.uid) {
+        localStorage.removeItem(`businessId_${user.uid}`);
+      }
       window.location.href = "setup.html";
     }
   }
