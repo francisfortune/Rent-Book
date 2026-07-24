@@ -34,6 +34,25 @@ const saveBtn = document.getElementById("savePublicSettings");
 const liveProfileLink = document.getElementById("liveProfileLink");
 
 /* =========================
+   REAL-TIME SLUG SANITIZER
+========================= */
+if (profileSlug) {
+  profileSlug.addEventListener("input", (e) => {
+    // Sanitize into URL-safe slug: lowercase, replace spaces with hyphens, strip non-alphanumeric
+    e.target.value = sanitizeSlug(e.target.value);
+  });
+}
+
+function sanitizeSlug(rawSlug) {
+  return rawSlug
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")           // Convert spaces to hyphens
+    .replace(/[^a-z0-9-_]/g, "")    // Remove invalid characters
+    .replace(/--+/g, "-");          // Replace multiple hyphens with single
+}
+
+/* =========================
    AUTHENTICATION GUARD
 ========================= */
 onAuthStateChanged(auth, async (user) => {
@@ -95,13 +114,16 @@ async function loadSettings() {
 }
 
 function updateLiveLink(slug, enabled) {
+  if (!liveProfileLink) return;
+
+  const parentCard = liveProfileLink.closest(".profile-card");
   if (enabled && slug) {
     const url = `${window.location.origin}/p/${slug}`;
     liveProfileLink.href = url;
     liveProfileLink.textContent = `View Live Store (${slug})`;
-    liveProfileLink.closest(".profile-card").classList.remove("hidden");
+    if (parentCard) parentCard.classList.remove("hidden");
   } else {
-    liveProfileLink.closest(".profile-card").classList.add("hidden");
+    if (parentCard) parentCard.classList.add("hidden");
   }
 }
 
@@ -109,7 +131,9 @@ function updateLiveLink(slug, enabled) {
    RENDER GALLERY PREVIEW
 ========================= */
 function renderGallery() {
+  if (!imagePreviewGrid) return;
   imagePreviewGrid.innerHTML = "";
+
   currentGallery.forEach((url, index) => {
     const wrapper = document.createElement("div");
     wrapper.className = "relative group aspect-square rounded-xl overflow-hidden border bg-gray-100 shadow-sm";
@@ -130,13 +154,13 @@ window.deleteGalleryImage = async function (index) {
 
   const url = currentGallery[index];
   try {
-    // 1. Delete from storage if it belongs to storage
+    // 1. Delete from storage if it belongs to Firebase Storage
     if (url.includes("firebasestorage.googleapis.com")) {
       const storageRef = ref(storage, url);
       await deleteObject(storageRef);
     }
 
-    // 2. Update array
+    // 2. Update local gallery array
     currentGallery.splice(index, 1);
 
     // 3. Save to database
@@ -179,8 +203,10 @@ if (galleryUploadInput) {
     });
 
     try {
-      saveBtn.disabled = true;
-      saveBtn.textContent = "Uploading images...";
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Uploading images...";
+      }
 
       const newUrls = await Promise.all(uploadPromises);
       currentGallery = [...currentGallery, ...newUrls];
@@ -197,11 +223,45 @@ if (galleryUploadInput) {
       console.error("Upload error:", err);
       alert("Error uploading images: " + err.message);
     } finally {
-      saveBtn.disabled = false;
-      saveBtn.textContent = "Update Storefront Data";
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Update Storefront Data";
+      }
       galleryUploadInput.value = ""; // Clear file selector
     }
   });
+}
+
+/* =========================
+   SLUG AVAILABILITY CHECK
+========================= */
+async function checkSlugAvailable(slug, myBusinessId) {
+  // Check 1: Lookup in dedicated publicSlugs collection
+  const slugRef = doc(db, "publicSlugs", slug);
+  const slugSnap = await getDoc(slugRef);
+
+  if (slugSnap.exists()) {
+    const ownerId = slugSnap.data().businessId;
+    if (ownerId !== myBusinessId) {
+      return false; // Taken by someone else
+    }
+  }
+
+  // Check 2: Direct Fallback Query on businesses collection
+  const q = query(
+    collection(db, "businesses"),
+    where("publicProfile.slug", "==", slug)
+  );
+  const querySnap = await getDocs(q);
+
+  if (!querySnap.empty) {
+    const matchedDoc = querySnap.docs[0];
+    if (matchedDoc.id !== myBusinessId) {
+      return false; // Taken by someone else
+    }
+  }
+
+  return true; // Available
 }
 
 /* =========================
@@ -209,10 +269,10 @@ if (galleryUploadInput) {
 ========================= */
 if (saveBtn) {
   saveBtn.addEventListener("click", async () => {
-    const slug = profileSlug.value.trim().toLowerCase().replace(/[^a-z0-9-_]/g, "");
+    const cleanSlug = sanitizeSlug(profileSlug.value);
     const enabled = publicProfileToggle.checked;
 
-    if (enabled && !slug) {
+    if (enabled && !cleanSlug) {
       alert("Please enter a custom URL handle to enable your public store.");
       return;
     }
@@ -221,47 +281,50 @@ if (saveBtn) {
     saveBtn.textContent = "Saving changes...";
 
     try {
-      // 1. Resolve slug collisions
-      if (slug) {
-        const slugRef = doc(db, "publicSlugs", slug);
-        const slugSnap = await getDoc(slugRef);
+      const businessRef = doc(db, "businesses", currentBusinessId);
+      const oldSnap = await getDoc(businessRef);
+      const oldSlug = oldSnap.data()?.publicProfile?.slug;
 
-        if (slugSnap.exists() && slugSnap.data().businessId !== currentBusinessId) {
-          throw new Error("This custom URL handle is already taken by another business.");
+      // 1. Handle Slug Reservation & Conflict Detection
+      if (cleanSlug) {
+        const isAvailable = await checkSlugAvailable(cleanSlug, currentBusinessId);
+        if (!isAvailable) {
+          throw new Error(`The handle "${cleanSlug}" is already taken by another business. Please choose another.`);
         }
 
-        // Clean up old slug if it changed
-        const businessRef = doc(db, "businesses", currentBusinessId);
-        const oldSnap = await getDoc(businessRef);
-        const oldSlug = oldSnap.data()?.publicProfile?.slug;
-
-        if (oldSlug && oldSlug !== slug) {
+        // Clean up old slug registry entry if the handle changed
+        if (oldSlug && oldSlug !== cleanSlug) {
           await deleteDoc(doc(db, "publicSlugs", oldSlug));
         }
 
-        // Write slug registry
+        // Update publicSlugs registry
+        const newSlugRef = doc(db, "publicSlugs", cleanSlug);
         if (enabled) {
-          await setDoc(slugRef, { businessId: currentBusinessId });
+          await setDoc(newSlugRef, { businessId: currentBusinessId, updatedAt: new Date().toISOString() });
         } else {
-          await deleteDoc(slugRef);
+          await deleteDoc(newSlugRef);
         }
+      } else if (oldSlug) {
+        // If slug was removed completely, delete old registry
+        await deleteDoc(doc(db, "publicSlugs", oldSlug));
       }
 
-      // 2. Update business details
-      const businessRef = doc(db, "businesses", currentBusinessId);
+      // 2. Write updated settings to main Business Document
       await updateDoc(businessRef, {
         publicProfile: {
           enabled: enabled,
-          slug: slug,
+          slug: cleanSlug,
           bio: businessBio.value.trim(),
           phone: publicPhone.value.trim(),
           whatsapp: publicWhatsapp.value.trim(),
           address: publicAddress.value.trim(),
-          gallery: currentGallery
+          gallery: currentGallery,
+          updatedAt: new Date().toISOString()
         }
       });
 
-      updateLiveLink(slug, enabled);
+      profileSlug.value = cleanSlug;
+      updateLiveLink(cleanSlug, enabled);
       alert("Storefront settings updated successfully! 🌐");
     } catch (err) {
       console.error("Save storefront error:", err);

@@ -311,7 +311,9 @@ const googleLogin = document.getElementById("googleLogin");
 const googleSignUp = document.getElementById("googleSignUp");
 
 if (googleLogin) googleLogin.addEventListener("click", handleGoogleAuth);
-if (googleSignUp) googleSignUp.addEventListener("click", handleGoogleAuth);/* =========================
+if (googleSignUp) googleSignUp.addEventListener("click", handleGoogleAuth);
+
+/* =========================
    AUTH STATE — ACCEPT INVITE
 ========================= */
 onAuthStateChanged(auth, async (user) => {

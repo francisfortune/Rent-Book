@@ -41,18 +41,24 @@ async function initAvatarAndDropdown() {
           <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">home</span>
           Dashboard
         </a>
+
+
         <a href="analytics.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#7c3aed';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
           <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">bar_chart</span>
           Analytics
         </a>
-        <a href="public.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#7c3aed';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
-          <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">public</span>
-          Public Profile
+
+
+        <a href="ai-assistant.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#7c3aed';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
+          <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">chat</span>
+          AI Assistant
         </a>
+
         <a href="settings.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#7c3aed';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
           <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">settings</span>
           Settings
         </a>
+        
         <div style="height: 1px; background-color: #f1f5f9; margin: 4px 0;"></div>
         <button id="logoutBtn" style="width: 100%; display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #dc2626; border: none; background: transparent; text-align: left; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#fef2f2';" onmouseout="this.style.backgroundColor='transparent';">
           <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">logout</span>
@@ -83,8 +89,7 @@ async function initAvatarAndDropdown() {
     }
   });
 
-  // Ensure dropdown is hidden initially on plain CSS setup
-  dropdownEl.style.display = "none";
+
 
   // 4. Close dropdown on click outside
   window.addEventListener("click", (e) => {

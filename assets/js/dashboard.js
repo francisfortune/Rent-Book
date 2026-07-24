@@ -308,7 +308,7 @@ onAuthStateChanged(auth, async user => {
       if (user && user.uid) {
         localStorage.removeItem(`businessId_${user.uid}`);
       }
-      window.location.href = "setup.html";
+      window.location.href = "signup.html";
     } else {
       if (user && user.uid) {
         localStorage.removeItem(`businessId_${user.uid}`);
@@ -327,7 +327,7 @@ async function requestPushPermission() {
     if (permission !== "granted") return;
 
     const token = await getToken(messaging, {
-      vapidKey: "YOUR_PUBLIC_VAPID_KEY"
+      vapidKey: "539d08e3-cada-4b7e-88c3-f89af30ff7f9"
     });
 
     console.log("FCM Token:", token);
@@ -437,8 +437,8 @@ function listenToNotifications(businessId) {
 
       // UNREAD: One purple tick | READ: Two green ticks
       let tickIcon = isRead
-        ? `<span class="material-symbols-outlined" style="font-size: 14px; color:green; vertical-align: middle;">done_all</span>`
-        : `<span class="material-symbols-outlined" style="font-size: 14px; color:purple; vertical-align: middle;">check</span>`;
+        ? `<span class="material-symbols-outlined" style="font-size: 18px; color:green; vertical-align: middle;">done_all</span>`
+        : `<span class="material-symbols-outlined" style="font-size: 18px; color:purple; vertical-align: middle;">check</span>`;
 
       return `
         <div class="p-3 border-b ${borderColor} ${bgColor} flex items-start gap-3">
@@ -453,7 +453,7 @@ function listenToNotifications(businessId) {
               </p>
             </div>
           </div>
-          <button onclick="event.stopPropagation(); deleteNotification('${businessId}', '${n.id}')" class="text-gray-400">✖</button>
+          <button onclick="event.stopPropagation(); deleteNotification('${businessId}', '${n.id}')" class="text-red-600">✖</button>
         </div>
       `;
     }).join("");

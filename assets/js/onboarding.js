@@ -18,7 +18,7 @@ const steps = [
   },
   {
     selector: 'a[href="add.html"]',
-    title: "Add New Rental Bookings ➕",
+    title: "Create New Rental Bookings ➕",
     desc: "Create client booking orders, assign rental items, add receipts, set price limits, and send instant push alerts to team members."
   },
   {
@@ -27,9 +27,14 @@ const steps = [
     desc: "Monitor your equipment inventory. The system auto-updates stock availability during rentals to prevent double-booking shortages."
   },
   {
-    selector: 'a[href="ai-assistant.html"]',
-    title: "Your AI Business Assistant 🤖",
-    desc: "Click here to chat with our AI! The assistant can adjust stock counts, fetch bookings, or guide you through Tracknrent features."
+    selector: 'a[href="public.html"]',
+    title: "Your Rental Online Storefront",
+    desc: "Click here to Set up Your Online Rental Business Storefront and get Discovered by more People"
+  },
+   {
+    selector: '#user-avatar',
+    title: "Your Rental Setting, Analytics and AI Assistant",
+    desc: "Click Settings to Visit your Settings page and Invite and Manage staff and lots\n` + Take a look at Your Business Analysis \n` + Click AI Assistant to chat with our AI! The assistant can adjust stock counts, fetch bookings, or guide you through Tracknrent features."
   }
 ];
 

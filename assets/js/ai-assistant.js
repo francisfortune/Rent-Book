@@ -252,7 +252,7 @@ async function runLocalNlp(prompt) {
   // 7. Phone Number Invites Support
   if (/phone\s+invite|phone\s+invitation|support\s+phone|phone\s+number\s+invite/i.test(prompt)) {
     return `**Yes! Inviting team partners by phone number is fully supported.**\n\n` +
-           `To invite by phone, type their clean phone number (e.g. \`+2348037764808\`) in the partner input box on the Settings page.\n\n` +
+           `To invite by phone, type their clean phone number (e.g. \`+234801234567\`) in the partner input box on the Settings page.\n\n` +
            `The partner can then register or log in using Phone SMS OTP. Tracknrent will automatically match their phone number to your team invitation.`;
   }
 
