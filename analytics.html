@@ -99,7 +99,53 @@
 
     @keyframes shine-text {
         to { background-position: 200% center; }
-    }    </style>
+    } 
+    /* =============== Navigation Fixes ================ */
+.navigation ul li a {
+    position: relative;
+    width: 100%;
+    display: flex;          /* Ensures horizontal alignment */
+    align-items: center;    /* Vertically aligns icon and text in center */
+    text-decoration: none;
+    color: white;
+    padding: 0 10px;        /* Replaced margin with inner padding */
+    height: 60px;
+    font-size: 1.5rem;
+}
+
+.navigation ul li:hover a,
+.navigation ul li.hovered a {
+    color: purple;
+}
+
+.navigation ul li a .icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 60px;
+    height: 60px;
+}
+
+.navigation ul li a .icon .material-symbols-outlined {
+    font-size: 1.88rem;
+}
+
+.navigation ul li a .title {
+    position: relative;
+    display: block;
+    padding: 0 10px;
+    height: 60px;
+    line-height: 60px;
+    text-align: start;
+    white-space: nowrap;
+    font-weight: 500;
+}
+    
+    
+    
+    
+    </style>
 </head>
 <body class="flex">
 

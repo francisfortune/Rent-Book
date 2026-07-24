@@ -1106,6 +1106,118 @@
 .modal-header {
   flex-shrink: 0;         /* 👈 header never scrolls away */
 }
+/* ================ Main & Topbar Fixes ================ */
+.main {
+    position: absolute;
+    width: calc(100% - 280px);
+    left: 280px;
+    min-height: 100%;
+    background: white;
+    transition: 0.5s;
+}
+
+.main.active {
+    width: calc(100% - 80px);
+    left: 80px;
+}
+
+/* Full Width Topbar */
+.topbar {
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    background: white;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    z-index: 100;
+    gap: 10px;
+}
+
+/* Override active state adjustments for topbar so it stays full-width */
+.main.active .topbar {
+    left: 0;
+    width: 100%;
+}
+
+/* ================ Dashboard Content Fixes ================ */
+.dashboard {
+    padding: 0 30px 45px 30px; /* Top padding removed */
+    overflow-y: visible;
+    height: auto;
+}
+
+.welcome-section {
+    background: purple;
+    padding: 30px;
+    border-radius: 0 0 15px 15px; /* Optional: Rounded bottom corners to blend flush with topbar */
+    margin-top: 0;               /* Removes margin above welcome section */
+    margin-bottom: 30px;
+    color: white;
+    text-align: center;
+}@media (max-width: 991px) {
+    .dashboard {
+        padding: 0 25px 25px 25px; /* Top padding set to 0 */
+    }
+}
+
+@media (max-width: 768px) {
+    .topbar {
+        left: 0;
+        width: 100%;
+    }
+
+    .dashboard {
+        padding: 0 20px 80px 20px; /* Top padding set to 0 */
+    }
+}
+/* =============== Navigation Fixes ================ */
+.navigation ul li a {
+    position: relative;
+    width: 100%;
+    display: flex;          /* Ensures horizontal alignment */
+    align-items: center;    /* Vertically aligns icon and text in center */
+    text-decoration: none;
+    color: white;
+    padding: 0 10px;        /* Replaced margin with inner padding */
+    height: 60px;
+    font-size: 1.5rem;
+}
+
+.navigation ul li:hover a,
+.navigation ul li.hovered a {
+    color: purple;
+}
+
+.navigation ul li a .icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 60px;
+    height: 60px;
+}
+
+.navigation ul li a .icon .material-symbols-outlined {
+    font-size: 1.88rem;
+}
+
+.navigation ul li a .title {
+    position: relative;
+    display: block;
+    padding: 0 10px;
+    height: 60px;
+    line-height: 60px;
+    text-align: start;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+
 
 
     </style>
