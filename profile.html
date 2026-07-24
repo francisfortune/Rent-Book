@@ -1,402 +1,263 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rental Catalog | Tracknrent</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rental Storefront</title>
   
-  <meta name="description" id="metaDescription" content="Browse our rental catalog, check equipment availability, and contact us directly to make booking reservations.">
-  <meta name="keywords" content="rental store, event rentals, equipment catalog, rent canopies, party supplies">
-  
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Raleway+Dots&family=Roboto:wght@300;400;500;700&family=Be+Vietnam+Pro:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
-  
-  <style>
-    :root {
-      --primary: #7c3aed;
-      --primary-dark: #6d28d9;
-      --primary-light: #eebffc;
-      --bg: #faf5ff;
-      --text: #1f2937;
-      --text-muted: #6b7280;
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: 'Be Vietnam Pro', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.6;
-      padding-bottom: 40px;
-    }
-
-    /* Header & Branding */
-    header {
-      background: white;
-      box-shadow: 0 4px 20px rgba(124, 58, 237, 0.08);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      backdrop-filter: blur(10px);
-      background: rgba(255, 255, 255, 0.9);
-    }
-
-    .header-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 15px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    h1.brand-logo {
-      font-family: 'Raleway Dots', cursive;
-      font-size: 1.8rem;
-      font-weight: 700;
-      color: var(--primary);
-      text-decoration: none;
-    }
-
-    /* Hero Banner */
-    .hero {
-      max-width: 1200px;
-      margin: 30px auto;
-      padding: 40px 20px;
-      background: linear-gradient(135deg, #7c3aed, #4f46e5);
-      border-radius: 24px;
-      color: white;
-      box-shadow: 0 10px 30px rgba(124, 58, 237, 0.15);
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .hero::before {
-      content: "";
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 80%);
-      pointer-events: none;
-    }
-
-    .business-name {
-      font-family: 'Roboto', sans-serif;
-      font-size: 2.5rem;
-      font-weight: 700;
-      margin-bottom: 15px;
-    }
-
-    .business-bio {
-      font-size: 1.1rem;
-      max-width: 700px;
-      margin: 0 auto 25px;
-      opacity: 0.9;
-    }
-
-    /* Metadata Panel */
-    .contact-grid {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-      flex-wrap: wrap;
-      margin-top: 15px;
-    }
-
-    .contact-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 16px;
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(5px);
-      border-radius: 12px;
-      font-size: 0.9rem;
-      font-weight: 500;
-      color: white;
-      text-decoration: none;
-      transition: 0.2s;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-
-    .contact-badge:hover {
-      background: rgba(255, 255, 255, 0.25);
-      transform: translateY(-2px);
-    }
-
-    .contact-badge.whatsapp {
-      background: #25d366;
-      border-color: #22c35e;
-    }
-
-    .contact-badge.whatsapp:hover {
-      background: #20ba59;
-    }
-
-    /* Gallery Carousel */
-    .gallery-section {
-      max-width: 1200px;
-      margin: 40px auto;
-      padding: 0 20px;
-    }
-
-    .section-title {
-      font-family: 'Roboto', sans-serif;
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-bottom: 20px;
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .gallery-carousel {
-      display: flex;
-      gap: 15px;
-      overflow-x: auto;
-      padding-bottom: 15px;
-      scroll-snap-type: x mandatory;
-      scrollbar-width: thin;
-      scrollbar-color: var(--primary) transparent;
-    }
-
-    .gallery-item {
-      flex: 0 0 300px;
-      aspect-ratio: 4/3;
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-      scroll-snap-align: start;
-      border: 1px solid rgba(124, 58, 237, 0.1);
-    }
-
-    .gallery-item img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: 0.3s;
-    }
-
-    .gallery-item:hover img {
-      transform: scale(1.05);
-    }
-
-    /* Catalog Showcase Grid */
-    .catalog-section {
-      max-width: 1200px;
-      margin: 40px auto;
-      padding: 0 20px;
-    }
-
-    .items-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 25px;
-    }
-
-    .item-card {
-      background: white;
-      border-radius: 20px;
-      overflow: hidden;
-      box-shadow: 0 4px 15px rgba(124, 58, 237, 0.05);
-      border: 1px solid rgba(124, 58, 237, 0.08);
-      transition: 0.3s;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .item-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 10px 25px rgba(124, 58, 237, 0.12);
-    }
-
-    .item-info {
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      flex-grow: 1;
-    }
-
-    .item-name {
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 8px;
-    }
-
-    .item-meta {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: auto;
-      padding-top: 15px;
-      border-top: 1px solid #f3f4f6;
-    }
-
-    .item-price {
-      font-family: 'Inter', sans-serif;
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: var(--primary);
-    }
-
-    .item-status {
-      font-size: 0.75rem;
-      padding: 6px 12px;
-      border-radius: 9999px;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-
-    .status-available {
-      background: #ecfdf5;
-      color: #059669;
-    }
-
-    .status-unavailable {
-      background: #fef2f2;
-      color: #dc2626;
-    }
-
-    /* Loader */
-    .loader {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 300px;
-    }
-
-    .spinner {
-      border: 4px solid rgba(124, 58, 237, 0.1);
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      border-left-color: var(--primary);
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    .error-card {
-      max-width: 500px;
-      margin: 80px auto;
-      padding: 40px;
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-      text-align: center;
-      border-top: 5px solid #dc2626;
-    }
-
-    .error-card h3 {
-      font-size: 1.4rem;
-      color: #dc2626;
-      margin-bottom: 12px;
-    }
-
-    /* Responsive */
-    @media (max-width: 640px) {
-      .business-name {
-        font-size: 1.8rem;
-      }
-      .business-bio {
-        font-size: 0.95rem;
-      }
-      .contact-grid {
-        flex-direction: column;
-        align-items: stretch;
-      }
-    }
-  </style>
+  <!-- Tailwind CSS for styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body>
+<body class="bg-gray-50 text-gray-800 antialiased min-h-screen flex flex-col">
 
-  <!-- Header -->
-  <header>
-    <div class="header-container">
-      <a href="#" class="brand-logo" id="logoText">Tracknrent</a>
-      <span class="material-symbols-outlined" style="color: var(--primary); font-size: 24px;">verified</span>
+  <!-- Skeleton Loader (Shown during initial load) -->
+  <div id="loader" class="max-w-4xl mx-auto w-full p-6 space-y-6 animate-pulse">
+    <div class="h-48 bg-gray-200 rounded-2xl w-full"></div>
+    <div class="h-8 bg-gray-200 rounded w-1/3"></div>
+    <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
+      <div class="h-32 bg-gray-200 rounded-xl"></div>
+      <div class="h-32 bg-gray-200 rounded-xl"></div>
     </div>
-  </header>
-
-  <!-- Loader View -->
-  <div id="loader" class="loader">
-    <div class="spinner"></div>
-    <p style="margin-top: 15px; color: var(--text-muted); font-size: 0.9rem;">Loading catalog...</p>
   </div>
 
-  <!-- Error View -->
-  <div id="errorView" class="error-card" style="display: none;">
-    <span class="material-symbols-outlined" style="font-size: 3rem; color: #dc2626; margin-bottom: 15px;">storefront</span>
-    <h3 id="errorTitle">Storefront Unavailable</h3>
-    <p id="errorMessage" style="color: var(--text-muted); font-size: 0.95rem;">This store is not configured for public display, or does not exist.</p>
-  </div>
-
-  <!-- Storefront Main Content -->
-  <main id="storefrontContent" style="display: none;">
+  <!-- Storefront Content (Hidden by default) -->
+  <main id="storefront" class="hidden max-w-4xl mx-auto w-full p-4 md:p-6 space-y-8 flex-1">
     
-    <!-- Hero / Profile info -->
-    <section class="hero" id="businessHero">
-      <h2 class="business-name" id="displayBusinessName">Loading...</h2>
-      <p class="business-bio" id="displayBusinessBio">Our catalog items available for lease.</p>
-      
-      <div class="contact-grid">
-        <a id="contactPhone" href="#" class="contact-badge">
-          <span class="material-symbols-outlined">call</span>
-          <span id="phoneText">Call</span>
-        </a>
-        <a id="contactWhatsapp" href="#" class="contact-badge whatsapp">
-          <span class="material-symbols-outlined">chat</span>
-          <span>Book via WhatsApp</span>
-        </a>
-        <a id="contactAddress" href="#" class="contact-badge" target="_blank">
-          <span class="material-symbols-outlined">pin_drop</span>
-          <span id="addressText">Address</span>
-        </a>
+    <!-- Hero / Store Header -->
+    <header class="bg-white border border-gray-100 rounded-2xl p-6 md:p-8 shadow-sm relative overflow-hidden">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <span class="inline-block bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full mb-2">Verified Partner</span>
+          <h1 id="store-name" class="text-3xl md:text-4xl font-bold text-gray-900">Loading...</h1>
+          <p id="store-bio" class="text-gray-600 mt-2 max-w-2xl leading-relaxed"></p>
+        </div>
+        
+        <!-- Quick Contact Actions -->
+        <div class="flex flex-wrap gap-3 w-full md:w-auto">
+          <a id="btn-whatsapp" target="_blank" rel="noopener noreferrer" 
+             class="flex-1 md:flex-none inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium transition shadow-sm">
+            <i data-lucide="message-square" class="w-4 h-4"></i> WhatsApp
+          </a>
+          <a id="btn-phone" 
+             class="flex-1 md:flex-none inline-flex items-center justify-center gap-2 border border-gray-300 hover:bg-gray-50 text-gray-700 px-5 py-2.5 rounded-xl font-medium transition">
+            <i data-lucide="phone" class="w-4 h-4"></i> Call
+          </a>
+        </div>
+      </div>
+
+      <!-- Address / Location Tag -->
+      <div id="address-container" class="mt-6 pt-6 border-t border-gray-100 flex items-center gap-2 text-sm text-gray-500">
+        <i data-lucide="map-pin" class="w-4 h-4 text-gray-400"></i>
+        <span id="store-address">Location not provided</span>
+      </div>
+    </header>
+
+    <!-- Equipment & Inventory Catalog -->
+    <section>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-gray-900">Available Equipment</h2>
+        <span id="inventory-count" class="text-sm text-gray-500">0 items</span>
+      </div>
+
+      <div id="inventory-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Item cards injected via JS -->
       </div>
     </section>
 
-    <!-- Gallery Carousel Section -->
-    <section class="gallery-section" id="gallerySection" style="display: none;">
-      <h3 class="section-title">
-        <span class="material-symbols-outlined">photo_library</span>
-        Setup Showcase
-      </h3>
-      <div class="gallery-carousel" id="showcaseGallery">
-        <!-- Showcase photos injected here -->
-      </div>
-    </section>
-
-    <!-- Catalog Inventory Section -->
-    <section class="catalog-section">
-      <h3 class="section-title">
-        <span class="material-symbols-outlined">inventory_2</span>
-        Equipment Catalog
-      </h3>
-      
-      <div class="items-grid" id="catalogGrid">
-        <!-- Catalog cards injected here -->
+    <!-- Store Photo Gallery (Optional) -->
+    <section id="gallery-section" class="hidden">
+      <h2 class="text-xl font-bold text-gray-900 mb-4">Gallery & Setup</h2>
+      <div id="gallery-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <!-- Gallery images injected via JS -->
       </div>
     </section>
 
   </main>
 
-  <!-- Firebase Scripts -->
-  <script type="module" src="/assets/js/profile-viewer.js"></script>
+  <!-- Error / 404 State -->
+  <div id="error-state" class="hidden max-w-md mx-auto my-auto text-center p-8 bg-white rounded-2xl shadow-sm border border-gray-100">
+    <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+      <i data-lucide="store" class="w-6 h-6"></i>
+    </div>
+    <h2 class="text-2xl font-bold text-gray-900 mb-2">Store Not Found</h2>
+    <p class="text-gray-600 mb-6">The storefront URL you followed might be incorrect or has been disabled by the owner.</p>
+    <a href="/" class="inline-block bg-gray-900 text-white px-5 py-2.5 rounded-xl font-medium text-sm">Return to Home</a>
+  </div>
+
+  <!-- Footer -->
+  <footer class="mt-auto py-6 border-t border-gray-200 text-center text-xs text-gray-400">
+    Powered by Your Rental Platform
+  </footer>
+
+  <!-- Firebase Logic -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // REPLACE THIS WITH YOUR FIREBASE CONFIGURATION
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // 1. Extract Slug from URL
+    function getSlugFromUrl() {
+      // Handles both /public-profile.html?slug=test-store AND /p/test-store
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('slug')) return urlParams.get('slug');
+
+      const pathSegments = window.location.pathname.split('/').filter(Boolean);
+      if (pathSegments.length > 0) return pathSegments[pathSegments.length - 1];
+
+      return null;
+    }
+
+    // 2. Fetch and Render Store Data
+    async function loadStorefront() {
+      const slug = getSlugFromUrl();
+
+      if (!slug) {
+        showError();
+        return;
+      }
+
+      try {
+        // Step A: Look up the public slug mapping
+        const slugRef = doc(db, "publicSlugs", slug.toLowerCase());
+        const slugSnap = await getDoc(slugRef);
+
+        if (!slugSnap.exists()) {
+          showError();
+          return;
+        }
+
+        const businessId = slugSnap.data().businessId;
+
+        // Step B: Fetch Business Profile
+        const bizRef = doc(db, "businesses", businessId);
+        const bizSnap = await getDoc(bizRef);
+
+        if (!bizSnap.exists() || !bizSnap.data().publicProfile?.enabled) {
+          showError();
+          return;
+        }
+
+        const bizData = bizSnap.data();
+        const profile = bizData.publicProfile;
+
+        // Render Profile
+        document.getElementById('store-name').innerText = bizData.name || 'Rental Store';
+        document.getElementById('store-bio').innerText = profile.bio || 'Welcome to our rental catalog.';
+        
+        if (profile.address) {
+          document.getElementById('store-address').innerText = profile.address;
+        } else {
+          document.getElementById('address-container').classList.add('hidden');
+        }
+
+        // Action Buttons Setup
+        const phone = profile.phone || profile.whatsapp;
+        if (phone) {
+          const cleanPhone = phone.replace(/[^0-9+]/g, '');
+          document.getElementById('btn-phone').href = `tel:${cleanPhone}`;
+          document.getElementById('btn-whatsapp').href = `https://wa.me/${cleanPhone.replace('+', '')}?text=Hi%20${encodeURIComponent(bizData.name)},%20I%20saw%20your%20inventory%20and%20want%20to%20inquire%20about%20renting equipment.`;
+        } else {
+          document.getElementById('btn-phone').classList.add('hidden');
+          document.getElementById('btn-whatsapp').classList.add('hidden');
+        }
+
+        // Gallery Render
+        if (profile.gallery && profile.gallery.length > 0) {
+          const galleryContainer = document.getElementById('gallery-grid');
+          galleryContainer.innerHTML = profile.gallery.map(url => `
+            <div class="h-32 md:h-40 bg-gray-100 rounded-xl overflow-hidden shadow-inner">
+              <img src="${url}" alt="Store setup" class="w-full h-full object-cover hover:scale-105 transition duration-300" />
+            </div>
+          `).join('');
+          document.getElementById('gallery-section').classList.remove('hidden');
+        }
+
+        // Step C: Fetch Inventory Subcollection
+        const inventoryRef = collection(db, "businesses", businessId, "inventory");
+        const inventorySnap = await getDocs(inventoryRef);
+
+        const grid = document.getElementById('inventory-grid');
+        let count = 0;
+
+        if (inventorySnap.empty) {
+          grid.innerHTML = `<p class="text-gray-500 text-sm col-span-2">No equipment listed at the moment.</p>`;
+        } else {
+          let itemsHtml = '';
+          inventorySnap.forEach(itemDoc => {
+            const item = itemDoc.data();
+            count++;
+            const isAvailable = (item.availableQuantity || 0) > 0;
+
+            itemsHtml += `
+              <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div class="flex justify-between items-start mb-2">
+                    <h3 class="font-semibold text-gray-900 text-lg">${item.name}</h3>
+                    <span class="text-xs px-2.5 py-1 rounded-full font-medium ${isAvailable ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
+                      ${isAvailable ? `${item.availableQuantity} available` : 'Booked Out'}
+                    </span>
+                  </div>
+                  <p class="text-gray-500 text-xs mb-4">Total Fleet: ${item.totalQuantity || 1}</p>
+                </div>
+
+                <div class="flex items-center justify-between pt-4 border-t border-gray-50">
+                  <div>
+                    <span class="text-lg font-bold text-gray-900">₦${(item.price || 0).toLocaleString()}</span>
+                    <span class="text-xs text-gray-400"> / day</span>
+                  </div>
+                  ${phone ? `
+                    <a href="https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=Hi,%20I'm%20interested%20in%20renting%20the%20*${encodeURIComponent(item.name)}*" 
+                       target="_blank" 
+                       class="text-xs font-semibold bg-gray-900 text-white px-3.5 py-2 rounded-lg hover:bg-gray-800 transition">
+                      Inquire
+                    </a>
+                  ` : ''}
+                </div>
+              </div>
+            `;
+          });
+          grid.innerHTML = itemsHtml;
+        }
+
+        document.getElementById('inventory-count').innerText = `${count} item${count === 1 ? '' : 's'}`;
+
+        // Show Main Content
+        document.getElementById('loader').classList.add('hidden');
+        document.getElementById('storefront').classList.remove('hidden');
+
+      } catch (error) {
+        console.error("Error loading storefront:", error);
+        showError();
+      }
+
+      // Initialize icons
+      lucide.createIcons();
+    }
+
+    function showError() {
+      document.getElementById('loader').classList.add('hidden');
+      document.getElementById('storefront').classList.add('hidden');
+      document.getElementById('error-state').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    // Run on load
+    loadStorefront();
+  </script>
 </body>
 </html>

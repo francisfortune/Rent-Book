@@ -57,7 +57,7 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background: linear-gradient(135deg, purple 0%, #540b9e 100%);
+            background: rgba(179, 167, 221, 0.849);
             padding: 20px;
         }
 
@@ -69,7 +69,7 @@
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 24px;
+            border-radius: 34px;
             box-shadow: 0 20px 40px rgba(124, 58, 237, 0.08);
             overflow: hidden;
             display: grid;
@@ -89,7 +89,7 @@
         }
 
         .brand-panel {
-            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            background: purple;
             padding: 40px;
             color: white;
             display: flex;
@@ -97,6 +97,8 @@
             justify-content: space-between;
             position: relative;
             overflow: hidden;
+            border-top-left-radius: 20px;
+            border-bottom-left-radius: 20px;
         }
 
         .brand-panel::before {
@@ -162,7 +164,7 @@
             top: 50%;
             transform: translateY(-50%);
             cursor: pointer;
-            color: #94a3b8;
+            color: var(--primary);
             z-index: 10;
         }
 
@@ -189,18 +191,18 @@
         }
 
         .pill-tab button.active {
-            background: white;
-            color: var(--primary);
+            background: var(--primary);
+            color: white;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
         .pill-tab button.inactive {
-            color: #64748b;
+            color: var(--primary);
         }
 
         /* Submit Button Gradient */
         .btn-gradient {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            background: purple;
             color: white;
             padding: 13px;
             border-radius: 12px;
@@ -208,7 +210,7 @@
             font-size: 0.95rem;
             width: 100%;
             transition: all 0.25s ease;
-            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+            box-shadow: 0 4px 12px rgba(203, 9, 252, 0.2);
         }
 
         .btn-gradient:hover {
@@ -250,11 +252,20 @@
         <!-- Brand banner panel (Left Column) -->
         <div class="brand-panel">
             <div>
-                <div class="brand-logo-text">Track<span>nrent</span></div>
+                <div class="brand-logo-text">
+
+    <div class="mobile-brand">
+
+                    <h1 style="color: white; font-size: 3rem;">Tracknrent</span></h1>
+
+                </div>
+
+
+                </div>
             </div>
             <div class="my-auto">
-                <h2 class="text-2xl font-bold leading-tight mb-4">Smarter Event Rentals</h2>
-                <p class="text-sm text-purple-100 leading-relaxed max-w-sm">
+                <h2 class="text-2xl font-bold leading-tight mb-4">Running a Rental Business shouldn't be Stressful</h2>
+                <p class="text-sm text-purple-100 leading-relaxed max-w-sm" style="color: whitesmoke; margin-top: 10px;">
                     Automate record-keeping, manage stock availability, send real-time client booking alerts, and track circular-economy workflows in one dashboard.
                 </p>
             </div>
@@ -276,7 +287,7 @@
             <div id="registerCard" class="auth-card active-card">
                 <form id="registerForm">
                     <h2 class="text-2xl font-bold text-gray-800 mb-2">Create Account</h2>
-                    <p class="text-xs text-gray-500 mb-6">Enter your details to register your rental business.</p>
+                    <p class="text-xs text-gray-500 mb-6">Create Your Tracknrent Account.</p>
                     
                     <!-- Segmented Email/Phone tab control -->
                     <div class="pill-tab mb-5">

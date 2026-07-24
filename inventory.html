@@ -41,6 +41,7 @@
 </script>
 
 
+
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap");
         @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined");
@@ -143,7 +144,8 @@
         .navigation ul li a .title {
             position: relative;
             display: block;
-            padding: 0 10px;
+               padding: 0 10px;
+            padding-top: 5.5px;
             height: 60px;
             line-height: 60px;
             text-align: start;
@@ -268,7 +270,7 @@
 
         /* ================ Dashboard Content ================ */
         .dashboard {
- padding: 20px;
+             padding: 45px 30px;
     overflow-y: visible;
     height: auto;
         }
@@ -901,7 +903,9 @@
             navigation: auto;
         }
     </style>
+
     
+
     <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
 </head>
 
@@ -931,8 +935,8 @@
                 <li class="hovered"><a href="inventory.html"> <span class="icon">
                             <span class="material-symbols-outlined" >inventory_2</span> </span> <span class="title">Inventory</span> </a>
                 </li>
-                <li><a href="ai-assistant.html"> <span class="icon">
-                            <span class="material-symbols-outlined" >chat</span> </span> <span class="title">AI Assistant</span> </a>
+                     <li><a href="public.html"> <span class="icon">
+                            <span class="material-symbols-outlined icon" > Public</span> </span> <span class="title">Public Profile</span> </a>
                 </li>
             </ul>
         </div><!-- ========================= Main ==================== -->
@@ -995,28 +999,7 @@
 </div>
 
 
-                <!-- ADD ITEM -->
-                <div class="inventory-box">
-                    <h3>Add Inventory Item</h3>
 
-                    <form id="addItemForm" class="inventory-form">
-                        <input id="itemName" placeholder="Item name" required />
-                        <input id="itemQty" type="number" placeholder="Total quantity" required />
-                        <input id="itemPrice" type="number" placeholder="Price per unit" required />
-                        <button type="submit">Save Item</button>
-                    </form>
-                </div>
-
-
-                <!-- INVENTORY LIST -->
-                <div class="inventory-box">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="m-0 text-purple-700">Your Inventory</h3>
-                        <input type="text" id="inventorySearch" placeholder="Search items..."
-                            class="p-2 border rounded-lg text-sm w-40 outline-none focus:ring-1 focus:ring-purple-500">
-                    </div>
-                    <div id="inventoryList" class="inventory-list"></div>
-                </div>
 
                 <!-- CALCULATOR -->
                 <div class="inventory-box">
@@ -1029,6 +1012,36 @@
 
                     <p id="calcResult" class="calc-result"></p>
                 </div>
+
+
+
+                <!-- INVENTORY LIST -->
+                <div class="inventory-box">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="m-0 text-purple-700">Your Inventory</h3>
+                        <input type="text" id="inventorySearch" placeholder="Search items..."
+                            class="p-2 border rounded-lg text-sm w-40 outline-none focus:ring-1 focus:ring-purple-500">
+                    </div>
+                    <div id="inventoryList" class="inventory-list"></div>
+                </div>
+
+
+
+       <!-- ADD ITEM -->
+                <div class="inventory-box">
+                    <h3>Add Inventory Item</h3>
+
+                    <form id="addItemForm" class="inventory-form">
+                        <input id="itemName" placeholder="Item name" required />
+                        <input id="itemQty" type="number" placeholder="Total quantity" required />
+                        <input id="itemPrice" type="number" placeholder="Price per unit" required />
+                        <button type="submit">Save Item</button>
+                    </form>
+                </div>
+
+
+
+
 
             </section>
 
@@ -1093,9 +1106,10 @@
                         <span class="material-symbols-outlined" >add_circle</span> </span> <span class="title">Add</span> </a></li>
             <li class="active"><a href="inventory.html"> <span class="icon">
                         <span class="material-symbols-outlined" >inventory_2</span> </span> <span class="title">Inventory</span> </a></li>
-            <li><a href="ai-assistant.html"> <span class="icon">
-                        <span class="material-symbols-outlined" >chat</span> </span> <span class="title">AI</span> </a>
-            </li>
+         <li><a href="public.html"> <span class="icon">
+                            <span class="material-symbols-outlined" > Public</span> </span> <span class="title">Profile</span> </a>
+                </li>
+                        
         </ul>
     </nav>
     </div><!-- =========== Scripts =========  -->

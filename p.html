@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rental Storefront</title>
+  
+  <!-- Tailwind CSS for styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 antialiased min-h-screen flex flex-col">
+
+  <!-- Skeleton Loader (Shown during initial load) -->
+  <div id="loader" class="max-w-4xl mx-auto w-full p-6 space-y-6 animate-pulse">
+    <div class="h-48 bg-gray-200 rounded-2xl w-full"></div>
+    <div class="h-8 bg-gray-200 rounded w-1/3"></div>
+    <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
+      <div class="h-32 bg-gray-200 rounded-xl"></div>
+      <div class="h-32 bg-gray-200 rounded-xl"></div>
+    </div>
+  </div>
+
+  <!-- Storefront Content (Hidden by default) -->
+  <main id="storefront" class="hidden max-w-4xl mx-auto w-full p-4 md:p-6 space-y-8 flex-1">
+    
+    <!-- Hero / Store Header -->
+    <header class="bg-white border border-gray-100 rounded-2xl p-6 md:p-8 shadow-sm relative overflow-hidden">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <span class="inline-block bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full mb-2">Verified Partner</span>
+          <h1 id="store-name" class="text-3xl md:text-4xl font-bold text-gray-900">Loading...</h1>
+          <p id="store-bio" class="text-gray-600 mt-2 max-w-2xl leading-relaxed"></p>
+        </div>
+        
+        <!-- Quick Contact Actions -->
+        <div class="flex flex-wrap gap-3 w-full md:w-auto">
+          <a id="btn-whatsapp" target="_blank" rel="noopener noreferrer" 
+             class="flex-1 md:flex-none inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium transition shadow-sm">
+            <i data-lucide="message-square" class="w-4 h-4"></i> WhatsApp
+          </a>
+          <a id="btn-phone" 
+             class="flex-1 md:flex-none inline-flex items-center justify-center gap-2 border border-gray-300 hover:bg-gray-50 text-gray-700 px-5 py-2.5 rounded-xl font-medium transition">
+            <i data-lucide="phone" class="w-4 h-4"></i> Call
+          </a>
+        </div>
+      </div>
+
+      <!-- Address / Location Tag -->
+      <div id="address-container" class="mt-6 pt-6 border-t border-gray-100 flex items-center gap-2 text-sm text-gray-500">
+        <i data-lucide="map-pin" class="w-4 h-4 text-gray-400"></i>
+        <span id="store-address">Location not provided</span>
+      </div>
+    </header>
+
+    <!-- Equipment & Inventory Catalog -->
+    <section>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-gray-900">Available Equipment</h2>
+        <span id="inventory-count" class="text-sm text-gray-500">0 items</span>
+      </div>
+
+      <div id="inventory-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Item cards injected via JS -->
+      </div>
+    </section>
+
+    <!-- Store Photo Gallery (Optional) -->
+    <section id="gallery-section" class="hidden">
+      <h2 class="text-xl font-bold text-gray-900 mb-4">Gallery & Setup</h2>
+      <div id="gallery-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <!-- Gallery images injected via JS -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Error / 404 State -->
+  <div id="error-state" class="hidden max-w-md mx-auto my-auto text-center p-8 bg-white rounded-2xl shadow-sm border border-gray-100">
+    <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+      <i data-lucide="store" class="w-6 h-6"></i>
+    </div>
+    <h2 class="text-2xl font-bold text-gray-900 mb-2">Store Not Found</h2>
+    <p class="text-gray-600 mb-6">The storefront URL you followed might be incorrect or has been disabled by the owner.</p>
+    <a href="/" class="inline-block bg-gray-900 text-white px-5 py-2.5 rounded-xl font-medium text-sm">Return to Home</a>
+  </div>
+
+  <!-- Footer -->
+  <footer class="mt-auto py-6 border-t border-gray-200 text-center text-xs text-gray-400">
+    Powered by Your Rental Platform
+  </footer>
+
+  <!-- Firebase Logic -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // REPLACE THIS WITH YOUR FIREBASE CONFIGURATION
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // 1. Extract Slug from URL
+    function getSlugFromUrl() {
+      // Handles both /public-profile.html?slug=test-store AND /p/test-store
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('slug')) return urlParams.get('slug');
+
+      const pathSegments = window.location.pathname.split('/').filter(Boolean);
+      if (pathSegments.length > 0) return pathSegments[pathSegments.length - 1];
+
+      return null;
+    }
+
+    // 2. Fetch and Render Store Data
+    async function loadStorefront() {
+      const slug = getSlugFromUrl();
+
+      if (!slug) {
+        showError();
+        return;
+      }
+
+      try {
+        // Step A: Look up the public slug mapping
+        const slugRef = doc(db, "publicSlugs", slug.toLowerCase());
+        const slugSnap = await getDoc(slugRef);
+
+        if (!slugSnap.exists()) {
+          showError();
+          return;
+        }
+
+        const businessId = slugSnap.data().businessId;
+
+        // Step B: Fetch Business Profile
+        const bizRef = doc(db, "businesses", businessId);
+        const bizSnap = await getDoc(bizRef);
+
+        if (!bizSnap.exists() || !bizSnap.data().publicProfile?.enabled) {
+          showError();
+          return;
+        }
+
+        const bizData = bizSnap.data();
+        const profile = bizData.publicProfile;
+
+        // Render Profile
+        document.getElementById('store-name').innerText = bizData.name || 'Rental Store';
+        document.getElementById('store-bio').innerText = profile.bio || 'Welcome to our rental catalog.';
+        
+        if (profile.address) {
+          document.getElementById('store-address').innerText = profile.address;
+        } else {
+          document.getElementById('address-container').classList.add('hidden');
+        }
+
+        // Action Buttons Setup
+        const phone = profile.phone || profile.whatsapp;
+        if (phone) {
+          const cleanPhone = phone.replace(/[^0-9+]/g, '');
+          document.getElementById('btn-phone').href = `tel:${cleanPhone}`;
+          document.getElementById('btn-whatsapp').href = `https://wa.me/${cleanPhone.replace('+', '')}?text=Hi%20${encodeURIComponent(bizData.name)},%20I%20saw%20your%20inventory%20and%20want%20to%20inquire%20about%20renting equipment.`;
+        } else {
+          document.getElementById('btn-phone').classList.add('hidden');
+          document.getElementById('btn-whatsapp').classList.add('hidden');
+        }
+
+        // Gallery Render
+        if (profile.gallery && profile.gallery.length > 0) {
+          const galleryContainer = document.getElementById('gallery-grid');
+          galleryContainer.innerHTML = profile.gallery.map(url => `
+            <div class="h-32 md:h-40 bg-gray-100 rounded-xl overflow-hidden shadow-inner">
+              <img src="${url}" alt="Store setup" class="w-full h-full object-cover hover:scale-105 transition duration-300" />
+            </div>
+          `).join('');
+          document.getElementById('gallery-section').classList.remove('hidden');
+        }
+
+        // Step C: Fetch Inventory Subcollection
+        const inventoryRef = collection(db, "businesses", businessId, "inventory");
+        const inventorySnap = await getDocs(inventoryRef);
+
+        const grid = document.getElementById('inventory-grid');
+        let count = 0;
+
+        if (inventorySnap.empty) {
+          grid.innerHTML = `<p class="text-gray-500 text-sm col-span-2">No equipment listed at the moment.</p>`;
+        } else {
+          let itemsHtml = '';
+          inventorySnap.forEach(itemDoc => {
+            const item = itemDoc.data();
+            count++;
+            const isAvailable = (item.availableQuantity || 0) > 0;
+
+            itemsHtml += `
+              <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div class="flex justify-between items-start mb-2">
+                    <h3 class="font-semibold text-gray-900 text-lg">${item.name}</h3>
+                    <span class="text-xs px-2.5 py-1 rounded-full font-medium ${isAvailable ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
+                      ${isAvailable ? `${item.availableQuantity} available` : 'Booked Out'}
+                    </span>
+                  </div>
+                  <p class="text-gray-500 text-xs mb-4">Total Fleet: ${item.totalQuantity || 1}</p>
+                </div>
+
+                <div class="flex items-center justify-between pt-4 border-t border-gray-50">
+                  <div>
+                    <span class="text-lg font-bold text-gray-900">₦${(item.price || 0).toLocaleString()}</span>
+                    <span class="text-xs text-gray-400"> / day</span>
+                  </div>
+                  ${phone ? `
+                    <a href="https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=Hi,%20I'm%20interested%20in%20renting%20the%20*${encodeURIComponent(item.name)}*" 
+                       target="_blank" 
+                       class="text-xs font-semibold bg-gray-900 text-white px-3.5 py-2 rounded-lg hover:bg-gray-800 transition">
+                      Inquire
+                    </a>
+                  ` : ''}
+                </div>
+              </div>
+            `;
+          });
+          grid.innerHTML = itemsHtml;
+        }
+
+        document.getElementById('inventory-count').innerText = `${count} item${count === 1 ? '' : 's'}`;
+
+        // Show Main Content
+        document.getElementById('loader').classList.add('hidden');
+        document.getElementById('storefront').classList.remove('hidden');
+
+      } catch (error) {
+        console.error("Error loading storefront:", error);
+        showError();
+      }
+
+      // Initialize icons
+      lucide.createIcons();
+    }
+
+    function showError() {
+      document.getElementById('loader').classList.add('hidden');
+      document.getElementById('storefront').classList.add('hidden');
+      document.getElementById('error-state').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    // Run on load
+    loadStorefront();
+  </script>
+</body>
+</html>

@@ -22,6 +22,23 @@
 <script type="module" type="module"  src="assets/js/onesignal.js" defer></script>
 
 
+<script type="importmap">
+{
+  "imports": {
+    "@babel/runtime/helpers/typeof": "https://esm.sh/@babel/runtime/helpers/typeof"
+  }
+}
+</script>
+
+<!-- Place this high up inside your <head> tag -->
+<script type="importmap">
+{
+  "imports": {
+    "fflate": "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js"
+  }
+}
+</script>
+
 
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js"></script>
@@ -43,7 +60,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Tracknrent">
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" href="assets/imgs/logo.png">
 
     
@@ -53,11 +70,15 @@
 <link rel="shortcut icon" href="favicon.ico">
 
 
+
+
+
+
 <style>
         @import url("https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap");
         @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined");
 
-        * {
+         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
@@ -155,7 +176,8 @@
         .navigation ul li a .title {
             position: relative;
             display: block;
-            padding: 0 10px;
+               padding: 0 10px;
+            padding-top: 5.5px;
             height: 60px;
             line-height: 60px;
             text-align: start;
@@ -170,7 +192,7 @@
         }
 
         .brand {
-                     position: relative;
+                       position: relative;
             display: block;
             padding: 0 3px;
             height: 60px;
@@ -280,10 +302,9 @@
 
         /* ================ Dashboard Content ================ */
         .dashboard {
-            padding: 45px;
-            /* padding-top: 90px; */
-            overflow-y: auto;
-            height: 100%;
+             padding: 45px 30px;
+    overflow-y: visible;
+    height: auto;
         }
 
         .welcome-section {
@@ -765,6 +786,148 @@
             }
         }
 
+
+        .inventory-wrapper {
+            max-width: 1100px;
+            margin: auto;
+            padding: 80px;
+            display: grid;
+            gap: 25px;
+        }
+
+        .inventory-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+        }
+
+        .inv-card {
+            background: white;
+            padding: 20px;
+            border-radius: 14px;
+            text-align: center;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, .08);
+        }
+
+        .inv-card h3 {
+            font-size: 2rem;
+            color: purple;
+        }
+
+        .inventory-box {
+            background: white;
+            padding: 20px;
+            border-radius: 14px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, .08);
+        }
+
+        .inventory-form {
+            display: grid;
+            gap: 12px;
+        }
+
+        .inventory-form input,
+        .inventory-box select {
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .inventory-form button,
+        .inventory-box button {
+            padding: 12px;
+            background: purple;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .inventory-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .inventory-item {
+            padding: 15px;
+            border-radius: 10px;
+            background: #f7f7fb;
+        }
+
+        .calc-result {
+            margin-top: 10px;
+            font-weight: 600;
+        }
+
+        #calcQty,
+        #calcItem,
+        #checkBtn {
+            width: 100%;
+        }
+
+        #calcQty {
+            margin: 16px 0;
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            background: white;
+        }
+
+
+        #calcQty,
+        #calcItem {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        @media (max-width: 600px) {
+            section {
+                padding-top: 80px;
+            }
+        }
+
+@media (max-width: 768px) {
+    .inventory-wrapper {
+        padding-bottom: 20px;
+    }
+
+    .dashboard {
+        padding-bottom: 90px; /* only for bottom-nav */
+    }
+}
+
+/* REMOVE LEFT & RIGHT PADDING ON SMALL SCREENS */
+@media (max-width: 768px) {
+    .inventory-wrapper {
+        padding-left: 20px;
+        padding-right: 20px;
+        padding-top: 80px;   /* keeps spacing below topbar */
+        padding-bottom: 20px;
+        margin: 0;
+        max-width: 100%;
+    }
+
+    .inventory-box,
+    .inv-card {
+        border-radius: 20px; /* optional: edge-to-edge feel */
+    }
+}
+
+@media (max-width: 768px) {
+    .inventory-summary {
+        display: block;
+    }
+
+    .inventory-summary .inv-card {
+        margin-bottom: 15px; /* spacing between cards */
+    }
+}
+
         /* FULL WIDTH BOOKINGS */
         section {
             margin: auto;
@@ -914,24 +1077,26 @@
       object-fit: contain;
       margin-right: 4px;
     " />
+    
                             </div>
-                        </span> <span class="brand">Tracknrent</span> </a></li>
+                               </span> <span class="brand"> Tracknrent</span> </a></li>
                 <li><a href="dashboard.html"> <span class="icon">
-                            <span class="material-symbols-outlined" >home</span> </span> <span class="title">Dashboard</span> </a>
+                            <span class="material-symbols-outlined icon" >home</span> </span> <span class="title">Dashboard</span> </a>
                 </li>
                 <li class="hovered"><a href="bookings.html"> <span class="icon">
-                            <span class="material-symbols-outlined" >calendar_today</span> </span> <span class="title">Bookings</span>
+                            <span class="material-symbols-outlined icon" >calendar_today</span> </span> <span class="title">Bookings</span>
                     </a></li>
                 <li><a href="add.html"> <span class="icon">
-                            <span class="material-symbols-outlined" >add_circle</span> </span> <span class="title">Add</span> </a>
+                            <span class="material-symbols-outlined icon" >add_circle</span> </span> <span class="title">Add</span> </a>
                 </li>
                 <li><a href="inventory.html"> <span class="icon">
-                            <span class="material-symbols-outlined" >inventory_2</span> </span> <span class="title">Inventory</span> </a>
+                            <span class="material-symbols-outlined icon" >inventory_2</span> </span> <span class="title">Inventory</span> </a>
                 </li>
-                <li><a href="ai-assistant.html"> <span class="icon">
-                            <span class="material-symbols-outlined" >chat</span> </span> <span class="title">AI Assistant</span> </a>
+                <li><a href="public.html"> <span class="icon">
+                            <span class="material-symbols-outlined icon" > Public</span> </span> <span class="title">Public Profile</span> </a>
                 </li>
             </ul>
+
         </div><!-- ========================= Main ==================== -->
         <div class="main">
             <div class="topbar">
@@ -989,7 +1154,7 @@
                         </select>
 
                     <input type="date" id="filterDate">
-                    <input type="text" id="searchInput" placeholder="Search client name..." class="flex-grow">
+                    <input type="text" id="searchInput" placeholder="Search client name..." class="flex-grow" style="border: purple;">
 
                     <button id="exportBookingsBtn" class="btn">
   Export Bookings
@@ -1057,8 +1222,8 @@
                 <li><a href="inventory.html"> <span class="icon">
                             <span class="material-symbols-outlined" >inventory_2</span> </span> <span class="title">Inventory</span> </a>
                 </li>
-                <li><a href="ai-assistant.html"> <span class="icon">
-                            <span class="material-symbols-outlined" >chat</span> </span> <span class="title">AI</span> </a>
+                <li><a href="public.html"> <span class="icon">
+                            <span class="material-symbols-outlined" > Public</span> </span> <span class="title">Profile</span> </a>
                 </li>
             </ul>
         </nav>
@@ -1164,8 +1329,7 @@
     <script type="module" src="assets/js/avatar.js"></script>
     <script type="module" src="assets/js/firebase.js"></script>
     <script type="module" src="assets/js/bookings.js"></script>
-    <script src="assets/js/pwa.js"></script>
- <script src="sw.js"></script>    
+    <script src="assets/js/pwa.js"></script>  
 
 </body>
 

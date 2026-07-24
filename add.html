@@ -30,9 +30,15 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="shortcut icon" href="favicon.ico">
 
+
+
+
+
+
 <style>
         @import url("https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap");
         @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined");
+
 
         * {
             margin: 0;
@@ -258,7 +264,7 @@
         /* ================ Dashboard Content ================ */
         .dashboard {
             padding: 45px;
-            /* padding-top: 90px; */
+            padding-top: 60px; 
             overflow-y: auto;
             height: 100%;
         }
@@ -915,8 +921,7 @@
         @view-transition {
             navigation: auto;
         }
-    </style>
-    
+    </style>    
     <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
 </head>
 
@@ -940,14 +945,15 @@
                 <li><a href="bookings.html"> <span class="icon">
                             <span class="material-symbols-outlined" >calendar_today</span> </span> <span class="title">Bookings</span>
                     </a></li>
+
                 <li class="hovered"><a href="add.html"> <span class="icon">
                             <span class="material-symbols-outlined" >add_circle</span> </span> <span class="title">Add</span> </a>
                 </li>
                 <li><a href="inventory.html"> <span class="icon">
                             <span class="material-symbols-outlined" >inventory_2</span> </span> <span class="title">Inventory</span> </a>
                 </li>
-                <li><a href="ai-assistant.html"> <span class="icon">
-                            <span class="material-symbols-outlined" >chat</span> </span> <span class="title">AI Assistant</span> </a>
+                     <li><a href="public.html"> <span class="icon">
+                            <span class="material-symbols-outlined icon" > Public</span> </span> <span class="title">Public Profile</span> </a>
                 </li>
             </ul>
         </div><!-- ========================= Main ==================== -->
@@ -1093,7 +1099,7 @@
                             <div class="receipt-upload-container"
                                 style="border: 2px dashed #e2e8f0; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s ease;"
                                 onclick="document.getElementById('receiptImage').click()">
-                                <input type="file" id="receiptImage" accept="image/*" capture="environment"
+                                <input type="file" id="receiptImage" accept="image/" capture="environment"
                                     style="display: none;">
                                 <div id="receiptPreview" style="display: none; margin-bottom: 10px;">
                                     <img id="receiptThumbnail"
@@ -1135,8 +1141,8 @@
                 <li><a href="inventory.html"> <span class="icon">
                             <span class="material-symbols-outlined" >inventory_2</span> </span> <span class="title">Inventory</span> </a>
                 </li>
-                <li><a href="ai-assistant.html"> <span class="icon">
-                            <span class="material-symbols-outlined" >chat</span> </span> <span class="title">AI</span> </a>
+                   <li><a href="public.html"> <span class="icon">
+                            <span class="material-symbols-outlined" > Public</span> </span> <span class="title">Profile</span> </a>
                 </li>
             </ul>
         </nav>
