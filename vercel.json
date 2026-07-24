@@ -1,8 +1,19 @@
 {
-  "rewrites": [
-    {
-      "source": "/p/:slug*",
-      "destination": "/profile.html"
-    }
-  ]
+"rewrites": [
+{
+"source": "/p/:slug",
+"destination": "/public.html?slug=:slug"
+}
+],
+"headers": [
+{
+"source": "/public.html",
+"headers": [
+{
+"key": "Cache-Control",
+"value": "no-cache, no-store, must-revalidate"
+}
+]
+}
+]
 }
