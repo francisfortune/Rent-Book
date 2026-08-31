@@ -2,7 +2,7 @@
 "rewrites": [
 {
 "source": "/p/:slug",
-"destination": "/public.html?slug=:slug"
+"destination": "/profile.html?slug=:slug"
 }
 ],
 "headers": [

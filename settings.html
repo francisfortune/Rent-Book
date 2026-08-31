@@ -39,8 +39,9 @@
 <link rel="shortcut icon" href="favicon.ico">
 
   <style>
-    @import url("https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap");
-    @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined");
+           @import url("https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined");
+
 
         * {
             margin: 0;
@@ -55,7 +56,8 @@
             overflow-x: hidden;
         }
 
-        html, body {
+        html,
+        body {
             height: 100%;
             width: 100%;
         }
@@ -65,6 +67,8 @@
             width: 100%;
             height: 100%;
         }
+
+        /* =============== Navigation ================ */
 
         /* =============== Navigation ================ */
         .navigation {
@@ -113,8 +117,8 @@
             display: flex;
             text-decoration: none;
             color: white;
-        margin: 20px;
-        font-size: 23px;
+            margin: 20px;
+            font-size: 23px;
         }
 
         .navigation ul li:hover a,
@@ -155,7 +159,7 @@
         }
 
         .brand {
-              position: relative;
+                       position: relative;
             display: block;
             padding: 0 3px;
             height: 60px;
@@ -167,41 +171,44 @@
             font-family: "Ubuntu", sans-serif;
         }
 
+
         /* ================ Main ================ */
-        .main {
-            position: absolute;
-            width: calc(100% - 280px);
-            left: 280px;
-            min-height: 100%;
-            background: white;
-            transition: 0.5s;
-        }
+       .main {
+    position: absolute;
+    width: calc(100% - 280px);
+    left: 280px;
+    min-height: 100%;
+    background: white;
+    transition: 0.5s;
+}
 
-        .main.active {
-            width: calc(100% - 80px);
-            left: 80px;
-        }
+.main.active {
+    width: calc(100% - 80px);
+    left: 80px;
+}
 
-        .topbar {
-            position: fixed;
-            top: 0;
-            left: 280px;
-            width: calc(100% - 280px);
-            height: 60px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 20px;
-            background: white;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-            z-index: 100;
-            transition: 0.5s;
-        }
+/* Full Width Topbar */
+.topbar {
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    background: white;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    z-index: 100;
+    gap: 10px;
+}
 
-        .main.active .topbar {
-            left: 80px;
-            width: calc(100% - 80px);
-        }
+/* Override active state adjustments for topbar so it stays full-width */
+.main.active .topbar {
+    left: 0;
+    width: 100%;
+}
 
         .toggle {
             position: relative;
@@ -264,27 +271,29 @@
         }
 
         /* ================ Dashboard Content ================ */
-        .dashboard {
-            padding: 60px;
-            /* padding-top: 90px; */
-            overflow-y: auto;
-            height: 100%;
-        }
+/* ================ Dashboard Content Fixes ================ */
+.dashboard {
+    padding: 0 30px 45px 30px; /* Top padding removed */
+    overflow-y: visible;
+    height: auto;
+}
 
-        .welcome-section {
-            background: purple;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            color: white;
-            text-align: center;
-        }
+.welcome-section {
+    background: purple;
+    padding: 30px;
+    border-radius: 0 0 15px 15px; /* Optional: Rounded bottom corners to blend flush with topbar */
+    margin-top: 0;               /* Removes margin above welcome section */
+    margin-bottom: 30px;
+    color: white;
+    text-align: center;
+}
 
         .welcome-text {
             font-size: 2rem;
             font-weight: 700;
             margin-bottom: 10px;
         }
+
 
         .welcome-subtitle {
             font-size: 1.1rem;
@@ -901,60 +910,7 @@
     width: 100%;
     max-width: 100%; /* ensure no restriction */
 }
-/* ================ Main & Topbar Fixes ================ */
-.main {
-    position: absolute;
-    width: calc(100% - 280px);
-    left: 280px;
-    min-height: 100%;
-    background: white;
-    transition: 0.5s;
-}
-
-.main.active {
-    width: calc(100% - 80px);
-    left: 80px;
-}
-
-/* Full Width Topbar */
-.topbar {
-    position: sticky;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 60px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 20px;
-    background: white;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    z-index: 100;
-    gap: 10px;
-}
-
-/* Override active state adjustments for topbar so it stays full-width */
-.main.active .topbar {
-    left: 0;
-    width: 100%;
-}
-
-/* ================ Dashboard Content Fixes ================ */
-.dashboard {
-    padding: 0 30px 45px 30px; /* Top padding removed */
-    overflow-y: visible;
-    height: auto;
-}
-
-.welcome-section {
-    background: purple;
-    padding: 30px;
-    border-radius: 0 0 15px 15px; /* Optional: Rounded bottom corners to blend flush with topbar */
-    margin-top: 0;               /* Removes margin above welcome section */
-    margin-bottom: 30px;
-    color: white;
-    text-align: center;
-}@media (max-width: 991px) {
+@media (max-width: 991px) {
     .dashboard {
         padding: 0 25px 25px 25px; /* Top padding set to 0 */
     }
@@ -971,47 +927,6 @@
     }
 }
 
-/* =============== Navigation Fixes ================ */
-.navigation ul li a {
-    position: relative;
-    width: 100%;
-    display: flex;          /* Ensures horizontal alignment */
-    align-items: center;    /* Vertically aligns icon and text in center */
-    text-decoration: none;
-    color: white;
-    padding: 0 10px;        /* Replaced margin with inner padding */
-    height: 60px;
-    font-size: 1.5rem;
-}
-
-.navigation ul li:hover a,
-.navigation ul li.hovered a {
-    color: purple;
-}
-
-.navigation ul li a .icon {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 60px;
-    height: 60px;
-}
-
-.navigation ul li a .icon .material-symbols-outlined {
-    font-size: 1.88rem;
-}
-
-.navigation ul li a .title {
-    position: relative;
-    display: block;
-    padding: 0 10px;
-    height: 60px;
-    line-height: 60px;
-    text-align: start;
-    white-space: nowrap;
-    font-weight: 500;
-}
 
         
     </style>
@@ -1042,8 +957,10 @@
         <span class="material-symbols-outlined" >add_circle</span> </span> <span class="title">Add</span> </a></li>
       <li><a href="inventory.html"> <span class="icon">
         <span class="material-symbols-outlined" >inventory_2</span> </span> <span class="title">Inventory</span> </a></li>
-      <li><a href="public.html"> <span class="icon">
-        <span class="material-symbols-outlined" >Public Profile</span> </span> <span class="title">Public Profile</span> </a></li>
+             <li><a href="public.html"> <span class="icon">
+                            <span class="material-symbols-outlined icon" > Public</span> </span> <span class="title">Public Profile</span> </a>
+                </li>
+
     </ul>
    </div><!-- ========================= Main ==================== -->
    <div class="main">
@@ -1056,7 +973,7 @@
 <div class="mobile-brand">
     
   <h1 style="color: black;">Track<span style="color: purple;">nrent</span></h1>
-  <span id="brand-name-mobile">Loading...</span>
+  <span id="brand-name-mobile"></span>
 </div>
 
 <div class="user">
@@ -1170,7 +1087,7 @@ If you need any assistance, have questions, or would like to report an issue, ou
         <span class="material-symbols-outlined" >add_circle</span> </span> <span class="title">Add</span> </a></li>
       <li><a href="inventory.html"> <span class="icon">
         <span class="material-symbols-outlined" >inventory_2</span> </span> <span class="title">Inventory</span> </a></li>
-           <li><a href="public.html"> <span class="icon">
+          <li><a href="public.html"> <span class="icon">
                             <span class="material-symbols-outlined" > Public</span> </span> <span class="title">Profile</span> </a>
                 </li>
                 
