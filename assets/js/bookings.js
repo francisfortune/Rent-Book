@@ -40,7 +40,7 @@ function generateReceiptText(booking) {
   const deliveryDate = booking.event?.deliveryDate || booking.event?.date || "Not set";
   const returnDate  = booking.event?.returnDate || "Not set";
 
-  return `*${currentBusinessName} BOOKING RECEIPT*\n\n` +
+  return `*${currentBusinessName} Booking Receipt*\n\n` +
     `Hi ${booking.client.name}, your booking details are below:\n\n` +
     `Event Date: ${formatDateTime(booking.event.date)}\n` +
     `Delivery Date: ${formatDateTime(deliveryDate)}\n` +
