@@ -148,44 +148,32 @@ self.addEventListener('fetch', (event) => {
     }
 
     // For local assets - Network first with cache fallback (for fresh data)
-    event.respondWith(
-        fetch(request)
-            .then(response => {
-                // Clone the response for caching
+event.respondWith(
+    fetch(request)
+        .then(response => {
+            if (response.ok && response.type === 'basic') {
                 const responseClone = response.clone();
-
                 caches.open(DYNAMIC_CACHE)
-                    .then(cache => {
-                        cache.put(request, responseClone);
-                    });
-
-                return response;
-            })
-            .catch(() => {
-                // Network failed, try cache
-                return caches.match(request)
-                    .then(cachedResponse => {
-                        if (cachedResponse) {
-                            return cachedResponse;
-                        }
-
-                        // Return offline page for navigation requests
-                        if (request.mode === 'navigate') {
-                            return caches.match('/offline.html');
-                        }
-
-                        // Return a placeholder for images
-                        if (request.destination === 'image') {
-                            return new Response(
-                                '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="#ddd" width="200" height="200"/><text fill="#999" x="100" y="100" text-anchor="middle" dy=".3em">Offline</text></svg>',
-                                { headers: { 'Content-Type': 'image/svg+xml' } }
-                            );
-                        }
-
-                        return new Response('Offline', { status: 503 });
-                    });
-            })
-    );
+                    .then(cache => cache.put(request, responseClone))
+                    .catch(err => console.log('[ServiceWorker] Cache put failed:', err));
+            }
+            return response;
+        })
+        .catch(() => {
+            return caches.match(request)
+                .then(cachedResponse => {
+                    if (cachedResponse) return cachedResponse;
+                    if (request.mode === 'navigate') return caches.match('/offline.html');
+                    if (request.destination === 'image') {
+                        return new Response(
+                            '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="#ddd" width="200" height="200"/><text fill="#999" x="100" y="100" text-anchor="middle" dy=".3em">Offline</text></svg>',
+                            { headers: { 'Content-Type': 'image/svg+xml' } }
+                        );
+                    }
+                    return new Response('Offline', { status: 503 });
+                });
+        })
+); 
 });
 
 // Background sync for offline bookings
