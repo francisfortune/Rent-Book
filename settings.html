@@ -1019,6 +1019,40 @@
   </button>
 </div>
 
+
+
+<!-- REFERRAL PROGRAM -->
+<div class="settings-card" style="width: 100%;">
+  <h3>🎁 Referral Program</h3>
+  <p style="font-size: 0.9rem; color: #4a5568; margin-bottom: 15px;">
+    Invite other rental businesses to Tracknrent. Once <strong>10 referred businesses complete setup</strong>, your business gets a featured spot in the public Marketplace.
+  </p>
+
+  <label>
+    Your Referral Link
+    <div style="display:flex; gap:8px;">
+      <input id="referralLinkInput" type="text" readonly style="flex:1;">
+      <button id="copyReferralBtn" class="secondary-btn" style="white-space:nowrap;">Copy</button>
+    </div>
+  </label>
+
+  <div style="margin-top:20px;">
+    <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#4a5568; margin-bottom:6px;">
+      <span id="referralProgressLabel">0 / 10 referrals</span>
+      <span id="referralStatusLabel">Keep inviting!</span>
+    </div>
+    <div style="background:#e5e7eb; border-radius:999px; height:14px; overflow:hidden;">
+      <div id="referralProgressFill" style="background:purple; height:100%; width:0%; border-radius:999px; transition:width 0.4s ease;"></div>
+    </div>
+  </div>
+
+  <div id="referralUnlockedBadge" style="display:none; margin-top:15px; background:#f3e8ff; color:purple; padding:10px 14px; border-radius:10px; font-weight:600; font-size:0.9rem;">
+    🎉 Marketplace Unlocked! Your business is now featured.
+  </div>
+</div>
+
+
+
 <!-- INVITE PARTNER -->
 <div class="settings-card" style="width: 100%;">
   <h3>🤝 Invite Partner</h3>
