@@ -28,16 +28,15 @@ const steps = [
   },
   {
     selector: 'a[href="public.html"]',
-    title: "Your Rental Online Storefront",
-    desc: "Click here to Set up Your Online Rental Business Storefront and get Discovered by more People"
+    title: "Your Rental Online Storefront 🌐",
+    desc: "Set up your online rental business storefront and get discovered by more customers."
   },
-   {
-    selector: '#user-avatar',
-    title: "Your Rental Setting, Analytics and AI Assistant",
-    desc: "Click Settings to Visit your Settings page and Invite and Manage staff and lots\n` + Take a look at Your Business Analysis \n` + Click AI Assistant to chat with our AI! The assistant can adjust stock counts, fetch bookings, or guide you through Tracknrent features."
+  {
+    selector: "#user-avatar",
+    title: "Settings, Analytics & AI Assistant 🤖",
+    desc: "Manage settings, invite staff, view business analytics, or chat with our AI Assistant to adjust stock counts and fetch booking records."
   }
 ];
-
 export function startOnboardingTour() {
   if (localStorage.getItem("tracknrent_onboarding_completed") === "true") return;
 

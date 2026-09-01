@@ -31,6 +31,13 @@ function showMessage(msg) {
   alert(msg);
 }
 
+function getReferralCodeFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = params.get("ref");
+  if (fromUrl) localStorage.setItem("tracknrent_ref", fromUrl);
+  return fromUrl || localStorage.getItem("tracknrent_ref") || null;
+}
+
 function setLoading(btn, loading) {
   if (!btn) return;
   btn.disabled = loading;
@@ -81,7 +88,7 @@ if (sendRegisterOtpBtn) {
     const phone = phoneInput.value.replace(/\D/g, '');
     if (!phone) return alert("Please enter your phone number.");
     const fullPhone = countryCode + phone.replace(/^0+/, '');
-    
+
     try {
       initRecaptcha();
       sendRegisterOtpBtn.disabled = true;
@@ -108,7 +115,7 @@ if (sendLoginOtpBtn) {
     const phone = phoneInput.value.replace(/\D/g, '');
     if (!phone) return alert("Please enter your phone number.");
     const fullPhone = countryCode + phone.replace(/^0+/, '');
-    
+
     try {
       initRecaptcha();
       sendLoginOtpBtn.disabled = true;
@@ -156,6 +163,7 @@ if (registerForm) {
           name: name,
           role: "owner",
           businessId: null,
+          referredByCode: getReferralCodeFromUrl(),
           createdAt: serverTimestamp()
         });
         window.location.href = "setup.html";
@@ -176,7 +184,7 @@ if (registerForm) {
         setLoading(btn, false);
         return;
       }
-      
+
       try {
         isRegistering = true;
         const userCredential = await registerConfirmationResult.confirm(otp);
@@ -187,6 +195,7 @@ if (registerForm) {
           name: name,
           role: "owner",
           businessId: null,
+          referredByCode: getReferralCodeFromUrl(),
           createdAt: serverTimestamp()
         });
         window.location.href = "setup.html";
@@ -234,7 +243,7 @@ if (loginForm) {
         setLoading(btn, false);
         return;
       }
-      
+
       try {
         await loginConfirmationResult.confirm(otp);
       } catch (err) {
@@ -296,10 +305,12 @@ async function handleGoogleAuth() {
         name: user.displayName || 'Google User',
         role: "owner",
         businessId: null,
+        referredByCode: getReferralCodeFromUrl(),
         createdAt: serverTimestamp()
       });
       window.location.href = "setup.html";
     }
+
     // Auth listener will handle the redirect for existing users
   } catch (err) {
     console.error("Google Auth Error:", err);

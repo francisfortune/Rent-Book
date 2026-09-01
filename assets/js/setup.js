@@ -10,7 +10,8 @@ import {
   getDocs,
   doc,
   getDoc,
-  setDoc
+  setDoc,
+  updateDoc 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -86,6 +87,61 @@ async function createInitialInventory(businessId) {
   }
 }
 
+
+
+
+
+function generateReferralCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+async function processReferral(user, newBusinessId) {
+  try {
+    const userSnap = await getDoc(doc(db, "users", user.uid));
+    const refCode = userSnap.exists() ? userSnap.data().referredByCode : null;
+    if (!refCode) return;
+
+    const q = query(collection(db, "businesses"), where("referralCode", "==", refCode));
+    const snap = await getDocs(q);
+    if (snap.empty) return;
+
+    const referrerDoc = snap.docs[0];
+    if (referrerDoc.id === newBusinessId) return; // no self-referrals
+
+    await addDoc(collection(db, "referrals"), {
+      referrerBusinessId: referrerDoc.id,
+      referredBusinessId: newBusinessId,
+      referralCode: refCode,
+      status: "valid",
+      createdAt: serverTimestamp()
+    });
+
+    const newCount = (referrerDoc.data().referralCount || 0) + 1;
+    const updates = { referralCount: newCount };
+    if (newCount >= 10) updates["features.marketplace"] = true;
+    await updateDoc(doc(db, "businesses", referrerDoc.id), updates);
+
+    await addDoc(collection(db, "businesses", referrerDoc.id, "notifications"), {
+      message: newCount >= 10
+        ? "🎉 Referral milestone reached! Your business now has a featured Marketplace listing."
+        : `🤝 A business you referred just completed setup! (${newCount}/10 referrals)`,
+      type: "referral",
+      triggeredBy: "Tracknrent",
+      createdAt: serverTimestamp(),
+      readBy: [],
+      deletedFor: []
+    });
+  } catch (err) {
+    console.error("Referral processing failed:", err);
+  }
+}
+
+
+
+
 /* =========================
    SETUP SUBMIT
 ========================= */async function handleSetupSubmit(user) {
@@ -102,6 +158,10 @@ async function createInitialInventory(businessId) {
       ownerId: user.uid,
       currency: "NGN",
       location: "Enugu",
+
+  referralCode: generateReferralCode(),   // ← add
+  referralCount: 0,                       // ← add
+  features: { marketplace: false },       // ← add
       settings: {
         inventoryEditableByStaff: false
       },
@@ -147,6 +207,7 @@ async function createInitialInventory(businessId) {
 
     // ✅ ADD THIS LINE HERE (Right before redirect)
     await sendWelcomeNotification(businessRef.id, businessName);
+    await processReferral(user, businessRef.id);
 
     window.location.href = "dashboard.html";
 

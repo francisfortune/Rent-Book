@@ -1,6 +1,12 @@
 // PWA Registration Script
 // Add this script to all main pages for PWA functionality
 
+// Change scope from '/' to './' or '/Rent-Book-main/'
+navigator.serviceWorker.register('/Rent-Book-main/sw.js', { 
+  scope: '/Rent-Book-main/' 
+});
+
+
 (function () {
     'use strict';
 
@@ -8,8 +14,8 @@
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', async () => {
             try {
-                const registration = await navigator.serviceWorker.register('/sw.js', {
-                    scope: '/'
+                const registration = await navigator.serviceWorker.register('/Rent-Book-main/sw.js', {
+                    scope: '/Rent-Book-main/'
                 });
 
                 console.log('[PWA] Service Worker registered successfully:', registration.scope);

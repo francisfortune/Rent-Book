@@ -26,6 +26,15 @@ const saveBusinessBtn = document.getElementById("saveBusinessName");
 const brandNameMobileEl = document.getElementById("brand-name-mobile");
 const topNavBrand = document.getElementById("topnav-brand");
 
+
+const referralLinkInput = document.getElementById("referralLinkInput");
+const copyReferralBtn = document.getElementById("copyReferralBtn");
+const referralProgressLabel = document.getElementById("referralProgressLabel");
+const referralStatusLabel = document.getElementById("referralStatusLabel");
+const referralProgressFill = document.getElementById("referralProgressFill");
+const referralUnlockedBadge = document.getElementById("referralUnlockedBadge");
+
+
 const inviteForm = document.getElementById("invitePartnerForm");
 const partnerEmailInput = document.getElementById("partnerEmail");
 const partnerRoleInput = document.getElementById("partnerRole");
@@ -65,6 +74,33 @@ function showErrorBanner(message) {
   banner.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px; vertical-align: middle;">error</span> Error: ${message}. Please refresh or try logging out.`;
   document.body.appendChild(banner);
 }
+
+
+function generateReferralCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+function renderReferralProgress(data) {
+  const count = data.referralCount || 0;
+  const goal = 10;
+  const pct = Math.min(100, Math.round((count / goal) * 100));
+  const unlocked = !!(data.features && data.features.marketplace);
+
+  if (referralProgressLabel) referralProgressLabel.textContent = `${count} / ${goal} referrals`;
+  if (referralProgressFill) referralProgressFill.style.width = pct + "%";
+  if (referralStatusLabel) {
+    referralStatusLabel.textContent = unlocked
+      ? "Marketplace unlocked 🎉"
+      : `${Math.max(0, goal - count)} more to unlock Marketplace`;
+  }
+  if (referralUnlockedBadge) referralUnlockedBadge.style.display = unlocked ? "block" : "none";
+}
+
+
+
 
 // ===== AUTH GUARD =====
 onAuthStateChanged(auth, async (user) => {
@@ -120,15 +156,32 @@ onSnapshot(query(membersRef, where("businessId", "==", businessId)), (snapshot) 
 });
     
     // ===== 2. LIVE BUSINESS NAME UPDATE =====
-    onSnapshot(businessRef, (docSnap) => {
-      if (!docSnap.exists()) return;
-      const data = docSnap.data();
-      const newName = data.name || "";
-      if (businessNameInput) businessNameInput.value = newName;
-      if (brandNameMobileEl) brandNameMobileEl.textContent = newName;
-      if (feedbackBusinessName) feedbackBusinessName.value = newName;
-      if (topNavBrand) topNavBrand.textContent = newName;
-    });
+  onSnapshot(businessRef, async (docSnap) => {
+  if (!docSnap.exists()) return;
+  const data = docSnap.data();
+  const newName = data.name || "";
+  if (businessNameInput) businessNameInput.value = newName;
+  if (brandNameMobileEl) brandNameMobileEl.textContent = newName;
+  if (feedbackBusinessName) feedbackBusinessName.value = newName;
+  if (topNavBrand) topNavBrand.textContent = newName;
+
+  // ===== REFERRAL PROGRAM =====
+  let referralCode = data.referralCode;
+  if (!referralCode) {
+    referralCode = generateReferralCode();
+    try {
+      await updateDoc(businessRef, { referralCode });
+    } catch (err) {
+      console.error("Failed to save referral code:", err);
+    }
+  }
+  if (referralLinkInput) {
+    referralLinkInput.value = `${window.location.origin}/signup.html?ref=${referralCode}`;
+  }
+  renderReferralProgress(data);
+});
+
+
 
 // ===== SEND NEW MEMBER NOTIFICATION =====
 async function sendNewMemberNotification(businessId, newUserEmail) {
@@ -500,6 +553,22 @@ document.getElementById("confirmDeletePartner").onclick = async () => {
     alert("Delete failed");
   }
 };
+
+
+if (copyReferralBtn) {
+  copyReferralBtn.addEventListener("click", async () => {
+    if (!referralLinkInput || !referralLinkInput.value) return;
+    try {
+      await navigator.clipboard.writeText(referralLinkInput.value);
+    } catch {
+      referralLinkInput.select();
+      document.execCommand("copy");
+    }
+    copyReferralBtn.textContent = "Copied!";
+    setTimeout(() => (copyReferralBtn.textContent = "Copy"), 1500);
+  });
+}
+
 
 // ===== FEEDBACK MODAL =====
     if (openFeedbackBtn) openFeedbackBtn.onclick = () => feedbackModal.classList.add("show");
