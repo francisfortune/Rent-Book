@@ -1,4 +1,13 @@
+// CORRECT: Registered immediately when sw.js loads
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+});
 
+self.addEventListener('install', (event) => {
+    // Install logic here
+});
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 
 // RentBook Service Worker - Production Level PWA
