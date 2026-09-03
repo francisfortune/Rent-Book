@@ -1,13 +1,14 @@
-// 1. MUST BE THE VERY FIRST LINE
+// MUST BE LINE 1 (No functions, no top-level awaits, no setTimeouts before it):
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 
-// 2. NOW register your own top-level message handlers
+// Register your own message handler immediately after:
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();
     }
 });
 
+// ... rest of sw.js ...
 // 3. Service worker configuration
 const CACHE_NAME = 'Tracknrent-v1.0.4';
 const DYNAMIC_CACHE = 'Tracknrent-dynamic-v1';
