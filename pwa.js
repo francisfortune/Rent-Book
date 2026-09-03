@@ -14,8 +14,8 @@ navigator.serviceWorker.register('/sw.js', {
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', async () => {
             try {
-                const registration = await navigator.serviceWorker.register('/Rent-Book-main/sw.js', {
-                    scope: '/Rent-Book-main/'
+                const registration = await navigator.serviceWorker.register('/sw.js', {
+                    scope: '/'
                 });
 
                 console.log('[PWA] Service Worker registered successfully:', registration.scope);
