@@ -1,20 +1,17 @@
-// CORRECT: Registered immediately when sw.js loads
+// 1. MUST BE THE VERY FIRST LINE
+importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+
+// 2. NOW register your own top-level message handlers
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();
     }
 });
 
-self.addEventListener('install', (event) => {
-    // Install logic here
-});
-importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
-
-// RentBook Service Worker - Production Level PWA
+// 3. Service worker configuration
 const CACHE_NAME = 'Tracknrent-v1.0.4';
 const DYNAMIC_CACHE = 'Tracknrent-dynamic-v1';
 
-// Core assets to cache for offline use
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -44,7 +41,7 @@ const STATIC_ASSETS = [
     '/manifest.json'
 ];
 
-
+// ... rest of your install/fetch/push handlers ...
 
 
 // External CDN resources to cache
