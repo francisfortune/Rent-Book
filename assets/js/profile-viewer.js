@@ -1,31 +1,48 @@
 import { db } from "./firebase.js";
 import {
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
   doc,
   getDoc,
   onSnapshot,
+  updateDoc,
+  addDoc,
   collection,
+  serverTimestamp,
+  arrayUnion,
   getDocs,
   query,
-  where,
-  addDoc,
-  runTransaction,
-  serverTimestamp,
-  orderBy,
-  limit
+  where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const loader = document.getElementById("loader");
-const errorView = document.getElementById("error-state");
-const storefrontContent = document.getElementById("storefront");
+// ── CLOUDINARY ────────────────────────────────────────────────────
+// Unsigned upload preset: fine to expose in client code (that's what
+// it's for), but it does mean anyone who has this preset name can
+// upload to your Cloudinary account. Two things worth doing in the
+// Cloudinary dashboard: cap the preset's max file size, and restrict
+// it to an "upload folder" scoped to this app. See SETUP-README.md
+// for the tighter, signed-upload alternative via a Cloud Function.
+const CLOUDINARY_CLOUD_NAME = "YOUR_CLOUD_NAME";
+const CLOUDINARY_UPLOAD_PRESET = "tracknrent_gallery_unsigned";
 
-// Shared across render functions so per-item "Inquire" links reuse the
-// same normalized WhatsApp number and business name.
+const loader = document.getElementById("loader");
+const errorView = document.getElementById("error-state") || document.getElementById("errorView");
+const storefrontContent = document.getElementById("storefront") || document.getElementById("storefrontContent");
+
+// Shared across renderProfile() and loadCatalog() so per-item "Inquire" links
+// can reuse the same normalized WhatsApp number and business name.
 let waNumberGlobal = "";
 let businessNameGlobal = "";
 let currentBusinessId = null;
-let unsubBusiness = null;
-let unsubInventory = null;
-let unsubReviews = null;
+let showAvailabilityGlobal = true;
+let cachedInventoryDocs = [];
+let unsubscribeInventory = null;
+let isStaffMember = false;
+let staffUser = null;
 
 function refreshIcons() {
   if (window.lucide && typeof window.lucide.createIcons === "function") {
@@ -68,7 +85,23 @@ function getSlug() {
 }
 
 /* =========================
-   INITIALIZE PUBLIC PROFILE (REAL-TIME)
+   RESOLVE SLUG → businessId (one-time; this mapping rarely changes)
+========================= */
+async function resolveBusinessId(slug) {
+  const slugRef = doc(db, "publicSlugs", slug);
+  const slugSnap = await getDoc(slugRef);
+  if (slugSnap.exists()) return slugSnap.data().businessId;
+
+  const q = query(collection(db, "businesses"), where("publicProfile.slug", "==", slug));
+  const querySnap = await getDocs(q);
+  return querySnap.empty ? null : querySnap.docs[0].id;
+}
+
+/* =========================
+   INITIALIZE PUBLIC PROFILE
+   Everything from here on is LIVE: a business doc listener means any
+   change the owner makes (toggles, bio, gallery deletions, map pin,
+   SEO indexing) appears on an already-open storefront with no reload.
 ========================= */
 export async function initViewer() {
   const slug = getSlug();
@@ -78,19 +111,10 @@ export async function initViewer() {
     return;
   }
 
+  let firstLoad = true;
+
   try {
-    let businessId = null;
-
-    const slugRef = doc(db, "publicSlugs", slug);
-    const slugSnap = await getDoc(slugRef);
-
-    if (slugSnap.exists()) {
-      businessId = slugSnap.data().businessId;
-    } else {
-      const q = query(collection(db, "businesses"), where("publicProfile.slug", "==", slug));
-      const querySnap = await getDocs(q);
-      if (!querySnap.empty) businessId = querySnap.docs[0].id;
-    }
+    const businessId = await resolveBusinessId(slug);
 
     if (!businessId) {
       showError("Storefront Not Found", `The store handle "${slug}" is not registered.`);
@@ -98,41 +122,62 @@ export async function initViewer() {
     }
 
     currentBusinessId = businessId;
-
-    // Live listener on the business doc — any change the owner saves
-    // (bio, contact info, toggle, gallery) reflects here instantly.
     const businessRef = doc(db, "businesses", businessId);
-    unsubBusiness = onSnapshot(
+    wireStaffGallery(businessId);
+
+    onSnapshot(
       businessRef,
-      (snap) => {
-        if (!snap.exists()) {
+      (businessSnap) => {
+        if (!businessSnap.exists()) {
           showError("Storefront Unavailable", "The business data associated with this store could not be found.");
           return;
         }
-        const businessData = snap.data();
+
+        const businessData = businessSnap.data();
         const profile = businessData.publicProfile || {};
 
+        applySeoMeta(businessData);
+
         if (profile.enabled === false) {
+          if (unsubscribeInventory) { unsubscribeInventory(); unsubscribeInventory = null; }
           showError("Storefront Offline", "This storefront has been disabled by the business owner.");
           return;
         }
 
-        renderProfile(businessData.name || "Equipment Rentals", profile, businessData);
+        renderProfile(businessData.name || "Equipment Rentals", profile, businessData.rating);
+        renderMap(profile);
 
-        if (loader) loader.classList.add("hidden");
-        if (storefrontContent) storefrontContent.classList.remove("hidden");
-        if (errorView) errorView.classList.add("hidden");
+        const inventorySection = document.getElementById("inventory-section");
+        if (profile.showInventory === false) {
+          if (inventorySection) inventorySection.classList.add("hidden");
+          if (unsubscribeInventory) { unsubscribeInventory(); unsubscribeInventory = null; }
+        } else {
+          if (inventorySection) inventorySection.classList.remove("hidden");
+          showAvailabilityGlobal = profile.showAvailability !== false; // default true
+          if (!unsubscribeInventory) {
+            unsubscribeInventory = watchCatalog(businessId);
+          } else {
+            renderCatalogFromCache(); // toggle flipped — re-render instantly, no need to wait for new stock data
+          }
+        }
+
+        if (firstLoad) {
+          if (loader) loader.classList.add("hidden");
+          if (storefrontContent) {
+            storefrontContent.classList.remove("hidden");
+            // one clean fade-in on first paint, not on every subsequent live update
+            requestAnimationFrame(() => storefrontContent.classList.remove("opacity-0"));
+          }
+          firstLoad = false;
+        }
         refreshIcons();
       },
       (err) => {
-        console.error("Business listener error:", err);
+        console.error("Storefront listener error:", err);
         showError("Connection Error", "Failed to retrieve store details. Please check your network connection.");
       }
     );
 
-    listenToCatalog(businessId);
-    listenToReviews(businessId);
-    wireReviewForm(businessId);
   } catch (err) {
     console.error("Storefront initialization error:", err);
     showError("Connection Error", "Failed to retrieve store details. Please check your network connection.");
@@ -140,22 +185,50 @@ export async function initViewer() {
 }
 
 /* =========================
+   SEO META (client-side best-effort)
+   Note: this only helps crawlers that execute JS. The reliable fix
+   for indexing is the sitemap Cloud Function in SETUP-README.md —
+   this tag is a cheap extra signal, not the whole solution.
+========================= */
+function applySeoMeta(businessData) {
+  const indexed = businessData.seo?.googleIndexed === true;
+  let metaTag = document.querySelector('meta[name="robots"]');
+  if (!metaTag) {
+    metaTag = document.createElement("meta");
+    metaTag.setAttribute("name", "robots");
+    document.head.appendChild(metaTag);
+  }
+  metaTag.setAttribute("content", indexed ? "index,follow" : "noindex,nofollow");
+}
+
+/* =========================
    RENDER PROFILE DATA
 ========================= */
-function renderProfile(name, profile, businessData) {
+function renderProfile(name, profile, rating) {
   document.title = `${name} | Rental Catalog`;
-  businessNameGlobal = name;
 
-  const nameEl = document.getElementById("store-name");
+  const nameEl = document.getElementById("store-name") || document.getElementById("displayBusinessName");
   if (nameEl) nameEl.textContent = name;
 
-  const bioEl = document.getElementById("store-bio");
-  if (bioEl) {
-    bioEl.textContent = profile.bio || "Welcome to our rental catalog. Browse available items and reach out to place an order.";
+  const ratingEl = document.getElementById("store-rating");
+  if (ratingEl) {
+    const numericRating = Number(rating || 0);
+    if (numericRating > 0) {
+      const stars = "★".repeat(Math.round(numericRating)) + "☆".repeat(5 - Math.round(numericRating));
+      ratingEl.innerHTML = `<span class="text-amber-400">${stars}</span> <span class="text-purple-200/80">${numericRating.toFixed(1)}</span>`;
+      ratingEl.classList.remove("hidden");
+    } else {
+      ratingEl.classList.add("hidden");
+    }
   }
 
-  const addrEl = document.getElementById("store-address");
-  const addrContainer = document.getElementById("address-container");
+  const bioEl = document.getElementById("store-bio") || document.getElementById("displayBusinessBio");
+  if (bioEl) {
+    bioEl.textContent = profile.bio || "Welcome to our rental catalog. Browse available items and contact us directly to place a order.";
+  }
+
+  const addrEl = document.getElementById("store-address") || document.getElementById("addressText");
+  const addrContainer = document.getElementById("address-container") || document.getElementById("contactAddress");
   if (profile.address) {
     if (addrEl) addrEl.textContent = profile.address;
     if (addrContainer) addrContainer.classList.remove("hidden");
@@ -166,7 +239,7 @@ function renderProfile(name, profile, businessData) {
   const rawPhone = profile.phone || profile.whatsapp || "";
   const cleanPhone = rawPhone.replace(/\D/g, "");
 
-  const btnPhone = document.getElementById("btn-phone");
+  const btnPhone = document.getElementById("btn-phone") || document.getElementById("contactPhone");
   if (btnPhone) {
     if (cleanPhone) {
       btnPhone.href = `tel:${cleanPhone}`;
@@ -176,340 +249,330 @@ function renderProfile(name, profile, businessData) {
     }
   }
 
-  const btnWa = document.getElementById("btn-whatsapp");
-  if (btnWa) {
-    if (cleanPhone) {
-      let waNumber = cleanPhone;
-      if (waNumber.startsWith("0")) waNumber = "234" + waNumber.slice(1);
-      waNumberGlobal = waNumber;
-      const waMsg = encodeURIComponent(`Hello ${name}, I am viewing your online rental catalog and would like to inquire about renting equipment.`);
-      btnWa.href = `https://wa.me/${waNumber}?text=${waMsg}`;
-      btnWa.classList.remove("hidden");
-    } else {
-      waNumberGlobal = "";
-      btnWa.classList.add("hidden");
-    }
+  const btnWa = document.getElementById("btn-whatsapp") || document.getElementById("contactWhatsapp");
+  const btnWaSticky = document.getElementById("sticky-btn-whatsapp");
+  if (cleanPhone) {
+    let waNumber = cleanPhone;
+    if (waNumber.startsWith("0")) waNumber = "234" + waNumber.slice(1);
+    waNumberGlobal = waNumber;
+    businessNameGlobal = name;
+    const waMsg = encodeURIComponent(`Hello ${name}, I am viewing your online rental catalog and would like to inquire about renting equipment.`);
+    const waHref = `https://wa.me/${waNumber}?text=${waMsg}`;
+    if (btnWa) { btnWa.href = waHref; btnWa.classList.remove("hidden"); }
+    if (btnWaSticky) { btnWaSticky.href = waHref; }
+  } else {
+    waNumberGlobal = "";
+    if (btnWa) btnWa.classList.add("hidden");
   }
 
-  renderGallery(profile.gallery || []);
-  renderRatingSummary(businessData);
+  const stickyBar = document.getElementById("sticky-mobile-bar");
+  if (stickyBar) stickyBar.classList.toggle("hidden", !cleanPhone);
+
+  renderGallery(profile.gallery, businessNameGlobal || name);
 }
 
 /* =========================
-   GALLERY — IMAGES + VIDEO (Cloudinary-aware)
+   LIVE GOOGLE MAP
+   Uses the no-API-key embed endpoint. Prefers exact coordinates;
+   falls back to a text search on the address string.
 ========================= */
-function renderGallery(gallery) {
-  const gallerySection = document.getElementById("gallery-section");
-  const galleryGrid = document.getElementById("gallery-grid");
-  if (!gallerySection || !galleryGrid) return;
+function renderMap(profile) {
+  const mapSection = document.getElementById("map-section");
+  const mapFrame = document.getElementById("store-map");
+  if (!mapSection || !mapFrame) return;
 
-  if (!gallery || gallery.length === 0) {
-    gallerySection.classList.add("hidden");
-    return;
+  let src = null;
+  if (typeof profile.latitude === "number" && typeof profile.longitude === "number") {
+    src = `https://maps.google.com/maps?q=${profile.latitude},${profile.longitude}&z=15&output=embed`;
+  } else if (profile.address) {
+    src = `https://maps.google.com/maps?q=${encodeURIComponent(profile.address)}&z=14&output=embed`;
   }
 
-  galleryGrid.innerHTML = gallery
-    .map((entry, i) => {
-      const item = normalizeGalleryEntry(entry);
-      if (item.type === "video") {
-        return `
-          <button type="button" class="gallery-tile" data-index="${i}" data-type="video" data-url="${item.url}" aria-label="Play video">
-            <video src="${item.url}#t=0.1" muted playsinline preload="metadata"></video>
-            <span class="gallery-play"><i data-lucide="play" class="w-5 h-5"></i></span>
-          </button>`;
-      }
-      return `
-        <button type="button" class="gallery-tile" data-index="${i}" data-type="image" data-url="${item.url}" aria-label="View photo">
-          <img src="${item.url}" alt="Store showcase" loading="lazy" />
-        </button>`;
-    })
-    .join("");
+  if (src) {
+    mapFrame.src = src;
+    mapSection.classList.remove("hidden");
+  } else {
+    mapSection.classList.add("hidden");
+  }
+}
 
-  gallerySection.classList.remove("hidden");
-  refreshIcons();
-
-  galleryGrid.querySelectorAll(".gallery-tile").forEach((tile) => {
-    tile.addEventListener("click", () => openLightbox(tile.dataset.url, tile.dataset.type));
+/* =========================
+   GALLERY (images + videos)
+========================= */
+function normalizeGallery(gallery) {
+  if (!Array.isArray(gallery)) return [];
+  return gallery.map((entry, i) => {
+    if (typeof entry === "string") return { id: `legacy_${i}`, url: entry, type: "image", addedBy: "owner" };
+    return { type: "image", ...entry }; // default legacy objects without a type to image
   });
 }
 
-function normalizeGalleryEntry(entry) {
-  // Backward compatible: old data may just be a plain URL string.
-  if (typeof entry === "string") {
-    const isVideo = /\.(mp4|webm|mov|m4v)(\?|$)/i.test(entry) || entry.includes("/video/upload/");
-    return { url: entry, type: isVideo ? "video" : "image" };
+function galleryTileMarkup(item, businessName) {
+  if (item.type === "video") {
+    return `
+      <div class="h-36 bg-black rounded-xl overflow-hidden shadow-inner relative">
+        <video src="${item.url}" class="w-full h-full object-cover" muted loop playsinline
+          onmouseover="this.play()" onmouseout="this.pause()"></video>
+        <span class="absolute bottom-1.5 right-1.5 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
+          <i data-lucide="play" class="w-3 h-3 inline"></i>
+        </span>
+      </div>`;
   }
-  return { url: entry.url, type: entry.type === "video" ? "video" : "image" };
+  return `
+    <div class="h-36 bg-gray-100 rounded-xl overflow-hidden shadow-inner">
+      <img src="${item.url}" alt="${businessName} showcase" class="w-full h-full object-cover" loading="lazy" />
+    </div>`;
 }
 
-function openLightbox(url, type) {
-  let overlay = document.getElementById("lightbox-overlay");
-  if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.id = "lightbox-overlay";
-    overlay.className = "lightbox-overlay";
-    overlay.innerHTML = `<div class="lightbox-inner"></div>`;
-    document.body.appendChild(overlay);
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) closeLightbox();
-    });
-  }
-  const inner = overlay.querySelector(".lightbox-inner");
-  inner.innerHTML =
-    type === "video"
-      ? `<video src="${url}" controls autoplay playsinline class="lightbox-media"></video>`
-      : `<img src="${url}" alt="Store showcase" class="lightbox-media" />`;
-  overlay.classList.add("open");
-  document.body.style.overflow = "hidden";
+function renderGallery(rawGallery, businessName) {
+  const gallerySection = document.getElementById("gallery-section") || document.getElementById("gallerySection");
+  const galleryGrid = document.getElementById("gallery-grid") || document.getElementById("showcaseGallery");
+  if (!gallerySection || !galleryGrid) return;
 
-  document.addEventListener("keydown", escCloseOnce);
-}
+  const gallery = normalizeGallery(rawGallery);
 
-function escCloseOnce(e) {
-  if (e.key === "Escape") closeLightbox();
-}
+  galleryGrid.innerHTML = gallery.length > 0
+    ? gallery.map(item => galleryTileMarkup(item, businessName)).join("")
+    : `<p class="col-span-full text-center text-sm text-slate-400 py-6">No photos or videos yet.</p>`;
 
-function closeLightbox() {
-  const overlay = document.getElementById("lightbox-overlay");
-  if (!overlay) return;
-  overlay.classList.remove("open");
-  overlay.querySelector(".lightbox-inner").innerHTML = "";
-  document.body.style.overflow = "";
-  document.removeEventListener("keydown", escCloseOnce);
+  // Gallery section stays visible (even when empty) so the staff
+  // upload widget below it is always reachable.
+  gallerySection.classList.remove("hidden");
+  refreshIcons();
 }
-window.closeLightbox = closeLightbox;
 
 /* =========================
-   LOAD CATALOG INVENTORY (REAL-TIME)
+   STAFF-GATED GALLERY UPLOAD
+   Anyone on the business's own team (a row in businessMembers) can
+   sign in right here and add photos/videos. The general public
+   cannot — only a quick login unlocks the uploader. Only the OWNER
+   can still change store settings or take the storefront offline
+   (that happens in storefront-settings.html, not here).
 ========================= */
-function listenToCatalog(businessId) {
-  const grid = document.getElementById("inventory-grid");
-  const countEl = document.getElementById("inventory-count");
-  if (!grid) return;
+function wireStaffGallery(businessId) {
+  const loginToggle = document.getElementById("staff-login-toggle");
+  const loginPanel = document.getElementById("staff-login-panel");
+  const emailInput = document.getElementById("staff-email");
+  const passwordInput = document.getElementById("staff-password");
+  const loginSubmitBtn = document.getElementById("staff-login-submit");
+  const loginStatus = document.getElementById("staff-login-status");
+  const uploadPanel = document.getElementById("staff-upload-panel");
+  const fileInput = document.getElementById("gallery-upload-input");
+  const uploadBtn = document.getElementById("btn-add-photo");
+  const uploadStatus = document.getElementById("gallery-upload-status");
+  const logoutBtn = document.getElementById("staff-logout-btn");
+  const staffNameLabel = document.getElementById("staff-name-label");
 
-  if (unsubInventory) unsubInventory();
+  if (!loginToggle || loginToggle.dataset.wired) return;
+  loginToggle.dataset.wired = "true";
 
-  const invRef = collection(db, "businesses", businessId, "inventory");
-  unsubInventory = onSnapshot(
-    invRef,
-    (snap) => {
-      if (snap.empty) {
-        grid.innerHTML = `<p class="col-span-full text-center text-slate-400 py-10">No equipment listed in the catalog yet.</p>`;
-        if (countEl) countEl.textContent = "0 items";
+  loginToggle.addEventListener("click", () => {
+    loginPanel.classList.toggle("hidden");
+  });
+
+  const auth = getAuth();
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      isStaffMember = false;
+      staffUser = null;
+      if (uploadPanel) uploadPanel.classList.add("hidden");
+      if (loginToggle) loginToggle.classList.remove("hidden");
+      return;
+    }
+
+    try {
+      const q = query(collection(db, "businessMembers"), where("uid", "==", user.uid));
+      const snap = await getDocs(q);
+      const isMember = snap.docs.some(d => d.data().businessId === businessId);
+
+      if (!isMember) {
+        if (loginStatus) loginStatus.textContent = "This account isn't part of this business's team.";
+        await signOut(auth);
         return;
       }
 
-      let itemCount = 0;
-      let itemsHtml = "";
+      isStaffMember = true;
+      staffUser = user;
+      if (loginPanel) loginPanel.classList.add("hidden");
+      if (loginToggle) loginToggle.classList.add("hidden");
+      if (uploadPanel) uploadPanel.classList.remove("hidden");
+      if (staffNameLabel) staffNameLabel.textContent = user.email;
+    } catch (err) {
+      console.error("Membership check failed:", err);
+      if (loginStatus) loginStatus.textContent = "Couldn't verify your account. Please try again.";
+    }
+  });
 
-      snap.forEach((docSnap) => {
-        itemCount++;
-        const item = docSnap.data();
-        const availableQty = Number(item.availableQuantity ?? item.quantity ?? 0);
-        const totalQty = Number(item.totalQuantity ?? item.quantity ?? availableQty);
-        const isAvailable = availableQty > 0;
+  if (loginSubmitBtn) {
+    loginSubmitBtn.addEventListener("click", async () => {
+      if (!emailInput.value || !passwordInput.value) {
+        if (loginStatus) loginStatus.textContent = "Enter your email and password.";
+        return;
+      }
+      loginSubmitBtn.disabled = true;
+      loginSubmitBtn.textContent = "Signing in...";
+      if (loginStatus) loginStatus.textContent = "";
+      try {
+        await signInWithEmailAndPassword(auth, emailInput.value.trim(), passwordInput.value);
+        // onAuthStateChanged above handles the rest
+      } catch (err) {
+        console.error("Staff sign-in failed:", err);
+        if (loginStatus) loginStatus.textContent = "Sign-in failed. Check your email and password.";
+      } finally {
+        loginSubmitBtn.disabled = false;
+        loginSubmitBtn.textContent = "Sign In";
+      }
+    });
+  }
 
-        itemsHtml += `
-          <div class="equipment-card ${isAvailable ? "is-available" : "is-booked"}">
-            <div class="equipment-card-body">
-              <div class="flex justify-between items-start gap-3 mb-1.5">
-                <h3 class="font-semibold text-slate-900 text-base leading-snug">${escapeHtml(item.name || "Unnamed Equipment")}</h3>
-                <span class="status-pill ${isAvailable ? "status-available" : "status-booked"}">
-                  ${isAvailable ? `${availableQty} left` : "Booked out"}
-                </span>
-              </div>
-              <p class="text-slate-400 text-xs">Total stock: ${totalQty}</p>
-            </div>
-            <div class="equipment-card-footer">
-              <div>
-                <span class="text-lg font-bold text-slate-900">₦${(Number(item.price) || 0).toLocaleString()}</span>
-                <span class="text-xs text-slate-400"> / day</span>
-              </div>
-              ${
-                waNumberGlobal
-                  ? `<a href="https://wa.me/${waNumberGlobal}?text=${encodeURIComponent(
-                      `Hi ${businessNameGlobal}, I'm interested in renting the ${item.name || "item"}`
-                    )}" target="_blank" rel="noopener noreferrer" class="equipment-inquire-btn">Inquire</a>`
-                  : ""
-              }
-            </div>
-          </div>`;
-      });
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => signOut(auth));
+  }
 
-      grid.innerHTML = itemsHtml;
-      if (countEl) countEl.textContent = `${itemCount} item${itemCount === 1 ? "" : "s"}`;
+  if (uploadBtn && fileInput && !uploadBtn.dataset.wired) {
+    uploadBtn.dataset.wired = "true";
+    uploadBtn.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file || !isStaffMember || !staffUser) return;
+
+      uploadBtn.disabled = true;
+      if (uploadStatus) uploadStatus.textContent = "Uploading...";
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, {
+          method: "POST",
+          body: formData
+        });
+        if (!res.ok) throw new Error("Cloudinary upload failed");
+        const result = await res.json();
+
+        const newEntry = {
+          id: result.public_id.replace(/\//g, "_"),
+          url: result.secure_url,
+          publicId: result.public_id,
+          resourceType: result.resource_type, // "image" | "video"
+          type: result.resource_type === "video" ? "video" : "image",
+          addedBy: staffUser.uid,
+          addedByEmail: staffUser.email,
+          addedAt: new Date().toISOString()
+        };
+
+        const businessRef = doc(db, "businesses", currentBusinessId);
+        await updateDoc(businessRef, {
+          "publicProfile.gallery": arrayUnion(newEntry)
+        });
+
+        // Queue a push notification for the owner. See SETUP-README.md
+        // for why this has to be picked up by a Cloud Function rather
+        // than calling OneSignal directly from here.
+        await addDoc(collection(db, "businesses", currentBusinessId, "notificationQueue"), {
+          type: "gallery_upload",
+          mediaType: newEntry.type,
+          imageUrl: newEntry.url,
+          addedByEmail: staffUser.email,
+          createdAt: serverTimestamp(),
+          processed: false
+        });
+
+        if (uploadStatus) uploadStatus.textContent = "Added — thank you!";
+      } catch (err) {
+        console.error("Gallery upload failed:", err);
+        if (uploadStatus) uploadStatus.textContent = "Upload failed. Please try again.";
+      } finally {
+        uploadBtn.disabled = false;
+        fileInput.value = "";
+        setTimeout(() => { if (uploadStatus) uploadStatus.textContent = ""; }, 4000);
+      }
+    });
+  }
+}
+
+/* =========================
+   LIVE CATALOG INVENTORY
+   watchCatalog() opens the listener and caches raw docs.
+   renderCatalogFromCache() does the actual drawing, and is also
+   called directly when the availability toggle flips, so the UI
+   updates instantly instead of waiting for stock to change.
+========================= */
+function watchCatalog(businessId) {
+  const invRef = collection(db, "businesses", businessId, "inventory");
+  return onSnapshot(
+    invRef,
+    (snap) => {
+      cachedInventoryDocs = snap.docs.map(d => d.data());
+      renderCatalogFromCache();
     },
     (err) => {
       console.error("Error loading catalog:", err);
-      grid.innerHTML = `<p class="col-span-full text-center text-red-500 py-6">Failed to load equipment catalog.</p>`;
+      const grid = document.getElementById("inventory-grid") || document.getElementById("catalogGrid");
+      if (grid) grid.innerHTML = `<p class="col-span-full text-center text-red-500 py-6">Failed to load equipment catalog.</p>`;
     }
   );
 }
 
-/* =========================
-   RATINGS & REVIEWS (built from scratch)
-========================= */
-function renderRatingSummary(businessData) {
-  const ratingCount = Number(businessData.ratingCount || 0);
-  const ratingSum = Number(businessData.ratingSum || 0);
-  const avg = ratingCount > 0 ? ratingSum / ratingCount : 0;
+function renderCatalogFromCache() {
+  const grid = document.getElementById("inventory-grid") || document.getElementById("catalogGrid");
+  const countEl = document.getElementById("inventory-count");
+  if (!grid) return;
 
-  const avgEl = document.getElementById("rating-average");
-  const countEl = document.getElementById("rating-count");
-  const starsEl = document.getElementById("rating-average-stars");
-
-  if (avgEl) avgEl.textContent = ratingCount > 0 ? avg.toFixed(1) : "—";
-  if (countEl) countEl.textContent = ratingCount === 0 ? "No reviews yet" : `${ratingCount} review${ratingCount === 1 ? "" : "s"}`;
-  if (starsEl) starsEl.innerHTML = starIconsHtml(avg);
-}
-
-function listenToReviews(businessId) {
-  const listEl = document.getElementById("reviews-list");
-  const distEl = document.getElementById("rating-distribution");
-  if (!listEl) return;
-
-  if (unsubReviews) unsubReviews();
-
-  const reviewsRef = collection(db, "businesses", businessId, "reviews");
-  const q = query(reviewsRef, orderBy("createdAt", "desc"), limit(25));
-
-  unsubReviews = onSnapshot(
-    q,
-    (snap) => {
-      if (snap.empty) {
-        listEl.innerHTML = `<p class="text-sm text-slate-400 py-4">Be the first to leave a review for this store.</p>`;
-        if (distEl) distEl.innerHTML = "";
-        return;
-      }
-
-      const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-      let rows = "";
-      snap.forEach((docSnap) => {
-        const r = docSnap.data();
-        const stars = Math.min(5, Math.max(1, Number(r.rating) || 0));
-        if (counts[stars] !== undefined) counts[stars]++;
-        const when = r.createdAt && r.createdAt.toDate ? r.createdAt.toDate() : null;
-        rows += `
-          <div class="review-row">
-            <div class="flex items-center justify-between gap-2 mb-1">
-              <span class="font-semibold text-sm text-slate-900">${escapeHtml(r.name || "Anonymous")}</span>
-              <span class="text-xs text-slate-400">${when ? when.toLocaleDateString() : ""}</span>
-            </div>
-            <div class="mb-1.5">${starIconsHtml(stars)}</div>
-            ${r.comment ? `<p class="text-sm text-slate-600 leading-relaxed">${escapeHtml(r.comment)}</p>` : ""}
-          </div>`;
-      });
-      listEl.innerHTML = rows;
-
-      if (distEl) {
-        const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
-        distEl.innerHTML = [5, 4, 3, 2, 1]
-          .map((star) => {
-            const pct = Math.round((counts[star] / total) * 100);
-            return `
-              <div class="dist-row">
-                <span class="dist-label">${star}★</span>
-                <div class="dist-track"><div class="dist-fill" style="width:${pct}%"></div></div>
-                <span class="dist-count">${counts[star]}</span>
-              </div>`;
-          })
-          .join("");
-      }
-
-      refreshIcons();
-    },
-    (err) => {
-      console.error("Error loading reviews:", err);
-      listEl.innerHTML = `<p class="text-sm text-red-500 py-4">Failed to load reviews.</p>`;
-    }
-  );
-}
-
-function starIconsHtml(value) {
-  const rounded = Math.round(value);
-  let html = "";
-  for (let i = 1; i <= 5; i++) {
-    html += `<i data-lucide="star" class="w-4 h-4 inline-block ${i <= rounded ? "star-filled" : "star-empty"}"></i>`;
+  if (cachedInventoryDocs.length === 0) {
+    grid.innerHTML = `<p class="col-span-full text-center text-gray-500 py-8">No equipment listed in catalog yet.</p>`;
+    if (countEl) countEl.textContent = "0 items";
+    return;
   }
-  return html;
-}
 
-function wireReviewForm(businessId) {
-  const form = document.getElementById("review-form");
-  if (!form) return;
+  let itemsHtml = "";
 
-  const nameInput = document.getElementById("review-name");
-  const commentInput = document.getElementById("review-comment");
-  const stars = Array.from(document.querySelectorAll(".rating-input-star"));
-  const submitBtn = document.getElementById("review-submit");
-  let selectedRating = 0;
+  cachedInventoryDocs.forEach(item => {
+    const availableQty = Number(item.availableQuantity ?? item.quantity ?? 0);
+    const totalQty = Number(item.totalQuantity ?? item.quantity ?? availableQty);
+    const isAvailable = availableQty > 0;
 
-  stars.forEach((star) => {
-    star.addEventListener("click", () => {
-      selectedRating = Number(star.dataset.value);
-      stars.forEach((s) => s.classList.toggle("star-filled", Number(s.dataset.value) <= selectedRating));
-      stars.forEach((s) => s.classList.toggle("star-empty", Number(s.dataset.value) > selectedRating));
-    });
+    const availabilityBadge = showAvailabilityGlobal
+      ? `<span class="text-xs px-2.5 py-1 rounded-full font-medium ${isAvailable ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
+           ${isAvailable ? `${availableQty} available` : 'Booked Out'}
+         </span>`
+      : "";
+    const stockLine = showAvailabilityGlobal
+      ? `<p class="text-gray-500 text-xs mb-4">Total Stock: ${totalQty}</p>`
+      : "";
+
+    itemsHtml += `
+      <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between hover:shadow-md hover:-translate-y-0.5 transition">
+        <div>
+          <div class="flex justify-between items-start mb-2">
+            <h3 class="font-semibold text-gray-900 text-lg">${item.name || "Unnamed Equipment"}</h3>
+            ${availabilityBadge}
+          </div>
+          ${stockLine}
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-gray-50">
+          <div>
+            <span class="text-lg font-bold text-gray-900">₦${(Number(item.price) || 0).toLocaleString()}</span>
+            <span class="text-xs text-gray-400"> / day</span>
+          </div>
+          ${waNumberGlobal ? `
+            <a href="https://wa.me/${waNumberGlobal}?text=${encodeURIComponent(`Hi ${businessNameGlobal}, I'm interested in renting the ${item.name || "item"}`)}"
+               target="_blank" rel="noopener noreferrer"
+               class="text-xs font-semibold bg-gray-900 text-white px-3.5 py-2 rounded-lg hover:bg-gray-800 transition">
+              Inquire
+            </a>
+          ` : ''}
+        </div>
+      </div>
+    `;
   });
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (selectedRating < 1) {
-      alert("Please select a star rating before submitting.");
-      return;
-    }
-    const name = (nameInput?.value || "").trim() || "Anonymous";
-    const comment = (commentInput?.value || "").trim();
-
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Submitting...";
-
-    try {
-      await addDoc(collection(db, "businesses", businessId, "reviews"), {
-        name,
-        rating: selectedRating,
-        comment,
-        createdAt: serverTimestamp()
-      });
-
-      // Atomically keep the aggregate rating on the business doc in sync.
-      // (A Cloud Function trigger on review create/delete is the more
-      // robust long-term approach — same pattern you're using for the
-      // sitemap on googleIndexed — but this transaction keeps things
-      // correct in the meantime.)
-      const businessRef = doc(db, "businesses", businessId);
-      await runTransaction(db, async (tx) => {
-        const snap = await tx.get(businessRef);
-        const data = snap.data() || {};
-        const newSum = Number(data.ratingSum || 0) + selectedRating;
-        const newCount = Number(data.ratingCount || 0) + 1;
-        tx.update(businessRef, { ratingSum: newSum, ratingCount: newCount });
-      });
-
-      form.reset();
-      selectedRating = 0;
-      stars.forEach((s) => {
-        s.classList.remove("star-filled");
-        s.classList.add("star-empty");
-      });
-      submitBtn.textContent = "Review submitted ✓";
-      setTimeout(() => {
-        submitBtn.textContent = "Submit review";
-        submitBtn.disabled = false;
-      }, 1800);
-    } catch (err) {
-      console.error("Review submit error:", err);
-      alert("Failed to submit review: " + err.message);
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Submit review";
-    }
-  });
-}
-
-function escapeHtml(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
+  grid.innerHTML = itemsHtml;
+  if (countEl) countEl.textContent = `${cachedInventoryDocs.length} item${cachedInventoryDocs.length === 1 ? '' : 's'}`;
 }
 
 /* =========================
@@ -519,14 +582,10 @@ function showError(title, message) {
   if (loader) loader.classList.add("hidden");
   if (storefrontContent) storefrontContent.classList.add("hidden");
 
-  if (unsubBusiness) unsubBusiness();
-  if (unsubInventory) unsubInventory();
-  if (unsubReviews) unsubReviews();
-
   if (errorView) {
     errorView.classList.remove("hidden");
-    const titleEl = errorView.querySelector("h2");
-    const msgEl = errorView.querySelector("p");
+    const titleEl = document.getElementById("errorTitle") || errorView.querySelector("h2");
+    const msgEl = document.getElementById("errorMessage") || errorView.querySelector("p");
     if (titleEl) titleEl.textContent = title;
     if (msgEl) msgEl.textContent = message;
   }
