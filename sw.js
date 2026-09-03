@@ -1,3 +1,6 @@
+
+importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+
 // RentBook Service Worker - Production Level PWA
 const CACHE_NAME = 'Tracknrent-v1.0.4';
 const DYNAMIC_CACHE = 'Tracknrent-dynamic-v1';
