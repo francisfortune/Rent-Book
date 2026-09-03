@@ -2,8 +2,8 @@
 // Add this script to all main pages for PWA functionality
 
 // Change scope from '/' to './' or '/Rent-Book-main/'
-navigator.serviceWorker.register('/Rent-Book-main/sw.js', { 
-  scope: '/Rent-Book-main/' 
+navigator.serviceWorker.register('/sw.js', { 
+  scope: '/' 
 });
 
 
@@ -43,6 +43,16 @@ navigator.serviceWorker.register('/Rent-Book-main/sw.js', {
             console.log('[PWA] New service worker activated, page may need refresh');
         });
     }
+
+// BEFORE (Failing with 404):
+// navigator.serviceWorker.register('/Rent-Book-main/sw.js', { scope: '/Rent-Book-main/' });
+
+// AFTER (Correct for Vercel root deployment):
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js', { scope: '/' })
+    .then(reg => console.log('[PWA] Service Worker registered:', reg))
+    .catch(err => console.error('[PWA] Service Worker registration failed:', err));
+}
 
     // Show update notification
 function showUpdateNotification() {
