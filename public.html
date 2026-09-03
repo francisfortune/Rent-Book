@@ -1183,8 +1183,6 @@
             </div>
           </div>
 
-          <div id="roleNotice"></div>
-
           <label>
             Choose your shop's link
             <span class="text-xs text-gray-500 font-normal block mb-1">Type your shop name here to create your unique
@@ -1222,18 +1220,55 @@
             <input id="publicAddress" type="text" placeholder="e.g. No 12. Ogui Road, Enugu">
           </label>
 
-          <h4 class="font-bold text-purple-700 text-sm mt-6 mb-3 border-b pb-2">🖼️ Upload Photos &amp; Videos of Your Items</h4>
+          <h4 class="font-bold text-purple-700 text-sm mt-6 mb-3 border-b pb-2">📍 Live Map Pin</h4>
+          <p class="text-xs text-gray-500 mb-3">Drop a pin so your storefront page shows a real, live map — not just
+            typed text.</p>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-gray-500">Leave blank to fall back to searching your address above.</span>
+            <button type="button" id="btnUseMyLocation" class="text-xs font-semibold text-purple-700 hover:underline">Use My Current Location</button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label>
+              Latitude
+              <input id="publicLatitude" type="number" step="0.000001" placeholder="e.g. 6.524379">
+            </label>
+            <label>
+              Longitude
+              <input id="publicLongitude" type="number" step="0.000001" placeholder="e.g. 3.379206">
+            </label>
+          </div>
+
+          <h4 class="font-bold text-purple-700 text-sm mt-6 mb-3 border-b pb-2">⚙️ What Customers See</h4>
+
+          <div class="flex items-center gap-3 p-3 bg-purple-50/50 rounded-xl mb-3 border border-purple-100">
+            <input type="checkbox" id="showInventoryToggle" class="w-4 h-4 accent-purple-700" checked>
+            <div>
+              <label for="showInventoryToggle" class="font-bold text-gray-800 m-0 text-sm">Show Inventory Catalog</label>
+              <span class="text-xs text-gray-500 block">Turn off to hide your equipment list entirely from visitors.</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 p-3 bg-purple-50/50 rounded-xl mb-4 border border-purple-100">
+            <input type="checkbox" id="showAvailabilityToggle" class="w-4 h-4 accent-purple-700" checked>
+            <div>
+              <label for="showAvailabilityToggle" class="font-bold text-gray-800 m-0 text-sm">Show Live Availability</label>
+              <span class="text-xs text-gray-500 block">Turn off to show only item names & prices, without stock counts.</span>
+            </div>
+          </div>
+
+          <h4 class="font-bold text-purple-700 text-sm mt-6 mb-3 border-b pb-2">🖼️ Photos & Videos of Your Items</h4>
           <p class="text-xs text-gray-500 mb-3">Add photos or short videos of your canopies, chairs, decorations, or
-            event setups to attract customers. Any team member can add to this gallery.</p>
+            event setups to attract customers. Your team can also add these straight from your live store page.</p>
 
           <div
-            class="border-2 border-dashed border-purple-300 rounded-xl p-6 text-center bg-purple-50/50 hover:bg-purple-50 transition relative cursor-pointer mb-4">
-            <input type="file" id="galleryUploadInput" multiple accept="image/*,video/*"
+            class="border-2 border-dashed border-purple-300 rounded-xl p-6 text-center bg-purple-50/50 hover:bg-purple-50 transition relative cursor-pointer mb-2">
+            <input type="file" id="galleryUploadInput" accept="image/*,video/*"
               class="absolute inset-0 opacity-0 cursor-pointer">
             <span class="material-symbols-outlined" style="font-size: 2.5rem; color: purple;">cloud_upload</span>
-            <p class="text-sm font-semibold text-purple-900 mt-2">Tap here to choose and upload photos or videos</p>
-            <p class="text-xs text-gray-400 mt-1">Select one or more files from your phone</p>
+            <p class="text-sm font-semibold text-purple-900 mt-2">Tap here to choose a photo or video</p>
+            <p class="text-xs text-gray-400 mt-1">One at a time — add more whenever you like</p>
           </div>
+          <p id="galleryUploadStatus" class="text-xs text-emerald-600 font-medium mb-4"></p>
 
           <div id="imagePreviewGrid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 mb-6">
           </div>
