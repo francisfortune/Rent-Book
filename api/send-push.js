@@ -5,12 +5,11 @@ export default async function handler(req, res) {
   }
 
   const { message, url } = req.body;
-
   const appId = process.env.ONESIGNAL_APP_ID;
   const apiKey = process.env.ONESIGNAL_REST_API_KEY;
 
   if (!appId || !apiKey) {
-    return res.status(500).json({ error: 'Missing OneSignal environment variables' });
+    return res.status(500).json({ error: 'Missing environment variables' });
   }
 
   try {
@@ -18,7 +17,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Key ${apiKey}`
+        'Authorization': `Key ${apiKey.trim()}`
       },
       body: JSON.stringify({
         app_id: appId,
