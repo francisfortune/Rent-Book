@@ -12,6 +12,17 @@ const loader = document.getElementById("loader");
 const errorView = document.getElementById("error-state") || document.getElementById("errorView");
 const storefrontContent = document.getElementById("storefront") || document.getElementById("storefrontContent");
 
+// Shared across renderProfile() and loadCatalog() so per-item "Inquire" links
+// can reuse the same normalized WhatsApp number and business name.
+let waNumberGlobal = "";
+let businessNameGlobal = "";
+
+function refreshIcons() {
+  if (window.lucide && typeof window.lucide.createIcons === "function") {
+    window.lucide.createIcons();
+  }
+}
+
 /* =========================
    PARSE SLUG FROM PATH / QUERY
 ========================= */
@@ -21,7 +32,7 @@ function getSlug() {
   // 1. Check query parameter ?slug=my-store
   if (urlParams.has("slug")) {
     const querySlug = urlParams.get("slug").trim().toLowerCase();
-    if (querySlug && querySlug !== "public.html" && querySlug !== "public-profile.html") {
+    if (querySlug && querySlug !== "p.html" && querySlug !== "public-profile.html") {
       return querySlug;
     }
   }
@@ -40,7 +51,7 @@ function getSlug() {
   const segments = path.split("/").filter(Boolean);
   if (segments.length > 0) {
     const lastSegment = decodeURIComponent(segments[segments.length - 1]).trim().toLowerCase();
-    const systemPages = ["public.html", "public-profile.html", "index.html", "pwa.html", "add.html"];
+    const systemPages = ["public.html", "public-profile.html", "profile.html", "index.html", "pwa.html", "add.html"];
     if (!systemPages.includes(lastSegment)) {
       return lastSegment;
     }
@@ -112,6 +123,7 @@ export async function initViewer() {
     // Show storefront content
     if (loader) loader.classList.add("hidden");
     if (storefrontContent) storefrontContent.classList.remove("hidden");
+    refreshIcons();
 
   } catch (err) {
     console.error("Storefront initialization error:", err);
@@ -162,10 +174,13 @@ function renderProfile(name, profile) {
     if (cleanPhone) {
       let waNumber = cleanPhone;
       if (waNumber.startsWith("0")) waNumber = "234" + waNumber.slice(1);
+      waNumberGlobal = waNumber;
+      businessNameGlobal = name;
       const waMsg = encodeURIComponent(`Hello ${name}, I am viewing your online rental catalog and would like to inquire about renting equipment.`);
       btnWa.href = `https://wa.me/${waNumber}?text=${waMsg}`;
       btnWa.classList.remove("hidden");
     } else {
+      waNumberGlobal = "";
       btnWa.classList.add("hidden");
     }
   }
@@ -234,6 +249,13 @@ async function loadCatalog(businessId) {
               <span class="text-lg font-bold text-gray-900">₦${(Number(item.price) || 0).toLocaleString()}</span>
               <span class="text-xs text-gray-400"> / day</span>
             </div>
+            ${waNumberGlobal ? `
+              <a href="https://wa.me/${waNumberGlobal}?text=${encodeURIComponent(`Hi ${businessNameGlobal}, I'm interested in renting the ${item.name || "item"}`)}"
+                 target="_blank" rel="noopener noreferrer"
+                 class="text-xs font-semibold bg-gray-900 text-white px-3.5 py-2 rounded-lg hover:bg-gray-800 transition">
+                Inquire
+              </a>
+            ` : ''}
           </div>
         </div>
       `;
@@ -262,6 +284,7 @@ function showError(title, message) {
     if (titleEl) titleEl.textContent = title;
     if (msgEl) msgEl.textContent = message;
   }
+  refreshIcons();
 }
 
 // Auto-run on script execution
