@@ -97,3 +97,18 @@ form.addEventListener("submit", async (e) => {
     alert(err.message);
   }
 });
+
+
+function togglePassword(inputId, iconElement) {
+    const passwordInput = document.getElementById(inputId);
+    if (!passwordInput) return;
+
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text'; // Show password text
+        iconElement.classList.replace('fa-eye-slash', 'fa-eye'); // Switch to open eye icon
+    } else {
+        passwordInput.type = 'password'; // Hide password text
+        iconElement.classList.replace('fa-eye', 'fa-eye-slash'); // Switch back to slash icon
+    }
+}
+

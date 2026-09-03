@@ -2,20 +2,30 @@ import { db } from "./firebase.js";
 import {
   doc,
   getDoc,
+  onSnapshot,
   collection,
   getDocs,
   query,
-  where
+  where,
+  addDoc,
+  runTransaction,
+  serverTimestamp,
+  orderBy,
+  limit
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const loader = document.getElementById("loader");
-const errorView = document.getElementById("error-state") || document.getElementById("errorView");
-const storefrontContent = document.getElementById("storefront") || document.getElementById("storefrontContent");
+const errorView = document.getElementById("error-state");
+const storefrontContent = document.getElementById("storefront");
 
-// Shared across renderProfile() and loadCatalog() so per-item "Inquire" links
-// can reuse the same normalized WhatsApp number and business name.
+// Shared across render functions so per-item "Inquire" links reuse the
+// same normalized WhatsApp number and business name.
 let waNumberGlobal = "";
 let businessNameGlobal = "";
+let currentBusinessId = null;
+let unsubBusiness = null;
+let unsubInventory = null;
+let unsubReviews = null;
 
 function refreshIcons() {
   if (window.lucide && typeof window.lucide.createIcons === "function") {
@@ -28,8 +38,7 @@ function refreshIcons() {
 ========================= */
 function getSlug() {
   const urlParams = new URLSearchParams(window.location.search);
-  
-  // 1. Check query parameter ?slug=my-store
+
   if (urlParams.has("slug")) {
     const querySlug = urlParams.get("slug").trim().toLowerCase();
     if (querySlug && querySlug !== "p.html" && querySlug !== "public-profile.html") {
@@ -37,7 +46,6 @@ function getSlug() {
     }
   }
 
-  // 2. Check path pattern e.g., /p/my-store
   const path = window.location.pathname;
   if (path.includes("/p/")) {
     const rawSlug = path.split("/p/")[1];
@@ -47,7 +55,6 @@ function getSlug() {
     }
   }
 
-  // 3. Fallback for path segments (excluding system pages)
   const segments = path.split("/").filter(Boolean);
   if (segments.length > 0) {
     const lastSegment = decodeURIComponent(segments[segments.length - 1]).trim().toLowerCase();
@@ -61,7 +68,7 @@ function getSlug() {
 }
 
 /* =========================
-   INITIALIZE PUBLIC PROFILE
+   INITIALIZE PUBLIC PROFILE (REAL-TIME)
 ========================= */
 export async function initViewer() {
   const slug = getSlug();
@@ -74,23 +81,15 @@ export async function initViewer() {
   try {
     let businessId = null;
 
-    // Stage 1: Try resolving via publicSlugs collection
     const slugRef = doc(db, "publicSlugs", slug);
     const slugSnap = await getDoc(slugRef);
 
     if (slugSnap.exists()) {
       businessId = slugSnap.data().businessId;
     } else {
-      // Stage 2: Direct query on businesses collection
-      const q = query(
-        collection(db, "businesses"),
-        where("publicProfile.slug", "==", slug)
-      );
+      const q = query(collection(db, "businesses"), where("publicProfile.slug", "==", slug));
       const querySnap = await getDocs(q);
-
-      if (!querySnap.empty) {
-        businessId = querySnap.docs[0].id;
-      }
+      if (!querySnap.empty) businessId = querySnap.docs[0].id;
     }
 
     if (!businessId) {
@@ -98,33 +97,42 @@ export async function initViewer() {
       return;
     }
 
-    // Load business details
+    currentBusinessId = businessId;
+
+    // Live listener on the business doc — any change the owner saves
+    // (bio, contact info, toggle, gallery) reflects here instantly.
     const businessRef = doc(db, "businesses", businessId);
-    const businessSnap = await getDoc(businessRef);
+    unsubBusiness = onSnapshot(
+      businessRef,
+      (snap) => {
+        if (!snap.exists()) {
+          showError("Storefront Unavailable", "The business data associated with this store could not be found.");
+          return;
+        }
+        const businessData = snap.data();
+        const profile = businessData.publicProfile || {};
 
-    if (!businessSnap.exists()) {
-      showError("Storefront Unavailable", "The business data associated with this store could not be found.");
-      return;
-    }
+        if (profile.enabled === false) {
+          showError("Storefront Offline", "This storefront has been disabled by the business owner.");
+          return;
+        }
 
-    const businessData = businessSnap.data();
-    const profile = businessData.publicProfile || {};
+        renderProfile(businessData.name || "Equipment Rentals", profile, businessData);
 
-    // Check if explicitly disabled (allow undefined/null to default to true)
-    if (profile.enabled === false) {
-      showError("Storefront Offline", "This storefront has been disabled by the business owner.");
-      return;
-    }
+        if (loader) loader.classList.add("hidden");
+        if (storefrontContent) storefrontContent.classList.remove("hidden");
+        if (errorView) errorView.classList.add("hidden");
+        refreshIcons();
+      },
+      (err) => {
+        console.error("Business listener error:", err);
+        showError("Connection Error", "Failed to retrieve store details. Please check your network connection.");
+      }
+    );
 
-    // Render Profile Info & Inventory
-    renderProfile(businessData.name || "Equipment Rentals", profile);
-    await loadCatalog(businessId);
-
-    // Show storefront content
-    if (loader) loader.classList.add("hidden");
-    if (storefrontContent) storefrontContent.classList.remove("hidden");
-    refreshIcons();
-
+    listenToCatalog(businessId);
+    listenToReviews(businessId);
+    wireReviewForm(businessId);
   } catch (err) {
     console.error("Storefront initialization error:", err);
     showError("Connection Error", "Failed to retrieve store details. Please check your network connection.");
@@ -134,20 +142,20 @@ export async function initViewer() {
 /* =========================
    RENDER PROFILE DATA
 ========================= */
-function renderProfile(name, profile) {
+function renderProfile(name, profile, businessData) {
   document.title = `${name} | Rental Catalog`;
+  businessNameGlobal = name;
 
-  const nameEl = document.getElementById("store-name") || document.getElementById("displayBusinessName");
+  const nameEl = document.getElementById("store-name");
   if (nameEl) nameEl.textContent = name;
 
-  const bioEl = document.getElementById("store-bio") || document.getElementById("displayBusinessBio");
+  const bioEl = document.getElementById("store-bio");
   if (bioEl) {
-    bioEl.textContent = profile.bio || "Welcome to our rental catalog. Browse available items and contact us directly to place a order.";
+    bioEl.textContent = profile.bio || "Welcome to our rental catalog. Browse available items and reach out to place an order.";
   }
 
-  // Address
-  const addrEl = document.getElementById("store-address") || document.getElementById("addressText");
-  const addrContainer = document.getElementById("address-container") || document.getElementById("contactAddress");
+  const addrEl = document.getElementById("store-address");
+  const addrContainer = document.getElementById("address-container");
   if (profile.address) {
     if (addrEl) addrEl.textContent = profile.address;
     if (addrContainer) addrContainer.classList.remove("hidden");
@@ -155,11 +163,10 @@ function renderProfile(name, profile) {
     addrContainer.classList.add("hidden");
   }
 
-  // Phone & WhatsApp Contact
   const rawPhone = profile.phone || profile.whatsapp || "";
   const cleanPhone = rawPhone.replace(/\D/g, "");
 
-  const btnPhone = document.getElementById("btn-phone") || document.getElementById("contactPhone");
+  const btnPhone = document.getElementById("btn-phone");
   if (btnPhone) {
     if (cleanPhone) {
       btnPhone.href = `tel:${cleanPhone}`;
@@ -169,13 +176,12 @@ function renderProfile(name, profile) {
     }
   }
 
-  const btnWa = document.getElementById("btn-whatsapp") || document.getElementById("contactWhatsapp");
+  const btnWa = document.getElementById("btn-whatsapp");
   if (btnWa) {
     if (cleanPhone) {
       let waNumber = cleanPhone;
       if (waNumber.startsWith("0")) waNumber = "234" + waNumber.slice(1);
       waNumberGlobal = waNumber;
-      businessNameGlobal = name;
       const waMsg = encodeURIComponent(`Hello ${name}, I am viewing your online rental catalog and would like to inquire about renting equipment.`);
       btnWa.href = `https://wa.me/${waNumber}?text=${waMsg}`;
       btnWa.classList.remove("hidden");
@@ -185,89 +191,325 @@ function renderProfile(name, profile) {
     }
   }
 
-  // Gallery
-  const gallerySection = document.getElementById("gallery-section") || document.getElementById("gallerySection");
-  const galleryGrid = document.getElementById("gallery-grid") || document.getElementById("showcaseGallery");
-  if (gallerySection && galleryGrid) {
-    if (profile.gallery && profile.gallery.length > 0) {
-      galleryGrid.innerHTML = profile.gallery.map(url => `
-        <div class="h-36 bg-gray-100 rounded-xl overflow-hidden shadow-inner">
-          <img src="${url}" alt="Store Showcase" class="w-full h-full object-cover" loading="lazy" />
-        </div>
-      `).join("");
-      gallerySection.classList.remove("hidden");
-    } else {
-      gallerySection.classList.add("hidden");
-    }
-  }
+  renderGallery(profile.gallery || []);
+  renderRatingSummary(businessData);
 }
 
 /* =========================
-   LOAD CATALOG INVENTORY
+   GALLERY — IMAGES + VIDEO (Cloudinary-aware)
 ========================= */
-async function loadCatalog(businessId) {
-  const grid = document.getElementById("inventory-grid") || document.getElementById("catalogGrid");
+function renderGallery(gallery) {
+  const gallerySection = document.getElementById("gallery-section");
+  const galleryGrid = document.getElementById("gallery-grid");
+  if (!gallerySection || !galleryGrid) return;
+
+  if (!gallery || gallery.length === 0) {
+    gallerySection.classList.add("hidden");
+    return;
+  }
+
+  galleryGrid.innerHTML = gallery
+    .map((entry, i) => {
+      const item = normalizeGalleryEntry(entry);
+      if (item.type === "video") {
+        return `
+          <button type="button" class="gallery-tile" data-index="${i}" data-type="video" data-url="${item.url}" aria-label="Play video">
+            <video src="${item.url}#t=0.1" muted playsinline preload="metadata"></video>
+            <span class="gallery-play"><i data-lucide="play" class="w-5 h-5"></i></span>
+          </button>`;
+      }
+      return `
+        <button type="button" class="gallery-tile" data-index="${i}" data-type="image" data-url="${item.url}" aria-label="View photo">
+          <img src="${item.url}" alt="Store showcase" loading="lazy" />
+        </button>`;
+    })
+    .join("");
+
+  gallerySection.classList.remove("hidden");
+  refreshIcons();
+
+  galleryGrid.querySelectorAll(".gallery-tile").forEach((tile) => {
+    tile.addEventListener("click", () => openLightbox(tile.dataset.url, tile.dataset.type));
+  });
+}
+
+function normalizeGalleryEntry(entry) {
+  // Backward compatible: old data may just be a plain URL string.
+  if (typeof entry === "string") {
+    const isVideo = /\.(mp4|webm|mov|m4v)(\?|$)/i.test(entry) || entry.includes("/video/upload/");
+    return { url: entry, type: isVideo ? "video" : "image" };
+  }
+  return { url: entry.url, type: entry.type === "video" ? "video" : "image" };
+}
+
+function openLightbox(url, type) {
+  let overlay = document.getElementById("lightbox-overlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "lightbox-overlay";
+    overlay.className = "lightbox-overlay";
+    overlay.innerHTML = `<div class="lightbox-inner"></div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeLightbox();
+    });
+  }
+  const inner = overlay.querySelector(".lightbox-inner");
+  inner.innerHTML =
+    type === "video"
+      ? `<video src="${url}" controls autoplay playsinline class="lightbox-media"></video>`
+      : `<img src="${url}" alt="Store showcase" class="lightbox-media" />`;
+  overlay.classList.add("open");
+  document.body.style.overflow = "hidden";
+
+  document.addEventListener("keydown", escCloseOnce);
+}
+
+function escCloseOnce(e) {
+  if (e.key === "Escape") closeLightbox();
+}
+
+function closeLightbox() {
+  const overlay = document.getElementById("lightbox-overlay");
+  if (!overlay) return;
+  overlay.classList.remove("open");
+  overlay.querySelector(".lightbox-inner").innerHTML = "";
+  document.body.style.overflow = "";
+  document.removeEventListener("keydown", escCloseOnce);
+}
+window.closeLightbox = closeLightbox;
+
+/* =========================
+   LOAD CATALOG INVENTORY (REAL-TIME)
+========================= */
+function listenToCatalog(businessId) {
+  const grid = document.getElementById("inventory-grid");
   const countEl = document.getElementById("inventory-count");
   if (!grid) return;
 
-  try {
-    const invRef = collection(db, "businesses", businessId, "inventory");
-    const snap = await getDocs(invRef);
+  if (unsubInventory) unsubInventory();
 
-    grid.innerHTML = "";
+  const invRef = collection(db, "businesses", businessId, "inventory");
+  unsubInventory = onSnapshot(
+    invRef,
+    (snap) => {
+      if (snap.empty) {
+        grid.innerHTML = `<p class="col-span-full text-center text-slate-400 py-10">No equipment listed in the catalog yet.</p>`;
+        if (countEl) countEl.textContent = "0 items";
+        return;
+      }
 
-    if (snap.empty) {
-      grid.innerHTML = `<p class="col-span-full text-center text-gray-500 py-8">No equipment listed in catalog yet.</p>`;
-      if (countEl) countEl.textContent = "0 items";
+      let itemCount = 0;
+      let itemsHtml = "";
+
+      snap.forEach((docSnap) => {
+        itemCount++;
+        const item = docSnap.data();
+        const availableQty = Number(item.availableQuantity ?? item.quantity ?? 0);
+        const totalQty = Number(item.totalQuantity ?? item.quantity ?? availableQty);
+        const isAvailable = availableQty > 0;
+
+        itemsHtml += `
+          <div class="equipment-card ${isAvailable ? "is-available" : "is-booked"}">
+            <div class="equipment-card-body">
+              <div class="flex justify-between items-start gap-3 mb-1.5">
+                <h3 class="font-semibold text-slate-900 text-base leading-snug">${escapeHtml(item.name || "Unnamed Equipment")}</h3>
+                <span class="status-pill ${isAvailable ? "status-available" : "status-booked"}">
+                  ${isAvailable ? `${availableQty} left` : "Booked out"}
+                </span>
+              </div>
+              <p class="text-slate-400 text-xs">Total stock: ${totalQty}</p>
+            </div>
+            <div class="equipment-card-footer">
+              <div>
+                <span class="text-lg font-bold text-slate-900">₦${(Number(item.price) || 0).toLocaleString()}</span>
+                <span class="text-xs text-slate-400"> / day</span>
+              </div>
+              ${
+                waNumberGlobal
+                  ? `<a href="https://wa.me/${waNumberGlobal}?text=${encodeURIComponent(
+                      `Hi ${businessNameGlobal}, I'm interested in renting the ${item.name || "item"}`
+                    )}" target="_blank" rel="noopener noreferrer" class="equipment-inquire-btn">Inquire</a>`
+                  : ""
+              }
+            </div>
+          </div>`;
+      });
+
+      grid.innerHTML = itemsHtml;
+      if (countEl) countEl.textContent = `${itemCount} item${itemCount === 1 ? "" : "s"}`;
+    },
+    (err) => {
+      console.error("Error loading catalog:", err);
+      grid.innerHTML = `<p class="col-span-full text-center text-red-500 py-6">Failed to load equipment catalog.</p>`;
+    }
+  );
+}
+
+/* =========================
+   RATINGS & REVIEWS (built from scratch)
+========================= */
+function renderRatingSummary(businessData) {
+  const ratingCount = Number(businessData.ratingCount || 0);
+  const ratingSum = Number(businessData.ratingSum || 0);
+  const avg = ratingCount > 0 ? ratingSum / ratingCount : 0;
+
+  const avgEl = document.getElementById("rating-average");
+  const countEl = document.getElementById("rating-count");
+  const starsEl = document.getElementById("rating-average-stars");
+
+  if (avgEl) avgEl.textContent = ratingCount > 0 ? avg.toFixed(1) : "—";
+  if (countEl) countEl.textContent = ratingCount === 0 ? "No reviews yet" : `${ratingCount} review${ratingCount === 1 ? "" : "s"}`;
+  if (starsEl) starsEl.innerHTML = starIconsHtml(avg);
+}
+
+function listenToReviews(businessId) {
+  const listEl = document.getElementById("reviews-list");
+  const distEl = document.getElementById("rating-distribution");
+  if (!listEl) return;
+
+  if (unsubReviews) unsubReviews();
+
+  const reviewsRef = collection(db, "businesses", businessId, "reviews");
+  const q = query(reviewsRef, orderBy("createdAt", "desc"), limit(25));
+
+  unsubReviews = onSnapshot(
+    q,
+    (snap) => {
+      if (snap.empty) {
+        listEl.innerHTML = `<p class="text-sm text-slate-400 py-4">Be the first to leave a review for this store.</p>`;
+        if (distEl) distEl.innerHTML = "";
+        return;
+      }
+
+      const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+      let rows = "";
+      snap.forEach((docSnap) => {
+        const r = docSnap.data();
+        const stars = Math.min(5, Math.max(1, Number(r.rating) || 0));
+        if (counts[stars] !== undefined) counts[stars]++;
+        const when = r.createdAt && r.createdAt.toDate ? r.createdAt.toDate() : null;
+        rows += `
+          <div class="review-row">
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <span class="font-semibold text-sm text-slate-900">${escapeHtml(r.name || "Anonymous")}</span>
+              <span class="text-xs text-slate-400">${when ? when.toLocaleDateString() : ""}</span>
+            </div>
+            <div class="mb-1.5">${starIconsHtml(stars)}</div>
+            ${r.comment ? `<p class="text-sm text-slate-600 leading-relaxed">${escapeHtml(r.comment)}</p>` : ""}
+          </div>`;
+      });
+      listEl.innerHTML = rows;
+
+      if (distEl) {
+        const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+        distEl.innerHTML = [5, 4, 3, 2, 1]
+          .map((star) => {
+            const pct = Math.round((counts[star] / total) * 100);
+            return `
+              <div class="dist-row">
+                <span class="dist-label">${star}★</span>
+                <div class="dist-track"><div class="dist-fill" style="width:${pct}%"></div></div>
+                <span class="dist-count">${counts[star]}</span>
+              </div>`;
+          })
+          .join("");
+      }
+
+      refreshIcons();
+    },
+    (err) => {
+      console.error("Error loading reviews:", err);
+      listEl.innerHTML = `<p class="text-sm text-red-500 py-4">Failed to load reviews.</p>`;
+    }
+  );
+}
+
+function starIconsHtml(value) {
+  const rounded = Math.round(value);
+  let html = "";
+  for (let i = 1; i <= 5; i++) {
+    html += `<i data-lucide="star" class="w-4 h-4 inline-block ${i <= rounded ? "star-filled" : "star-empty"}"></i>`;
+  }
+  return html;
+}
+
+function wireReviewForm(businessId) {
+  const form = document.getElementById("review-form");
+  if (!form) return;
+
+  const nameInput = document.getElementById("review-name");
+  const commentInput = document.getElementById("review-comment");
+  const stars = Array.from(document.querySelectorAll(".rating-input-star"));
+  const submitBtn = document.getElementById("review-submit");
+  let selectedRating = 0;
+
+  stars.forEach((star) => {
+    star.addEventListener("click", () => {
+      selectedRating = Number(star.dataset.value);
+      stars.forEach((s) => s.classList.toggle("star-filled", Number(s.dataset.value) <= selectedRating));
+      stars.forEach((s) => s.classList.toggle("star-empty", Number(s.dataset.value) > selectedRating));
+    });
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (selectedRating < 1) {
+      alert("Please select a star rating before submitting.");
       return;
     }
+    const name = (nameInput?.value || "").trim() || "Anonymous";
+    const comment = (commentInput?.value || "").trim();
 
-    let itemCount = 0;
-    let itemsHtml = "";
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
 
-    snap.forEach(docSnap => {
-      itemCount++;
-      const item = docSnap.data();
-      const availableQty = Number(item.availableQuantity ?? item.quantity ?? 0);
-      const totalQty = Number(item.totalQuantity ?? item.quantity ?? availableQty);
-      const isAvailable = availableQty > 0;
+    try {
+      await addDoc(collection(db, "businesses", businessId, "reviews"), {
+        name,
+        rating: selectedRating,
+        comment,
+        createdAt: serverTimestamp()
+      });
 
-      itemsHtml += `
-        <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
-          <div>
-            <div class="flex justify-between items-start mb-2">
-              <h3 class="font-semibold text-gray-900 text-lg">${item.name || "Unnamed Equipment"}</h3>
-              <span class="text-xs px-2.5 py-1 rounded-full font-medium ${isAvailable ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
-                ${isAvailable ? `${availableQty} available` : 'Booked Out'}
-              </span>
-            </div>
-            <p class="text-gray-500 text-xs mb-4">Total Stock: ${totalQty}</p>
-          </div>
+      // Atomically keep the aggregate rating on the business doc in sync.
+      // (A Cloud Function trigger on review create/delete is the more
+      // robust long-term approach — same pattern you're using for the
+      // sitemap on googleIndexed — but this transaction keeps things
+      // correct in the meantime.)
+      const businessRef = doc(db, "businesses", businessId);
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(businessRef);
+        const data = snap.data() || {};
+        const newSum = Number(data.ratingSum || 0) + selectedRating;
+        const newCount = Number(data.ratingCount || 0) + 1;
+        tx.update(businessRef, { ratingSum: newSum, ratingCount: newCount });
+      });
 
-          <div class="flex items-center justify-between pt-4 border-t border-gray-50">
-            <div>
-              <span class="text-lg font-bold text-gray-900">₦${(Number(item.price) || 0).toLocaleString()}</span>
-              <span class="text-xs text-gray-400"> / day</span>
-            </div>
-            ${waNumberGlobal ? `
-              <a href="https://wa.me/${waNumberGlobal}?text=${encodeURIComponent(`Hi ${businessNameGlobal}, I'm interested in renting the ${item.name || "item"}`)}"
-                 target="_blank" rel="noopener noreferrer"
-                 class="text-xs font-semibold bg-gray-900 text-white px-3.5 py-2 rounded-lg hover:bg-gray-800 transition">
-                Inquire
-              </a>
-            ` : ''}
-          </div>
-        </div>
-      `;
-    });
+      form.reset();
+      selectedRating = 0;
+      stars.forEach((s) => {
+        s.classList.remove("star-filled");
+        s.classList.add("star-empty");
+      });
+      submitBtn.textContent = "Review submitted ✓";
+      setTimeout(() => {
+        submitBtn.textContent = "Submit review";
+        submitBtn.disabled = false;
+      }, 1800);
+    } catch (err) {
+      console.error("Review submit error:", err);
+      alert("Failed to submit review: " + err.message);
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit review";
+    }
+  });
+}
 
-    grid.innerHTML = itemsHtml;
-    if (countEl) countEl.textContent = `${itemCount} item${itemCount === 1 ? '' : 's'}`;
-
-  } catch (err) {
-    console.error("Error loading catalog:", err);
-    grid.innerHTML = `<p class="col-span-full text-center text-red-500 py-6">Failed to load equipment catalog.</p>`;
-  }
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
 }
 
 /* =========================
@@ -276,18 +518,21 @@ async function loadCatalog(businessId) {
 function showError(title, message) {
   if (loader) loader.classList.add("hidden");
   if (storefrontContent) storefrontContent.classList.add("hidden");
-  
+
+  if (unsubBusiness) unsubBusiness();
+  if (unsubInventory) unsubInventory();
+  if (unsubReviews) unsubReviews();
+
   if (errorView) {
     errorView.classList.remove("hidden");
-    const titleEl = document.getElementById("errorTitle") || errorView.querySelector("h2");
-    const msgEl = document.getElementById("errorMessage") || errorView.querySelector("p");
+    const titleEl = errorView.querySelector("h2");
+    const msgEl = errorView.querySelector("p");
     if (titleEl) titleEl.textContent = title;
     if (msgEl) msgEl.textContent = message;
   }
   refreshIcons();
 }
 
-// Auto-run on script execution
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initViewer);
 } else {

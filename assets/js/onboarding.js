@@ -15,19 +15,24 @@ const steps = [
     selector: ".cardBox",
     title: "Real-Time Stats Dashboard 📊",
     desc: "Keep track of your total inventory items, active bookings, returns, and overdue items at a glance."
+  }, 
+  {
+    selector: 'a[href="bookings.html"], .bookings',
+    title: "Bookings Record",
+    desc: "View all your bookings from active bookings to returned Bookings"
   },
   {
-    selector: 'a[href="add.html"]',
+    selector: 'a[href="add.html"], .add',
     title: "Create New Rental Bookings ➕",
-    desc: "Create client booking orders, assign rental items, add receipts, set price limits, and send instant push alerts to team members."
+    desc: "Create client booking orders, assign rental items, Generate receipts and send instant push alerts to team members."
   },
   {
-    selector: 'a[href="inventory.html"]',
+    selector: 'a[href="inventory.html"], .inventory',
     title: "Live Inventory Catalog 📦",
     desc: "Monitor your equipment inventory. The system auto-updates stock availability during rentals to prevent double-booking shortages."
   },
   {
-    selector: 'a[href="public.html"]',
+    selector: 'a[href="public.html"], .profile',
     title: "Your Rental Online Storefront 🌐",
     desc: "Set up your online rental business storefront and get discovered by more customers."
   },
@@ -65,7 +70,7 @@ function createOverlayAndTooltip() {
     overlayEl.style.borderRadius = "12px";
     overlayEl.style.boxShadow = "0 0 0 9999px rgba(0, 0, 0, 0.75)";
     overlayEl.style.transition = "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)";
-    overlayEl.style.border = "3px solid #540b9e"; // brand purple border!
+    overlayEl.style.border = "3px solid purple"; // brand purple border!
     document.body.appendChild(overlayEl);
   }
 
@@ -128,14 +133,14 @@ function showStep(stepIndex) {
   // Render tooltip card content
   tooltipEl.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-      <span style="font-size: 0.75rem; font-weight: 700; color: #540b9e; text-transform: uppercase; letter-spacing: 0.05em;">Step ${stepIndex + 1} of ${steps.length}</span>
-      <button id="ob-skip" style="background: none; border: none; color: #6b7280; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='#540b9e'" onmouseout="this.style.color='#6b7280'">Skip</button>
+      <span style="font-size: 0.75rem; font-weight: 700; color: purple; text-transform: uppercase; letter-spacing: 0.05em;">Step ${stepIndex + 1} of ${steps.length}</span>
+      <button id="ob-skip" style="background: none; border: none; color: #6b7280; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='purple'" onmouseout="this.style.color='#6b7280'">Skip</button>
     </div>
     <h3 style="font-weight: 700; font-size: 1.15rem; margin-bottom: 8px; color: #111827;">${step.title}</h3>
     <p style="font-size: 0.875rem; color: #4b5563; line-height: 1.6; margin-bottom: 20px;">${step.desc}</p>
     <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
       <button id="ob-back" style="background: #f3f4f6; color: #4b5563; border: none; padding: 8px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: background 0.2s; ${stepIndex === 0 ? 'visibility: hidden;' : ''}" onmouseover="this.style.backgroundColor='#e5e7eb'" onmouseout="this.style.backgroundColor='#f3f4f6'">Back</button>
-      <button id="ob-next" style="background: #540b9e; color: #ffffff; border: none; padding: 8px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: background 0.2s; box-shadow: 0 4px 6px -1px rgba(84, 11, 158, 0.2);" onmouseover="this.style.backgroundColor='#43087e'" onmouseout="this.style.backgroundColor='#540b9e'">${stepIndex === steps.length - 1 ? 'Finish' : 'Next'}</button>
+      <button id="ob-next" style="background: purple; color: #ffffff; border: none; padding: 8px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: background 0.2s; box-shadow: 0 4px 6px -1px rgba(84, 11, 158, 0.2);" onmouseover="this.style.backgroundColor='#43087e'" onmouseout="this.style.backgroundColor='#540b9e'">${stepIndex === steps.length - 1 ? 'Finish' : 'Next'}</button>
     </div>
   `;
 

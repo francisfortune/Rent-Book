@@ -33,6 +33,8 @@ const referralProgressLabel = document.getElementById("referralProgressLabel");
 const referralStatusLabel = document.getElementById("referralStatusLabel");
 const referralProgressFill = document.getElementById("referralProgressFill");
 const referralUnlockedBadge = document.getElementById("referralUnlockedBadge");
+const SITE_URL = "https://tracknrent.vercel.app";
+
 
 
 const inviteForm = document.getElementById("invitePartnerForm");
@@ -176,7 +178,7 @@ onSnapshot(query(membersRef, where("businessId", "==", businessId)), (snapshot) 
     }
   }
   if (referralLinkInput) {
-    referralLinkInput.value = `${window.location.origin}/signup.html?ref=${referralCode}`;
+   referralLinkInput.value = `${SITE_URL}/signup.html?ref=${referralCode}`;
   }
   renderReferralProgress(data);
 });
