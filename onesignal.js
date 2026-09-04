@@ -1,45 +1,166 @@
-window.OneSignalDeferred = window.OneSignalDeferred || [];
+// ============================================
+// ONESIGNAL - COMPLETE FIX
+// ============================================
 
-OneSignalDeferred.push(async function (OneSignal) {
-  await OneSignal.init({
-    appId: "539d08e3-cada-4b7e-88c3-f89af30ff7f9",
-  });
-});
+const ONESIGNAL_APP_ID = "539d08e3-cada-4b7e-88c3-f89af30ff7f9";
 
-/**
- * Send a OneSignal push notification to all subscribed users.
- * Called automatically whenever an in-app notification is saved.
- *
- * @param {string} message - The notification body text
- * @param {string} url     - Relative path to deep-link into (e.g. "/bookings.html?highlight=ID")
- */
+// ✅ Detect if running on localhost
+const isLocalhost = window.location.hostname === 'localhost' || 
+                    window.location.hostname === '127.0.0.1' ||
+                    window.location.hostname === '';
+
+// ✅ Export sendPush at MODULE scope
 export async function sendPush(message, url = "/dashboard.html") {
-  const REST_API_KEY = "os_v2_app_kooqry6k3jfx5cgd7cnpgd7x7etbd3jheedehl4pykvo4uxmrzc7bedzic2tn5anv47tgms4uij7lpjiebj53sqlotxev3vgyhdvucq";
-
-  try {
-    const response = await fetch("https://onesignal.com/api/v1/notifications", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Key ${REST_API_KEY}`
-      },
-      body: JSON.stringify({
-        app_id: "539d08e3-cada-4b7e-88c3-f89af30ff7f9",
-        included_segments: ["Subscribed Users"],
-        headings: { en: "Tracknrent 🔔" },
-        contents: { en: message },
-        url: `https://tracknrent.vercel.app${url}`
-      })
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("❌ OneSignal push failed:", errText);
-    } else {
-      const data = await response.json();
-      console.log("✅ Push notification sent via OneSignal:", data);
+    // ✅ Skip push on localhost
+    if (isLocalhost) {
+        console.log('[OneSignal] ⏭️ Skipping push on localhost');
+        return { success: true, message: 'Skipped - localhost' };
     }
-  } catch (err) {
-    console.error("Push failed (network error):", err);
-  }
+
+    console.log('[OneSignal] 📨 Sending push:', { message, url });
+
+    try {
+        // Try OneSignal SDK first
+        if (window.OneSignal && typeof window.OneSignal.Notifications !== 'undefined') {
+            try {
+                const OneSignal = window.OneSignal;
+                const userId = await OneSignal.User.getOnesignalId();
+                
+                if (userId) {
+                    await OneSignal.Notifications.add({
+                        contents: { en: message },
+                        data: { url: url },
+                        targetUserId: userId,
+                        web_url: url
+                    });
+                    console.log('[OneSignal] ✅ Push sent via SDK');
+                    return { success: true };
+                } else {
+                    console.log('[OneSignal] ⚠️ No user ID found, falling back to serverless');
+                }
+            } catch (sdkError) {
+                console.warn('[OneSignal] ⚠️ SDK send failed:', sdkError.message);
+            }
+        }
+
+        // Fallback: Serverless API
+        console.log('[OneSignal] 🔄 Trying serverless fallback...');
+        const response = await fetch("/api/send-push", {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            body: JSON.stringify({ 
+                message: message,
+                url: url
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error('[OneSignal] ❌ Serverless error:', data);
+            return { success: false, error: data };
+        }
+
+        console.log('[OneSignal] ✅ Push sent via serverless:', data);
+        return { success: true, data };
+
+    } catch (err) {
+        console.error('[OneSignal] ❌ Push network error:', err);
+        return { success: false, error: err.message };
+    }
+}
+
+// ✅ Expose to window
+window.sendPush = sendPush;
+
+// ============================================
+// ✅ COMPLETELY SKIP ONESIGNAL ON LOCALHOST
+// ============================================
+if (isLocalhost) {
+    console.log('[OneSignal] ⏭️ Skipping initialization on localhost');
+    
+    // ✅ Mock OneSignal completely to prevent any errors
+    window.OneSignal = {
+        Notifications: {
+            permission: 'default',
+            add: async () => ({ success: true })
+        },
+        User: {
+            getOnesignalId: async () => null
+        },
+        init: async () => {},
+        on: () => {},
+        emit: () => {},
+        off: () => {},
+        once: () => {}
+    };
+    
+    // ✅ Prevent OneSignalDeferred from running
+    window.OneSignalDeferred = [];
+    
+    // ✅ Also mock the global OneSignal SDK
+    if (window.OneSignalSDK) {
+        window.OneSignalSDK = null;
+    }
+    
+    console.log('[OneSignal] ✅ Localhost mock applied');
+    
+} else {
+    // ============================================
+    // ✅ PRODUCTION - Initialize OneSignal
+    // ============================================
+    (function() {
+        'use strict';
+
+        if (window.__onesignal_initialized) {
+            console.log('[OneSignal] Already initialized, skipping');
+            return;
+        }
+        window.__onesignal_initialized = true;
+
+        // ✅ Wait for DOM to be ready
+        const initOneSignal = () => {
+            window.OneSignalDeferred = window.OneSignalDeferred || [];
+
+            window.OneSignalDeferred.push(async function(OneSignal) {
+                try {
+                    console.log('[OneSignal] 🚀 Initializing...');
+                    await OneSignal.init({
+                        appId: ONESIGNAL_APP_ID,
+                        serviceWorkerPath: "/sw.js",
+                        serviceWorkerParam: { scope: "/" },
+                        allowLocalhostAsSecureOrigin: false,
+                        notifyButton: {
+                            enable: false
+                        }
+                    });
+
+                    const permission = await OneSignal.Notifications.permission;
+                    console.log('[OneSignal] Permission:', permission);
+
+                    if (permission === 'granted') {
+                        const userId = await OneSignal.User.getOnesignalId();
+                        console.log('[OneSignal] User ID:', userId);
+                    }
+
+                    console.log('[OneSignal] ✅ Initialized successfully');
+                } catch (error) {
+                    console.warn('[OneSignal] ⚠️ Init error:', error.message);
+                }
+            });
+
+            console.log('[OneSignal] ✅ Module loaded for production');
+        };
+
+        // ✅ Wait for page load
+        if (document.readyState === 'complete') {
+            initOneSignal();
+        } else {
+            window.addEventListener('load', initOneSignal);
+        }
+
+    })();
 }

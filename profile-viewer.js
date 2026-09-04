@@ -27,6 +27,13 @@ let unsubBusiness = null;
 let unsubInventory = null;
 let unsubReviews = null;
 
+// Owner-controlled visibility toggles (public.html "What Customers See").
+// Defaults are permissive (true) so older records without these fields
+// keep behaving the way the storefront always has.
+let showInventoryGlobal = true;
+let showAvailabilityGlobal = true;
+let lastInventorySnapshot = null; // re-rendered if the toggles change
+
 function refreshIcons() {
   if (window.lucide && typeof window.lucide.createIcons === "function") {
     window.lucide.createIcons();
@@ -113,7 +120,7 @@ export async function initViewer() {
         const profile = businessData.publicProfile || {};
 
         if (profile.enabled === false) {
-          showError("Storefront Offline", "This storefront has been disabled by the business owner.");
+          showError("Store Currently Offline", "This business has taken its storefront offline. Please check back later.");
           return;
         }
 
@@ -148,6 +155,27 @@ function renderProfile(name, profile, businessData) {
 
   const nameEl = document.getElementById("store-name");
   if (nameEl) nameEl.textContent = name;
+
+  // Logo / profile picture (WhatsApp-Business style avatar)
+  const logoEl = document.getElementById("store-logo");
+  if (logoEl) {
+    logoEl.innerHTML = businessData.logoUrl
+      ? `<img src="${businessData.logoUrl}" style="width:100%;height:100%;object-fit:cover;" alt="${escapeHtml(name)} logo">`
+      : name.slice(0, 2).toUpperCase();
+  }
+
+  // Verification / Growth Partner badges — mirrors the marketplace card
+  const badgesEl = document.getElementById("profile-badges");
+  if (badgesEl) {
+    const marketplace = businessData.marketplace || {};
+    let badges = "";
+    if (marketplace.featured) {
+      badges += `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:rgba(245,165,36,.18); color:#FBBF24; border:1px solid rgba(245,165,36,.35);">🏆 Growth Partner</span>`;
+    } else if (marketplace.verified) {
+      badges += `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:rgba(16,185,129,.15); color:#34D399; border:1px solid rgba(16,185,129,.3);"><i data-lucide="badge-check" class="w-3 h-3"></i> Verified</span>`;
+    }
+    badgesEl.innerHTML = badges;
+  }
 
   const bioEl = document.getElementById("store-bio");
   if (bioEl) {
@@ -189,6 +217,20 @@ function renderProfile(name, profile, businessData) {
       waNumberGlobal = "";
       btnWa.classList.add("hidden");
     }
+  }
+
+  const prevShowInventory = showInventoryGlobal;
+  const prevShowAvailability = showAvailabilityGlobal;
+  showInventoryGlobal = profile.showInventory !== false; // default true
+  showAvailabilityGlobal = profile.showAvailability !== false; // default true
+
+  const catalogSection = document.getElementById("inventory-grid")?.closest("section");
+  if (catalogSection) catalogSection.classList.toggle("hidden", !showInventoryGlobal);
+
+  // If either toggle flipped since the last inventory snapshot, re-render
+  // the grid immediately rather than waiting on the next inventory write.
+  if (lastInventorySnapshot && (prevShowInventory !== showInventoryGlobal || prevShowAvailability !== showAvailabilityGlobal)) {
+    renderInventoryGrid(lastInventorySnapshot);
   }
 
   renderGallery(profile.gallery || []);
@@ -284,7 +326,6 @@ window.closeLightbox = closeLightbox;
 ========================= */
 function listenToCatalog(businessId) {
   const grid = document.getElementById("inventory-grid");
-  const countEl = document.getElementById("inventory-count");
   if (!grid) return;
 
   if (unsubInventory) unsubInventory();
@@ -293,57 +334,84 @@ function listenToCatalog(businessId) {
   unsubInventory = onSnapshot(
     invRef,
     (snap) => {
-      if (snap.empty) {
-        grid.innerHTML = `<p class="col-span-full text-center text-slate-400 py-10">No equipment listed in the catalog yet.</p>`;
-        if (countEl) countEl.textContent = "0 items";
-        return;
-      }
-
-      let itemCount = 0;
-      let itemsHtml = "";
-
-      snap.forEach((docSnap) => {
-        itemCount++;
-        const item = docSnap.data();
-        const availableQty = Number(item.availableQuantity ?? item.quantity ?? 0);
-        const totalQty = Number(item.totalQuantity ?? item.quantity ?? availableQty);
-        const isAvailable = availableQty > 0;
-
-        itemsHtml += `
-          <div class="equipment-card ${isAvailable ? "is-available" : "is-booked"}">
-            <div class="equipment-card-body">
-              <div class="flex justify-between items-start gap-3 mb-1.5">
-                <h3 class="font-semibold text-slate-900 text-base leading-snug">${escapeHtml(item.name || "Unnamed Equipment")}</h3>
-                <span class="status-pill ${isAvailable ? "status-available" : "status-booked"}">
-                  ${isAvailable ? `${availableQty} left` : "Booked out"}
-                </span>
-              </div>
-              <p class="text-slate-400 text-xs">Total stock: ${totalQty}</p>
-            </div>
-            <div class="equipment-card-footer">
-              <div>
-                <span class="text-lg font-bold text-slate-900">₦${(Number(item.price) || 0).toLocaleString()}</span>
-                <span class="text-xs text-slate-400"> / day</span>
-              </div>
-              ${
-                waNumberGlobal
-                  ? `<a href="https://wa.me/${waNumberGlobal}?text=${encodeURIComponent(
-                      `Hi ${businessNameGlobal}, I'm interested in renting the ${item.name || "item"}`
-                    )}" target="_blank" rel="noopener noreferrer" class="equipment-inquire-btn">Inquire</a>`
-                  : ""
-              }
-            </div>
-          </div>`;
-      });
-
-      grid.innerHTML = itemsHtml;
-      if (countEl) countEl.textContent = `${itemCount} item${itemCount === 1 ? "" : "s"}`;
+      lastInventorySnapshot = snap;
+      renderInventoryGrid(snap);
     },
     (err) => {
       console.error("Error loading catalog:", err);
       grid.innerHTML = `<p class="col-span-full text-center text-red-500 py-6">Failed to load equipment catalog.</p>`;
     }
   );
+}
+
+// Renders the equipment grid from the latest inventory snapshot, honoring
+// the owner's "Show Inventory Catalog" / "Show Live Availability" toggles.
+function renderInventoryGrid(snap) {
+  const grid = document.getElementById("inventory-grid");
+  const countEl = document.getElementById("inventory-count");
+  if (!grid) return;
+
+  if (!showInventoryGlobal) {
+    // Section itself is hidden (see renderProfile), nothing to build.
+    grid.innerHTML = "";
+    return;
+  }
+
+  if (snap.empty) {
+    grid.innerHTML = `<p class="col-span-full text-center text-slate-400 py-10">No equipment listed in the catalog yet.</p>`;
+    if (countEl) countEl.textContent = "0 items";
+    return;
+  }
+
+  let itemCount = 0;
+  let itemsHtml = "";
+
+  snap.forEach((docSnap) => {
+    itemCount++;
+    const item = docSnap.data();
+    const availableQty = Number(item.availableQuantity ?? item.quantity ?? 0);
+    const totalQty = Number(item.totalQuantity ?? item.quantity ?? availableQty);
+    const isAvailable = availableQty > 0;
+
+    // Without "Show Live Availability", visitors see only name & price —
+    // no stock counts, no booked/available status pill.
+    const statusHtml = showAvailabilityGlobal
+      ? `<span class="status-pill ${isAvailable ? "status-available" : "status-booked"}">
+           ${isAvailable ? `${availableQty} left` : "Booked out"}
+         </span>`
+      : "";
+    const stockLine = showAvailabilityGlobal
+      ? `<p class="text-slate-400 text-xs">Total stock: ${totalQty}</p>`
+      : "";
+    const cardStateClass = showAvailabilityGlobal ? (isAvailable ? "is-available" : "is-booked") : "";
+
+    itemsHtml += `
+      <div class="equipment-card ${cardStateClass}">
+        <div class="equipment-card-body">
+          <div class="flex justify-between items-start gap-3 mb-1.5">
+            <h3 class="font-semibold text-slate-900 text-base leading-snug">${escapeHtml(item.name || "Unnamed Equipment")}</h3>
+            ${statusHtml}
+          </div>
+          ${stockLine}
+        </div>
+        <div class="equipment-card-footer">
+          <div>
+            <span class="text-lg font-bold text-slate-900">₦${(Number(item.price) || 0).toLocaleString()}</span>
+            <span class="text-xs text-slate-400"> / day</span>
+          </div>
+          ${
+            waNumberGlobal
+              ? `<a href="https://wa.me/${waNumberGlobal}?text=${encodeURIComponent(
+                  `Hi ${businessNameGlobal}, I'm interested in renting the ${item.name || "item"}`
+                )}" target="_blank" rel="noopener noreferrer" class="equipment-inquire-btn">Inquire</a>`
+              : ""
+          }
+        </div>
+      </div>`;
+  });
+
+  grid.innerHTML = itemsHtml;
+  if (countEl) countEl.textContent = `${itemCount} item${itemCount === 1 ? "" : "s"}`;
 }
 
 /* =========================
