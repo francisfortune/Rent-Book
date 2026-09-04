@@ -1,5 +1,5 @@
 // ============================================
-// ONESIGNAL - COMPLETE FIX (Block on localhost)
+// ONESIGNAL - COMPLETE FIX
 // ============================================
 
 const ONESIGNAL_APP_ID = "539d08e3-cada-4b7e-88c3-f89af30ff7f9";
@@ -17,6 +17,8 @@ export async function sendPush(message, url = "/dashboard.html") {
         return { success: true, message: 'Skipped - localhost' };
     }
 
+    console.log('[OneSignal] 📨 Sending push:', { message, url });
+
     try {
         // Try OneSignal SDK first
         if (window.OneSignal && typeof window.OneSignal.Notifications !== 'undefined') {
@@ -33,32 +35,40 @@ export async function sendPush(message, url = "/dashboard.html") {
                     });
                     console.log('[OneSignal] ✅ Push sent via SDK');
                     return { success: true };
+                } else {
+                    console.log('[OneSignal] ⚠️ No user ID found, falling back to serverless');
                 }
             } catch (sdkError) {
-                console.warn('[OneSignal] SDK send failed:', sdkError.message);
+                console.warn('[OneSignal] ⚠️ SDK send failed:', sdkError.message);
             }
         }
 
         // Fallback: Serverless API
-        console.log('[OneSignal] Trying serverless fallback...');
+        console.log('[OneSignal] 🔄 Trying serverless fallback...');
         const response = await fetch("/api/send-push", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message, url })
+            headers: { 
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            body: JSON.stringify({ 
+                message: message,
+                url: url
+            })
         });
 
         const data = await response.json();
 
         if (!response.ok) {
-            console.error('[OneSignal] Serverless error:', data);
+            console.error('[OneSignal] ❌ Serverless error:', data);
             return { success: false, error: data };
         }
 
-        console.log('[OneSignal] ✅ Push sent via serverless');
+        console.log('[OneSignal] ✅ Push sent via serverless:', data);
         return { success: true, data };
 
     } catch (err) {
-        console.error('[OneSignal] Push failed:', err);
+        console.error('[OneSignal] ❌ Push network error:', err);
         return { success: false, error: err.message };
     }
 }
@@ -111,35 +121,46 @@ if (isLocalhost) {
         }
         window.__onesignal_initialized = true;
 
-        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        // ✅ Wait for DOM to be ready
+        const initOneSignal = () => {
+            window.OneSignalDeferred = window.OneSignalDeferred || [];
 
-        window.OneSignalDeferred.push(async function(OneSignal) {
-            try {
-                await OneSignal.init({
-                    appId: ONESIGNAL_APP_ID,
-                    serviceWorkerPath: "/sw.js",
-                    serviceWorkerParam: { scope: "/" },
-                    allowLocalhostAsSecureOrigin: false,
-                    notifyButton: {
-                        enable: false
+            window.OneSignalDeferred.push(async function(OneSignal) {
+                try {
+                    console.log('[OneSignal] 🚀 Initializing...');
+                    await OneSignal.init({
+                        appId: ONESIGNAL_APP_ID,
+                        serviceWorkerPath: "/sw.js",
+                        serviceWorkerParam: { scope: "/" },
+                        allowLocalhostAsSecureOrigin: false,
+                        notifyButton: {
+                            enable: false
+                        }
+                    });
+
+                    const permission = await OneSignal.Notifications.permission;
+                    console.log('[OneSignal] Permission:', permission);
+
+                    if (permission === 'granted') {
+                        const userId = await OneSignal.User.getOnesignalId();
+                        console.log('[OneSignal] User ID:', userId);
                     }
-                });
 
-                const permission = await OneSignal.Notifications.permission;
-                console.log('[OneSignal] Permission:', permission);
-
-                if (permission === 'granted') {
-                    const userId = await OneSignal.User.getOnesignalId();
-                    console.log('[OneSignal] User ID:', userId);
+                    console.log('[OneSignal] ✅ Initialized successfully');
+                } catch (error) {
+                    console.warn('[OneSignal] ⚠️ Init error:', error.message);
                 }
+            });
 
-                console.log('[OneSignal] ✅ Initialized successfully');
-            } catch (error) {
-                console.warn('[OneSignal] Init error:', error.message);
-            }
-        });
+            console.log('[OneSignal] ✅ Module loaded for production');
+        };
 
-        console.log('[OneSignal] Module loaded for production');
+        // ✅ Wait for page load
+        if (document.readyState === 'complete') {
+            initOneSignal();
+        } else {
+            window.addEventListener('load', initOneSignal);
+        }
 
     })();
 }

@@ -129,6 +129,35 @@ async function loadInventory(businessId) {
   inventoryItems = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
+
+/* =========================
+   GENERATE RECEIPT IMAGE HTML
+========================= */
+function getReceiptImageHTML(booking) {
+  if (!booking.receiptImage) {
+    return `
+      <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center">
+        <span class="material-symbols-outlined text-4xl text-gray-400">image</span>
+        <p class="text-xs text-gray-400 mt-2">No receipt image uploaded</p>
+      </div>
+    `;
+  }
+  
+  return `
+    <div class="relative group">
+      <img src="${booking.receiptImage}" 
+           alt="Receipt Image" 
+           class="w-full max-h-64 object-contain rounded-xl border border-gray-200 shadow-sm"
+           onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22200%22 height=%22200%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%239ca3af%22 font-size=%2214%22 font-family=%22sans-serif%22%3ENo Image%3C/text%3E%3C/svg%3E'">
+      <button onclick="window.open('${booking.receiptImage}', '_blank')"
+              class="absolute top-2 right-2 bg-black/70 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+        <span class="material-symbols-outlined text-sm">open_in_new</span>
+      </button>
+    </div>
+  `;
+}
+
+
 /* =========================
    BUSINESS LOOKUP
 ========================= */
@@ -471,6 +500,38 @@ window.openBooking = function(booking, id, businessId) {
     </div>
   </div>
 
+  // Add this after the notes section and before the receipt preview section
+
+${booking.receiptImage ? `
+  <div class="mt-4">
+    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+      <p class="text-[10px] font-black text-purple-700 uppercase flex items-center gap-2">
+        <span class="material-symbols-outlined text-sm">receipt_long</span> Receipt Image
+      </p>
+      <span class="text-[10px] bg-purple-100 text-purple-700 px-2 py-1 rounded-full font-bold">Uploaded</span>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+      <img src="${booking.receiptImage}" 
+           alt="Receipt Image" 
+           class="w-full max-h-64 object-contain"
+           onerror="this.parentElement.innerHTML='<div class=\\'p-4 text-center text-gray-400 text-sm\\'>Image failed to load</div>'">
+    </div>
+  </div>
+` : `
+  <div class="mt-4">
+    <div class="flex items-center gap-2 mb-2 flex-wrap">
+      <p class="text-[10px] font-black text-gray-400 uppercase flex items-center gap-2">
+        <span class="material-symbols-outlined text-sm">receipt_long</span> Receipt Image
+      </p>
+      <span class="text-[10px] bg-gray-100 text-gray-400 px-2 py-1 rounded-full font-bold">Not uploaded</span>
+    </div>
+    <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
+      <span class="material-symbols-outlined text-4xl text-gray-300">image</span>
+      <p class="text-xs text-gray-400 mt-2">No receipt image available</p>
+    </div>
+  </div>
+`}
+
   ${booking.notes ? `<div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4"><p class="text-xs font-bold text-yellow-700 uppercase">Notes</p><p class="text-sm text-gray-700 mt-1 break-words">${booking.notes}</p></div>` : ""}
 
   <div class="mt-6">
@@ -629,6 +690,33 @@ window.openEditModal = async function(booking, id, businessId) {
     </div>
   </div>
 
+// Add receipt image edit section (inside openEditModal function)
+
+// Add this after the notes textarea and before the save/cancel buttons
+
+<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;border-top:1px solid #e5e5e5;padding-top:12px;">
+  <label style="font-size:12px;color:purple;font-weight:600;">Receipt Image</label>
+  ${booking.receiptImage ? `
+    <div style="position:relative;display:inline-block;">
+      <img src="${booking.receiptImage}" 
+           alt="Receipt" 
+           style="max-height:120px;max-width:100%;border-radius:8px;border:1px solid #e5e5e5;object-fit:contain;">
+      <button type="button" onclick="document.getElementById('editReceiptInput').click()" 
+              style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.7);color:white;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">
+        Change
+      </button>
+    </div>
+  ` : `
+    <div style="background:#f9fafb;border:2px dashed #d8b4fe;border-radius:8px;padding:20px;text-align:center;cursor:pointer;"
+         onclick="document.getElementById('editReceiptInput').click()">
+      <span style="font-size:2rem;color:purple;">📸</span>
+      <p style="font-size:12px;color:#6b7280;margin:4px 0 0;">Tap to upload receipt image</p>
+    </div>
+  `}
+  <input type="file" id="editReceiptInput" accept="image/*" style="display:none;">
+  <p id="editReceiptStatus" style="font-size:11px;color:#059669;margin-top:4px;display:none;">Image uploaded ✅</p>
+</div>
+
   <div style="display:flex;flex-direction:column;gap:6px;">
     <label style="font-size:12px;color:purple;font-weight:600;">Internal notes</label>
     <textarea id="editNotes" placeholder="Internal updates, client agreements, balance notes..." style="width:100%;padding:10px;font-size:13px;border-radius:6px;border:0.5px solid #d8b4fe;background:#f9fafb;color:#374151;outline:none;min-height:72px;resize:vertical;box-sizing:border-box;font-family:inherit;">${booking.notes || ""}</textarea>
@@ -644,6 +732,44 @@ window.openEditModal = async function(booking, id, businessId) {
 
   document.querySelectorAll("#editItemsContainer .item-row").forEach(attachRowCalculationListeners);
   recalculateEditWorkspace();
+
+  // Add receipt image upload handler for edit modal
+const editReceiptInput = document.getElementById('editReceiptInput');
+if (editReceiptInput) {
+  editReceiptInput.addEventListener('change', async function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const statusEl = document.getElementById('editReceiptStatus');
+    statusEl.textContent = 'Uploading...';
+    statusEl.style.display = 'block';
+    statusEl.style.color = '#6b7280';
+    
+    try {
+      const imageUrl = await uploadReceiptImage(businessId, file);
+      // Store the new image URL to be saved with the booking
+      window._editReceiptImageUrl = imageUrl;
+      statusEl.textContent = '✅ Image uploaded!';
+      statusEl.style.color = '#059669';
+      
+      // Update preview
+      const container = this.parentElement;
+      const preview = container.querySelector('img') || container.querySelector('div[style*="dashed"]');
+      if (preview) {
+        if (preview.tagName === 'IMG') {
+          preview.src = imageUrl;
+        } else {
+          preview.outerHTML = `<img src="${imageUrl}" alt="Receipt" style="max-height:120px;max-width:100%;border-radius:8px;border:1px solid #e5e5e5;object-fit:contain;">`;
+        }
+      }
+    } catch (error) {
+      console.error('Upload failed:', error);
+      statusEl.textContent = '❌ Upload failed';
+      statusEl.style.color = '#dc2626';
+    }
+  });
+}
+
 };
 
 function formatDateTime(value) {
@@ -704,6 +830,13 @@ window.saveEdit = async function(id, businessId, originalItems) {
       return;
     }
 
+    // ✅ Get receipt image URL from edit modal (if uploaded)
+    const receiptImageUrl = window._editReceiptImageUrl || null;
+    if (receiptImageUrl) {
+      // Clear the temporary stored URL
+      window._editReceiptImageUrl = null;
+    }
+
     const updatedBookingData = {
       "client.name": document.getElementById("editName").value.trim(),
       "client.phone": document.getElementById("editPhone").value.trim(),
@@ -717,6 +850,11 @@ window.saveEdit = async function(id, businessId, originalItems) {
       "payment.paid": Number(document.getElementById("editPaid").value || 0),
       notes: document.getElementById("editNotes").value.trim()
     };
+
+    // ✅ Add receipt image if uploaded
+    if (receiptImageUrl) {
+      updatedBookingData.receiptImage = receiptImageUrl;
+    }
 
     await editBookingTransaction(businessId, id, updatedBookingData, originalItems, updatedItems);
     alert("Booking updated successfully! ✅");

@@ -67,37 +67,36 @@ function recalcTotal() {
     }
   });
 
-  // ✅ FORMAT TOTAL WITH COMMAS
-  const formattedTotal = total.toLocaleString('en-NG');
-  
-  // Update total input with formatted value
-  const totalInput = document.getElementById("totalAmount");
-  if (totalInput) {
-    totalInput.value = formattedTotal;
+  // ✅ Store raw total for calculation
+  const totalAmountInput = document.getElementById("totalAmount");
+  const amountPaidInput = document.getElementById("amountPaid");
+
+  // ✅ Only update total if user hasn't manually changed it
+  if (totalAmountInput && !totalAmountInput.dataset.userEdited) {
+    totalAmountInput.value = total.toLocaleString('en-NG');
   }
 
-  // Get Paid Amount
-  const paidInput = document.getElementById("amountPaid");
-  const paidValue = paidInput ? parseFloat(paidInput.value.replace(/,/g, '')) || 0 : 0;
+  // Get Paid Amount - handle both formatted and raw values
+  const paidRaw = amountPaidInput ? amountPaidInput.value.replace(/,/g, '') : '0';
+  const paidValue = parseFloat(paidRaw) || 0;
 
-  // ✅ FORMAT PAID WITH COMMAS
-  const formattedPaid = paidValue.toLocaleString('en-NG');
-  if (paidInput) {
-    paidInput.value = formattedPaid;
+  // ✅ Format paid display
+  if (amountPaidInput && !amountPaidInput.dataset.userEdited) {
+    amountPaidInput.value = paidValue.toLocaleString('en-NG');
   }
 
   const balance = total - paidValue;
 
-  // Build Preview with Dynamic Business Name
+  // Build Preview
   const previewText = 
     `*BOOKING CONFIRMATION - ${currentBusinessName.toUpperCase()}*\n\n` +
     `Hi ${document.getElementById("clientName")?.value || "Customer"}, your booking is confirmed! ✅\n\n` +
-  `Event Date: ${document.getElementById("eventDate")?.value || "Date"}\n` +
-  `Return Date: ${document.getElementById("returnDate")?.value || "Not Set"}\n` +
+    `Event Date: ${document.getElementById("eventDate")?.value || "Date"}\n` +
+    `Return Date: ${document.getElementById("returnDate")?.value || "Not Set"}\n` +
     `Location: ${document.getElementById("eventLocation")?.value || "Not specified"}\n\n` +
     `Items Ordered: \n${itemsSummary}\n` +
-    `Total: ₦${formattedTotal}\n` +
-    `Paid: ₦${formattedPaid}\n` +
+    `Total: ₦${total.toLocaleString()}\n` +
+    `Paid: ₦${paidValue.toLocaleString()}\n` +
     `Balance: ₦${balance.toLocaleString()}\n\n` +
     `Thank you for choosing ${currentBusinessName}!\n\n` +
     `--- \n` + 
@@ -109,6 +108,44 @@ function recalcTotal() {
     previewBox.innerText = previewText;
   }
 }
+
+// ✅ Add event listeners to detect user editing
+document.addEventListener('DOMContentLoaded', function() {
+  const totalAmountInput = document.getElementById("totalAmount");
+  const amountPaidInput = document.getElementById("amountPaid");
+  
+  if (totalAmountInput) {
+    totalAmountInput.addEventListener('focus', function() {
+      // Show raw number when focused
+      const raw = this.value.replace(/,/g, '');
+      if (raw) this.value = raw;
+    });
+    totalAmountInput.addEventListener('blur', function() {
+      // Format when leaving
+      const raw = parseFloat(this.value.replace(/,/g, '')) || 0;
+      if (raw) this.value = raw.toLocaleString('en-NG');
+    });
+    totalAmountInput.addEventListener('input', function() {
+      this.dataset.userEdited = 'true';
+    });
+  }
+  
+  if (amountPaidInput) {
+    amountPaidInput.addEventListener('focus', function() {
+      const raw = this.value.replace(/,/g, '');
+      if (raw) this.value = raw;
+    });
+    amountPaidInput.addEventListener('blur', function() {
+      const raw = parseFloat(this.value.replace(/,/g, '')) || 0;
+      if (raw) this.value = raw.toLocaleString('en-NG');
+    });
+    amountPaidInput.addEventListener('input', function() {
+      this.dataset.userEdited = 'true';
+    });
+  }
+});
+
+
 /* =========================
    ADD ITEM ROW
 ========================= */
@@ -421,34 +458,35 @@ const cleanPaid = parseFloat(amountPaid.value.replace(/,/g, '')) || 0;
 
 
 
-        const bookingData = {
-          client: {
-            name: clientName.value.trim(),
-            phone: clientPhone.value.trim(),
-            email: clientEmail.value.trim() || ""
-          },
-          event: {
-            type: eventType.value,
-            date: eventDate.value,
-  deliveryDate: deliveryDate.value || "", // ✅ NEW
-            returnDate: returnDate.value,
-            location: eventLocation.value || ""
-          },
-          items,
-          payment: {
-    total: cleanTotal,      // ✅ Use clean value
-    paid: cleanPaid,        // ✅ Use clean value
-    
-          receiptImage: receiptImageUrl,
-          notes: document.getElementById("notes")?.value || "",
-          status: "active",
-         createdBy: {
-  uid: currentUser.uid,
-  email: currentUser.email
-},
-          createdAt: serverTimestamp()
-        };
-
+// ✅ Update the bookingData payment section
+const bookingData = {
+  client: {
+    name: clientName.value.trim(),
+    phone: clientPhone.value.trim(),
+    email: clientEmail.value.trim() || ""
+  },
+  event: {
+    type: eventType.value,
+    date: eventDate.value,
+    deliveryDate: deliveryDate.value || "",
+    returnDate: returnDate.value,
+    location: eventLocation.value || ""
+  },
+  items,
+  payment: {
+    total: cleanTotal,
+    paid: cleanPaid,
+    method: paymentMethod.value
+  },
+  receiptImage: receiptImageUrl,
+  notes: document.getElementById("notes")?.value || "",
+  status: "active",
+  createdBy: {
+    uid: currentUser.uid,
+    email: currentUser.email
+  },
+  createdAt: serverTimestamp()
+};
        
   /* ===== SAVE BOOKING ===== */
 const bookingRef = await addDoc(
