@@ -219,3 +219,37 @@ function endTour() {
   window.removeEventListener("resize", resizeHandler);
   window.removeEventListener("scroll", resizeHandler);
 }
+
+async function requestNotificationPermission() {
+  try {
+    if (!window.OneSignal) {
+      console.log('[Onboarding] OneSignal not available');
+      return false;
+    }
+    
+    // Use OneSignal's built-in slidedown
+    await window.OneSignal.Notifications.requestPermission({
+      modalOptions: {
+        title: "🔔 Stay Updated",
+        message: "Get real-time notifications for bookings, returns, and inventory alerts.",
+        buttonText: "Allow",
+        cancelButtonText: "Not Now"
+      }
+    });
+    
+    const permission = await window.OneSignal.Notifications.permission;
+    console.log('[Onboarding] Permission:', permission);
+    
+    if (permission === 'granted') {
+      const userId = await window.OneSignal.User.getOnesignalId();
+      console.log('[Onboarding] User subscribed:', userId);
+      return true;
+    }
+    
+    return false;
+    
+  } catch (error) {
+    console.error('[Onboarding] Permission error:', error);
+    return false;
+  }
+}
