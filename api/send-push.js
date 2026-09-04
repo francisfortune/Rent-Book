@@ -1,16 +1,29 @@
 // /api/send-push.js
-// Vercel Serverless Function
+// Vercel Serverless Function for OneSignal
 
 const ONESIGNAL_APP_ID = "539d08e3-cada-4b7e-88c3-f89af30ff7f9";
 
 export default async function handler(req, res) {
+    // ✅ Handle CORS
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    // ✅ Handle preflight
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
+    // ✅ Only allow POST
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    // ✅ Get API key from environment
     const ONESIGNAL_API_KEY = process.env.ONESIGNAL_API_KEY;
     
     if (!ONESIGNAL_API_KEY) {
+        console.error('[API] ❌ OneSignal API key missing');
         return res.status(500).json({ 
             error: 'OneSignal API key missing',
             details: 'Set ONESIGNAL_API_KEY in Vercel environment variables'
@@ -18,22 +31,36 @@ export default async function handler(req, res) {
     }
 
     try {
+        // ✅ Parse request body
         const { message, url = '/dashboard.html' } = req.body;
 
-        if (!message) {
-            return res.status(400).json({ error: 'Message is required' });
+        console.log('[API] 📨 Received request:', { message, url });
+
+        if (!message || message.trim() === '') {
+            console.error('[API] ❌ Message is empty');
+            return res.status(400).json({ 
+                error: 'Message is required',
+                details: 'Please provide a non-empty message in the request body'
+            });
         }
 
+        // ✅ Build OneSignal payload
         const payload = {
             app_id: ONESIGNAL_APP_ID,
             contents: { en: message },
             headings: { en: 'Tracknrent' },
             web_url: url,
             chrome_web_image: 'https://tracknrent.vercel.app/assets/imgs/logo.png',
-            data: { url: url },
+            data: { 
+                url: url,
+                timestamp: new Date().toISOString()
+            },
             included_segments: ['All']
         };
 
+        console.log('[API] 📤 Sending to OneSignal:', JSON.stringify(payload, null, 2));
+
+        // ✅ Send to OneSignal API
         const response = await fetch('https://onesignal.com/api/v1/notifications', {
             method: 'POST',
             headers: {
@@ -46,17 +73,25 @@ export default async function handler(req, res) {
         const data = await response.json();
 
         if (!response.ok) {
-            console.error('[API] OneSignal error:', data);
-            return res.status(response.status).json({ error: data });
+            console.error('[API] ❌ OneSignal API error:', data);
+            return res.status(response.status).json({
+                error: 'OneSignal API error',
+                details: data
+            });
         }
 
+        console.log('[API] ✅ Push sent successfully! ID:', data.id);
         return res.status(200).json({
             success: true,
-            notificationId: data.id
+            notificationId: data.id,
+            message: 'Push notification sent successfully'
         });
 
     } catch (error) {
-        console.error('[API] Error:', error);
-        return res.status(500).json({ error: error.message });
+        console.error('[API] ❌ Unexpected error:', error);
+        return res.status(500).json({
+            error: 'Internal server error',
+            details: error.message
+        });
     }
 }

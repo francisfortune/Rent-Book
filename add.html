@@ -1088,22 +1088,24 @@
                             + Add Item
                         </button>
 
-                        <h3 style="margin-top:20px;">Payment</h3>
-                        <div class="form-group">
-                            <label>Total Amount</label>
-                            <input type="number" id="totalAmount">
-                        </div>
-                        <div class="form-group">
-                            <label>Amount Paid</label>
-                            <input type="number" id="amountPaid">
-                        </div>
-                        <div class="form-group">
-                            <label>Payment Method</label>
-                            <select id="paymentMethod">
-                                <option>Cash</option>
-                                <option>Transfer</option>
-                            </select>
-                        </div>
+                      <h3 style="margin-top:20px;">Payment</h3>
+<div class="form-group">
+    <label>Total Amount (₦)</label>
+    <input type="text" id="totalAmount" inputmode="numeric" readonly 
+           style="background:#f7fafc; font-weight:700; color:purple; cursor:not-allowed; padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%;">
+</div>
+<div class="form-group">
+    <label>Amount Paid (₦)</label>
+    <input type="text" id="amountPaid" inputmode="numeric" placeholder="0"
+           style="padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%;">
+</div>
+<div class="form-group">
+    <label>Payment Method</label>
+    <select id="paymentMethod" style="padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%;">
+        <option>Cash</option>
+        <option>Transfer</option>
+    </select>
+</div>
 
 
                         <div class="form-group">
