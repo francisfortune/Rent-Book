@@ -1,22 +1,19 @@
 window.OneSignalDeferred = window.OneSignalDeferred || [];
 
 OneSignalDeferred.push(async function (OneSignal) {
-  if (!OneSignal.initialized) {
-    await OneSignal.init({
-      appId: "539d08e3-cada-4b7e-88c3-f89af30ff7f9",
-      serviceWorkerPath: "sw.js",
-      serviceWorkerParam: { scope: "/" }
-    });
-  }
+  await OneSignal.init({
+    appId: "539d08e3-cada-4b7e-88c3-f89af30ff7f9",
+    serviceWorkerPath: "sw.js",
+    serviceWorkerParam: { scope: "/" },
+    allowLocalhostAsSecureOrigin: true
+  });
 });
 
 export async function sendPush(message, url = "/dashboard.html") {
   try {
     const response = await fetch("/api/send-push", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message, url })
     });
 
@@ -25,7 +22,7 @@ export async function sendPush(message, url = "/dashboard.html") {
     if (!response.ok) {
       console.error("❌ Push relay error:", data);
     } else {
-      console.log(`✅ Push notification sent via OneSignal to ${data.recipients || 0} recipient(s):`, data);
+      console.log(`✅ Push notification sent via OneSignal:`, data);
     }
   } catch (err) {
     console.error("Push network error:", err);

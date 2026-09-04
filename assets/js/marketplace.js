@@ -7,7 +7,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const CATEGORIES = ["Equipment", "Vehicles", "Event Rentals", "Photography", "Furniture", "Sound & Lighting"];
-const CITIES = ["Lagos", "Abuja", "Port Harcourt", "Owerri"];
 
 const searchInput = document.getElementById("search-input");
 const searchClear = document.getElementById("search-clear");
@@ -42,6 +41,10 @@ function refreshIcons() {
    every open marketplace tab updates itself. No refresh needed.
 ========================= */
 function loadBusinesses() {
+  // The dashboard's single "Go Online" toggle writes publicProfile.enabled
+  // AND marketplace.visible together in the same update (see
+  // public-profile.js), so marketplace.visible is the correct — and only
+  // — field this catalog needs to filter on.
   const q = query(collection(db, "businesses"), where("marketplace.visible", "==", true));
 
   onSnapshot(
@@ -49,6 +52,7 @@ function loadBusinesses() {
     (snap) => {
       allBusinesses = snap.docs.map(d => normalizeBusiness(d.id, d.data()));
       rankBusinesses(allBusinesses);
+      renderCityChips();
       // Keep whatever view (homepage vs filtered results) is currently active in sync
       const isFiltering = searchInput.value.trim().length > 0 || activeCategory || activeCity;
       isFiltering ? applyFilters() : renderHomepage();
@@ -64,23 +68,44 @@ function loadBusinesses() {
   );
 }
 
+// Pulls a short, chip-friendly location (e.g. "Port Harcourt") out of a
+// freeform address like "No 12 Ogui Road, Port Harcourt, Rivers State".
+// Falls back gracefully since owners type addresses however they like.
+function deriveLocation(business) {
+  if (business.city) return business.city;
+  if (!business.address) return "";
+  const parts = business.address.split(",").map(s => s.trim()).filter(Boolean);
+  if (parts.length === 0) return "";
+  // Prefer the second-to-last segment (usually the city) over the last
+  // (often a state, or "Nigeria"), but fall back sensibly either way.
+  const stateLike = /state|nigeria/i;
+  const last = parts[parts.length - 1];
+  const secondLast = parts[parts.length - 2];
+  if (secondLast && !stateLike.test(secondLast)) return secondLast;
+  if (last && !stateLike.test(last)) return last;
+  return secondLast || last;
+}
+
 function normalizeBusiness(id, data) {
   const marketplace = data.marketplace || {};
   const profile = data.publicProfile || {};
-  return {
+  const business = {
     id,
     name: data.name || "Unnamed Business",
     category: data.category || "Equipment",
-    city: data.city || profile.address || "",
+    city: data.city || "",
+    address: profile.address || "",
     rating: Number(data.rating || 0),
     logoUrl: data.logoUrl || "",
     slug: profile.slug || "",
-    visible: marketplace.visible === true,
+    visible: profile.enabled === true,
     featured: marketplace.featured === true,
     verified: marketplace.verified === true,
     referralCount: Number(data.referrals?.count || 0),
     createdAt: data.createdAt || null
   };
+  business.location = deriveLocation(business);
+  return business;
 }
 
 // Featured (Growth Partner) > Verified > Rating > Newest
@@ -126,7 +151,8 @@ function buildBusinessCard(business, { featuredStyle = false } = {}) {
       </div>
       <div>
         <h3 class="font-display font-bold text-slate-900 group-hover:text-purple-800 transition">${business.name}</h3>
-        <p class="text-xs text-slate-500 mt-0.5">${business.category}${business.city ? ` · ${business.city}` : ""}</p>
+        <p class="text-xs text-slate-500 mt-0.5">${business.category}${business.location ? ` · ${business.location}` : ""}</p>
+        ${business.address ? `<p class="text-xs text-slate-400 mt-1 flex items-start gap-1"><i data-lucide="map-pin" class="w-3 h-3 mt-0.5 flex-shrink-0"></i><span class="line-clamp-1">${business.address}</span></p>` : ""}
       </div>
       <div class="flex items-center justify-between pt-2 border-t border-slate-50">
         <span class="text-amber-500 text-sm tracking-tight">${business.rating > 0 ? stars : ""}</span>
@@ -164,7 +190,7 @@ function renderHomepage() {
    SEARCH + FILTERS
 ========================= */
 function matchesQuery(business, tokens) {
-  const haystack = `${business.name} ${business.category} ${business.city}`.toLowerCase();
+  const haystack = `${business.name} ${business.category} ${business.location} ${business.address}`.toLowerCase();
   return tokens.every(t => haystack.includes(t));
 }
 
@@ -184,7 +210,7 @@ function applyFilters() {
 
   let filtered = allBusinesses.filter(b => {
     if (activeCategory && b.category !== activeCategory) return false;
-    if (activeCity && b.city !== activeCity) return false;
+    if (activeCity && b.location.toLowerCase() !== activeCity.toLowerCase()) return false;
     if (tokens.length > 0 && !matchesQuery(b, tokens)) return false;
     return true;
   });
@@ -231,13 +257,6 @@ function renderChips() {
     </button>
   `).join("");
 
-  cityChipsEl.innerHTML = CITIES.map(city => `
-    <button data-city-chip data-value="${city}"
-      class="text-sm font-medium px-4 py-2 rounded-full bg-white border border-slate-200 hover:border-purple-300 hover:text-purple-800 transition">
-      ${city}
-    </button>
-  `).join("");
-
   document.querySelectorAll("[data-category-chip]").forEach(btn => {
     btn.addEventListener("click", () => {
       const value = btn.dataset.value;
@@ -247,13 +266,45 @@ function renderChips() {
       applyFilters();
     });
   });
+}
+
+/* =========================
+   LOCATION CHIPS (dynamic)
+   This is a nationwide marketplace, so instead of a fixed handful of
+   cities, we surface whatever real locations businesses have actually
+   listed — sorted by how many businesses are there, most first.
+========================= */
+function renderCityChips() {
+  if (!cityChipsEl) return;
+
+  const counts = new Map();
+  allBusinesses.forEach(b => {
+    if (!b.location) return;
+    counts.set(b.location, (counts.get(b.location) || 0) + 1);
+  });
+
+  const locations = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 16)
+    .map(([location]) => location);
+
+  if (locations.length === 0) {
+    cityChipsEl.innerHTML = `<p class="text-sm text-slate-400">Locations will show up here as businesses join.</p>`;
+    return;
+  }
+
+  cityChipsEl.innerHTML = locations.map(loc => `
+    <button data-city-chip data-value="${loc}"
+      class="text-sm font-medium px-4 py-2 rounded-full bg-white border border-slate-200 hover:border-purple-300 hover:text-purple-800 transition ${activeCity === loc ? "bg-purple-800 text-white border-purple-800" : ""}">
+      ${loc}
+    </button>
+  `).join("");
 
   document.querySelectorAll("[data-city-chip]").forEach(btn => {
     btn.addEventListener("click", () => {
       const value = btn.dataset.value;
       activeCity = activeCity === value ? null : value;
-      document.querySelectorAll("[data-city-chip]").forEach(el => el.classList.remove("bg-purple-800", "text-white"));
-      if (activeCity) btn.classList.add("bg-purple-800", "text-white");
+      renderCityChips();
       applyFilters();
     });
   });
