@@ -142,21 +142,22 @@ function buildBusinessCard(business, { featuredStyle = false } = {}) {
     : "border border-slate-200 shadow-sm";
 
   return `
-    <a href="${storeUrl}" class="group block bg-white ${cardBorder} rounded-2xl p-5 hover:shadow-lg transition flex flex-col gap-3 min-w-[240px]">
+    <a href="${storeUrl}" style="width:290px; height:380px; text-align:center; background:alicewhite;" class="group block bg-white ${cardBorder} rounded-2xl p-5 hover:shadow-lg transition flex flex-col gap-3 min-w-[140px]">
       <div class="flex items-start justify-between gap-2">
-        <div class="w-12 h-12 rounded-xl bg-purple-950 text-white flex items-center justify-center font-display font-bold text-sm overflow-hidden">
+        <div style="border-radius:50px; margin:auto; width:150px; height:150px;" class="w-10 h-14 rounded-xl bg-purple-950 text-white flex items-center justify-center font-display font-bold text-bm overflow-hidden">
           ${business.logoUrl ? `<img src="${business.logoUrl}" class="w-full h-full object-cover" alt="${business.name} logo">` : initials}
         </div>
         ${badge}
       </div>
       <div>
-        <h3 class="font-display font-bold text-slate-900 group-hover:text-purple-800 transition">${business.name}</h3>
-        <p class="text-xs text-slate-500 mt-0.5">${business.category}${business.location ? ` · ${business.location}` : ""}</p>
-        ${business.address ? `<p class="text-xs text-slate-400 mt-1 flex items-start gap-1"><i data-lucide="map-pin" class="w-3 h-3 mt-0.5 flex-shrink-0"></i><span class="line-clamp-1">${business.address}</span></p>` : ""}
+        <h3 style="font-size:20px; font-weight:bold; text-align:center;" class="font-display font-bold text-slate-900 group-hover:text-purple-800 transition">${business.name}</h3>
+        <p style="font-weight:400; font-size:14px; text-align:center; padding-top:3px;" class="text-xs text-slate-500 mt-0.5">${business.category}${business.location ? ` · ${business.location}` : ""}</p>
+        ${business.address ? `<p style="text-align:center;" class="text-xs text-slate-400 mt-1 flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3 mt-0.5 flex-shrink-0"></i><span class="line-clamp-1">${business.address}</span></p>` : ""}
       </div>
       <div class="flex items-center justify-between pt-2 border-t border-slate-50">
         <span class="text-amber-500 text-sm tracking-tight">${business.rating > 0 ? stars : ""}</span>
-        <span class="text-xs font-semibold text-purple-800 group-hover:underline">View Store &rarr;</span>
+        <span style=" margin: auto;
+    margin-top: 60px; color:purple; font-weight:500;">View Store &rarr;</span>
       </div>
     </a>
   `;

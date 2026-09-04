@@ -45,6 +45,7 @@ async function sendNotification(businessId, message, userEmail, type = "general"
    TOTAL CALCULATION
 ========================= */
 
+
 function recalcTotal() {
   let total = 0;
   let itemsSummary = "";
@@ -55,52 +56,59 @@ function recalcTotal() {
     const qty = Number(row.querySelector(".item-qty")?.value || 0);
     const price = Number(row.querySelector(".item-price")?.value || 0);
     
-    // Updated selector to find the vendor name inside the new container
     const vendor = row.querySelector(".vendor-name")?.value;
     
     const rowTotal = qty * price;
     total += rowTotal;
 
     if (qty > 0) {
-      // Improved logic: only show the tag if a vendor name is actually typed
       const vendorTag = vendor ? ` [Ext: ${vendor}]` : "";
       itemsSummary += `• ${name} (x${qty})${vendorTag} - ₦${rowTotal.toLocaleString()}\n`;
     }
   });
 
-  // Update hidden total input
-  if (document.getElementById("totalAmount")) {
-    document.getElementById("totalAmount").value = total;
+  // ✅ FORMAT TOTAL WITH COMMAS
+  const formattedTotal = total.toLocaleString('en-NG');
+  
+  // Update total input with formatted value
+  const totalInput = document.getElementById("totalAmount");
+  if (totalInput) {
+    totalInput.value = formattedTotal;
   }
 
-   // Read Amount Paid
-// ✅ FIXED: Get Paid Amount correctly
+  // Get Paid Amount
   const paidInput = document.getElementById("amountPaid");
-  const paidValue = paidInput ? parseFloat(paidInput.value) || 0 : 0;
+  const paidValue = paidInput ? parseFloat(paidInput.value.replace(/,/g, '')) || 0 : 0;
+
+  // ✅ FORMAT PAID WITH COMMAS
+  const formattedPaid = paidValue.toLocaleString('en-NG');
+  if (paidInput) {
+    paidInput.value = formattedPaid;
+  }
 
   const balance = total - paidValue;
 
   // Build Preview with Dynamic Business Name
- const previewText = 
-  `*BOOKING CONFIRMATION - ${currentBusinessName.toUpperCase()}*\n\n` +
-  `Hi ${document.getElementById("clientName")?.value || "Customer"}, your booking is confirmed! ✅\n\n` +
-  `Date: ${document.getElementById("eventDate")?.value || "Date"}\n` +
-  `Location: ${document.getElementById("eventLocation")?.value || "Not specified"}\n\n` +
-  `Items Ordered: \n${itemsSummary}\n` +
-  `Total: ₦${total.toLocaleString()}\n` +
-  `Paid: ₦${paidValue.toLocaleString()}\n` +
-  `Balance: ₦${balance.toLocaleString()}\n\n` +
-`Thank you for choosing ${currentBusinessName}!\n\n` +
-  `--- \n` + 
-  `_Powered by Tracknrent_ \n` + 
-  `👉 https://tracknrent.vercel.app`;
-  ;
+  const previewText = 
+    `*BOOKING CONFIRMATION - ${currentBusinessName.toUpperCase()}*\n\n` +
+    `Hi ${document.getElementById("clientName")?.value || "Customer"}, your booking is confirmed! ✅\n\n` +
+  `Event Date: ${document.getElementById("eventDate")?.value || "Date"}\n` +
+  `Return Date: ${document.getElementById("returnDate")?.value || "Not Set"}\n` +
+    `Location: ${document.getElementById("eventLocation")?.value || "Not specified"}\n\n` +
+    `Items Ordered: \n${itemsSummary}\n` +
+    `Total: ₦${formattedTotal}\n` +
+    `Paid: ₦${formattedPaid}\n` +
+    `Balance: ₦${balance.toLocaleString()}\n\n` +
+    `Thank you for choosing ${currentBusinessName}!\n\n` +
+    `--- \n` + 
+    `_Powered by Tracknrent_ \n` + 
+    `👉 https://tracknrent.vercel.app`;
+  
   const previewBox = document.getElementById("liveReceiptText");
   if (previewBox) {
     previewBox.innerText = previewText;
   }
 }
-
 /* =========================
    ADD ITEM ROW
 ========================= */
@@ -264,7 +272,7 @@ onAuthStateChanged(auth, async (user) => {
     }));
 
 // ✅ ADD LISTENERS FOR LIVE UPDATES
-    const liveFields = ["clientName", "eventDate", "eventLocation", "amountPaid"];
+    const liveFields = ["clientName", "eventDate", "eventLocation", "amountPaid","returnDate"];
     liveFields.forEach(id => {
       const el = document.getElementById(id);
       if (el) {
@@ -402,6 +410,17 @@ if (overbookedItems.length) {
           receiptImageUrl = await uploadReceiptImage(businessId, receiptFile);
         }
 
+// Inside the submit event listener, before creating bookingData:
+
+// ✅ Remove commas from total and paid before saving
+const totalAmount = document.getElementById("totalAmount");
+const amountPaid = document.getElementById("amountPaid");
+
+const cleanTotal = parseFloat(totalAmount.value.replace(/,/g, '')) || 0;
+const cleanPaid = parseFloat(amountPaid.value.replace(/,/g, '')) || 0;
+
+
+
         const bookingData = {
           client: {
             name: clientName.value.trim(),
@@ -417,10 +436,9 @@ if (overbookedItems.length) {
           },
           items,
           payment: {
-            total: Number(totalAmount.value),
-            paid: Number(amountPaid.value || 0),
-            method: paymentMethod.value
-          },
+    total: cleanTotal,      // ✅ Use clean value
+    paid: cleanPaid,        // ✅ Use clean value
+    
           receiptImage: receiptImageUrl,
           notes: document.getElementById("notes")?.value || "",
           status: "active",

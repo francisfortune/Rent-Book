@@ -24,6 +24,35 @@ import { runAutomatedChecks } from "./services/reminderService.js";
 
 let currentRole = "viewer";
 let currentBusinessName = "";
+let publicProfileSettings = { enabled: false, slug: "" }; // Store storefront status
+
+/* =========================
+   LISTEN TO BUSINESS PROFILE SETTINGS
+========================= */
+function listenToBusinessProfile(businessId) {
+  const businessRef = doc(db, "businesses", businessId);
+  onSnapshot(businessRef, (snap) => {
+    if (snap.exists()) {
+      const data = snap.data();
+      currentBusinessName = data.name || "Our Business";
+      publicProfileSettings = {
+        enabled: data.publicProfile?.enabled || false,
+        slug: data.publicProfile?.slug || ""
+      };
+    }
+  });
+}
+
+// Call this inside your onAuthStateChanged block after resolving businessId:
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return;
+  try {
+    const businessId = await getBusinessIdByEmail(user.email, user);
+    listenToBusinessProfile(businessId); // Initializes live tracking of online status & slug
+  } catch (err) {
+    console.error("Failed to load business context for receipts:", err);
+  }
+});
 
 /* =========================
    RECEIPT TEXT GENERATOR
@@ -40,7 +69,8 @@ function generateReceiptText(booking) {
   const deliveryDate = booking.event?.deliveryDate || booking.event?.date || "Not set";
   const returnDate  = booking.event?.returnDate || "Not set";
 
-  return `*${currentBusinessName} Booking Receipt*\n\n` +
+  // Build the core receipt body
+  let receiptText = `*${currentBusinessName} Booking Receipt*\n\n` +
     `Hi ${booking.client.name}, your booking details are below:\n\n` +
     `Event Date: ${formatDateTime(booking.event.date)}\n` +
     `Delivery Date: ${formatDateTime(deliveryDate)}\n` +
@@ -51,9 +81,18 @@ function generateReceiptText(booking) {
     `Paid: ₦${paid.toLocaleString()}\n` +
     `Balance: ₦${balance.toLocaleString()}\n\n` +
     `Thank you for choosing ${currentBusinessName}!\n\n` +
-    `---\n` +
-    `_Powered by Tracknrent_\n` +
-    `👉 https://tracknrent.vercel.app`;
+    `---`;
+
+  // Conditionally append store URL only if "Go Online" toggle is enabled AND a valid slug exists
+  if (publicProfileSettings.enabled && publicProfileSettings.slug) {
+    const storeUrl = `${window.location.origin}/p/${publicProfileSettings.slug}`;
+    receiptText += `\n🌐 _View our store catalog: ${storeUrl}_`;
+  }
+
+  // App Footer
+  receiptText += `\n_Powered by Tracknrent_\n👉 https://tracknrent.vercel.app`;
+
+  return receiptText;
 }
 
 function normalizePhone(phone) {
@@ -819,30 +858,49 @@ function showErrorBanner(message) {
    NOTIFICATION HELPER — saves to Firestore AND fires OneSignal push
 ========================= */
 async function sendNotification(businessId, message, userEmail, type, bookingId = "") {
-  try {
-    // 1. Save in-app notification to Firestore
-    const notifRef = collection(db, "businesses", businessId, "notifications");
-    await addDoc(notifRef, {
-      message,
-      triggeredBy: userEmail || "System",
-      type,
-      bookingId,
-      createdAt: serverTimestamp(),
-      readBy: [],
-      deletedFor: []
-    });
+    try {
+        // 1. Save in-app notification to Firestore (always works)
+        const notifRef = collection(db, "businesses", businessId, "notifications");
+        await addDoc(notifRef, {
+            message,
+            triggeredBy: userEmail || "System",
+            type,
+            bookingId,
+            createdAt: serverTimestamp(),
+            readBy: [],
+            deletedFor: []
+        });
 
-    // 2. Fire OneSignal push notification to all subscribed devices
-    const deepLink = bookingId
-      ? `/bookings.html?highlight=${bookingId}`
-      : `/dashboard.html`;
-    await sendPush(message, deepLink);
+        // 2. Fire OneSignal push notification (optional, non-blocking)
+        const deepLink = bookingId
+            ? `/bookings.html?highlight=${bookingId}`
+            : `/dashboard.html`;
+        
+        // ✅ Use the imported sendPush or fallback to window.sendPush
+        try {
+            if (typeof sendPush === 'function') {
+                await sendPush(message, deepLink);
+            } else if (window.sendPush) {
+                await window.sendPush(message, deepLink);
+            } else {
+                // Try dynamic import
+                const { sendPush: importedSendPush } = await import('./onesignal.js');
+                await importedSendPush(message, deepLink);
+            }
+        } catch (pushError) {
+            console.warn('[Notification] Push failed but in-app saved:', pushError.message);
+            // ✅ Don't throw - push failure shouldn't break the UI
+        }
 
-    console.log("✅ Notification saved + push sent:", message);
-  } catch (err) {
-    console.error("sendNotification error (non-critical):", err);
-  }
+        console.log("✅ Notification saved:", message);
+    } catch (err) {
+        console.error("[Notification] Error:", err);
+        // ✅ Don't throw - notification failure shouldn't break the UI
+    }
 }
+
+
+
 
 /* =========================
    AUTH & MAIN LOAD

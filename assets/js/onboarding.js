@@ -5,43 +5,46 @@ let overlayEl = null;
 let tooltipEl = null;
 let resizeHandler = null;
 
+
 const steps = [
   {
-    selector: ".mobile-brand, .brand, .navigation",
+    selector: ".navigation, .mobile-brand, .brand",
     title: "Welcome to Tracknrent! 🚀",
-    desc: "Tracknrent makes it simple to manage your circular economy event bookings and item inventory in one place. Let's take a quick tour!"
+    desc: "Easily manage your rental items, inventory, and event bookings all in one place. Let's show you around!"
   },
   {
     selector: ".cardBox",
-    title: "Real-Time Stats Dashboard 📊",
-    desc: "Keep track of your total inventory items, active bookings, returns, and overdue items at a glance."
-  }, 
-  {
-    selector: 'a[href="bookings.html"], .bookings',
-    title: "Bookings Record",
-    desc: "View all your bookings from active bookings to returned Bookings"
+    title: "Dashboard Overview 📊",
+    desc: "See your total items, active bookings, completed returns, and overdue rentals at a glance."
   },
   {
-    selector: 'a[href="add.html"], .add',
-    title: "Create New Rental Bookings ➕",
-    desc: "Create client booking orders, assign rental items, Generate receipts and send instant push alerts to team members."
+    selector: '.bookings, a[href="bookings.html"]',
+    title: "Bookings Record 📋",
+    desc: "Track every order, from newly scheduled rentals to completed returns."
   },
   {
-    selector: 'a[href="inventory.html"], .inventory',
-    title: "Live Inventory Catalog 📦",
-    desc: "Monitor your equipment inventory. The system auto-updates stock availability during rentals to prevent double-booking shortages."
+    selector: '.add, a[href="add.html"]',
+    title: "New Booking ➕",
+    desc: "Create client orders, assign rental gear, generate receipts, and alert your team instantly."
   },
   {
-    selector: 'a[href="public.html"], .profile',
-    title: "Your Rental Online Storefront 🌐",
-    desc: "Set up your online rental business storefront and get discovered by more customers."
+    selector: '.inventory, a[href="inventory.html"]',
+    title: "Inventory Catalog 📦",
+    desc: "Check real-time stock levels. Available items update automatically to prevent double-booking."
+  },
+  {
+    selector: '.profile, a[href="public.html"]',
+    title: "Online Storefront 🌐",
+    desc: "Set up your public rental page so prospective clients can browse and reach out."
   },
   {
     selector: "#user-avatar",
-    title: "Settings, Analytics & AI Assistant 🤖",
-    desc: "Manage settings, invite staff, view business analytics, or chat with our AI Assistant to adjust stock counts and fetch booking records."
+    title: "Account & Settings 🤖",
+    desc: "Customize settings, invite team members, view reports, or ask the AI Assistant for help."
   }
 ];
+
+
 export function startOnboardingTour() {
   if (localStorage.getItem("tracknrent_onboarding_completed") === "true") return;
 
