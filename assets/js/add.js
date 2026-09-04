@@ -16,11 +16,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { onAuthStateChanged } from
   "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {
-  ref,
-  uploadBytes,
-  getDownloadURL
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
 
 let currentBusinessName = "Our Business"; 
 let inventoryItems = [];
@@ -181,19 +177,39 @@ window.addItemRow = function () {
 };
 
 /* =========================
-   RECEIPT IMAGE UPLOAD
+   RECEIPT IMAGE UPLOAD (Cloudinary)
 ========================= */
 async function uploadReceiptImage(businessId, file) {
   if (!file) return null;
 
-  const timestamp = Date.now();
-  const fileName = `receipts/${businessId}/${timestamp}_${file.name}`;
-  const storageRef = ref(storage, fileName);
+  const cloudName = "jbavo7nr";
+  const uploadPreset = "add_receipt_img";
+  const url = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
 
-  await uploadBytes(storageRef, file);
-  const downloadURL = await getDownloadURL(storageRef);
-  return downloadURL;
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", uploadPreset);
+  // Optional: organize uploads into folders on Cloudinary
+  formData.append("folder", `receipts/${businessId}`);
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error(`Cloudinary upload failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.secure_url; // Returns the public HTTPS URL for Firestore
+  } catch (error) {
+    console.error("Cloudinary Upload Error:", error);
+    throw error;
+  }
 }
+
 
 let businessId = "";
 let currentUser = null;
