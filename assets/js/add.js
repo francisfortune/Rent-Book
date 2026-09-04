@@ -2,6 +2,7 @@ import { auth, db, storage } from "./firebase.js";
 import { deductInventory } from "./services/inventoryService.js";
 import { getBusinessIdByEmail } from "./shared.js";
 import { sendPush } from "./onesignal.js";
+import { uploadReceiptImage } from "./utils/upload.js";
 
 import {
   collection,
@@ -14,6 +15,8 @@ import {
   doc,
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+
 import { onAuthStateChanged } from
   "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
@@ -46,6 +49,7 @@ async function sendNotification(businessId, message, userEmail, type = "general"
 ========================= */
 
 
+
 function recalcTotal() {
   let total = 0;
   let itemsSummary = "";
@@ -67,27 +71,29 @@ function recalcTotal() {
     }
   });
 
-  // ✅ Store raw total for calculation
   const totalAmountInput = document.getElementById("totalAmount");
   const amountPaidInput = document.getElementById("amountPaid");
 
-  // ✅ Only update total if user hasn't manually changed it
+  // ✅ Set raw number (NO commas) for text inputs
   if (totalAmountInput && !totalAmountInput.dataset.userEdited) {
-    totalAmountInput.value = total.toLocaleString('en-NG');
+    totalAmountInput.value = total || 0;
   }
 
   // Get Paid Amount - handle both formatted and raw values
   const paidRaw = amountPaidInput ? amountPaidInput.value.replace(/,/g, '') : '0';
   const paidValue = parseFloat(paidRaw) || 0;
 
-  // ✅ Format paid display
   if (amountPaidInput && !amountPaidInput.dataset.userEdited) {
-    amountPaidInput.value = paidValue.toLocaleString('en-NG');
+    amountPaidInput.value = paidValue || 0;
   }
 
   const balance = total - paidValue;
 
-  // Build Preview
+  // ✅ Format with commas ONLY for display preview
+  const formattedTotal = total.toLocaleString('en-NG');
+  const formattedPaid = paidValue.toLocaleString('en-NG');
+
+  // Build Preview with formatted values
   const previewText = 
     `*BOOKING CONFIRMATION - ${currentBusinessName.toUpperCase()}*\n\n` +
     `Hi ${document.getElementById("clientName")?.value || "Customer"}, your booking is confirmed! ✅\n\n` +
@@ -95,8 +101,8 @@ function recalcTotal() {
     `Return Date: ${document.getElementById("returnDate")?.value || "Not Set"}\n` +
     `Location: ${document.getElementById("eventLocation")?.value || "Not specified"}\n\n` +
     `Items Ordered: \n${itemsSummary}\n` +
-    `Total: ₦${total.toLocaleString()}\n` +
-    `Paid: ₦${paidValue.toLocaleString()}\n` +
+    `Total: ₦${formattedTotal}\n` +
+    `Paid: ₦${formattedPaid}\n` +
     `Balance: ₦${balance.toLocaleString()}\n\n` +
     `Thank you for choosing ${currentBusinessName}!\n\n` +
     `--- \n` + 
@@ -109,7 +115,10 @@ function recalcTotal() {
   }
 }
 
+
+
 // ✅ Add event listeners to detect user editing
+// ✅ Add event listeners for text inputs (type="text" with inputmode="numeric")
 document.addEventListener('DOMContentLoaded', function() {
   const totalAmountInput = document.getElementById("totalAmount");
   const amountPaidInput = document.getElementById("amountPaid");
@@ -121,9 +130,9 @@ document.addEventListener('DOMContentLoaded', function() {
       if (raw) this.value = raw;
     });
     totalAmountInput.addEventListener('blur', function() {
-      // Format when leaving
+      // Keep raw value (no commas in input)
       const raw = parseFloat(this.value.replace(/,/g, '')) || 0;
-      if (raw) this.value = raw.toLocaleString('en-NG');
+      this.value = raw;
     });
     totalAmountInput.addEventListener('input', function() {
       this.dataset.userEdited = 'true';
@@ -137,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     amountPaidInput.addEventListener('blur', function() {
       const raw = parseFloat(this.value.replace(/,/g, '')) || 0;
-      if (raw) this.value = raw.toLocaleString('en-NG');
+      this.value = raw;
     });
     amountPaidInput.addEventListener('input', function() {
       this.dataset.userEdited = 'true';
@@ -706,5 +715,7 @@ window.shareToWhatsApp = function() {
   updateBtnSize();
   */
 // })();
+
+
 
 

@@ -18,8 +18,10 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { editBookingTransaction } from "./services/bookingService.js";
+import { uploadReceiptImage } from "./utils/upload.js";
 import { deductInventory, restoreInventory } from "./services/inventoryService.js";
 import { generateReceiptImage } from "./pdf.js";
+
 import { runAutomatedChecks } from "./services/reminderService.js";
 
 let currentRole = "viewer";
@@ -500,7 +502,7 @@ window.openBooking = function(booking, id, businessId) {
     </div>
   </div>
 
-  // Add this after the notes section and before the receipt preview section
+  
 
 ${booking.receiptImage ? `
   <div class="mt-4">
@@ -690,9 +692,6 @@ window.openEditModal = async function(booking, id, businessId) {
     </div>
   </div>
 
-// Add receipt image edit section (inside openEditModal function)
-
-// Add this after the notes textarea and before the save/cancel buttons
 
 <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;border-top:1px solid #e5e5e5;padding-top:12px;">
   <label style="font-size:12px;color:purple;font-weight:600;">Receipt Image</label>
