@@ -9,18 +9,23 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    // ✅ Handle preflight
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
 
-    // ✅ Only allow POST
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
     // ✅ Get API key from environment
     const ONESIGNAL_API_KEY = process.env.ONESIGNAL_API_KEY;
+    
+    // ✅ DEBUG - Check key format
+    console.log('[API] API Key exists:', !!ONESIGNAL_API_KEY);
+    if (ONESIGNAL_API_KEY) {
+        console.log('[API] Key prefix:', ONESIGNAL_API_KEY.substring(0, 15) + '...');
+        console.log('[API] Starts with os_v2_app_:', ONESIGNAL_API_KEY.startsWith('os_v2_app_'));
+    }
     
     if (!ONESIGNAL_API_KEY) {
         console.error('[API] ❌ OneSignal API key missing');
@@ -31,7 +36,6 @@ export default async function handler(req, res) {
     }
 
     try {
-        // ✅ Parse request body
         const { message, url = '/dashboard.html' } = req.body;
 
         console.log('[API] 📨 Received request:', { message, url });
@@ -58,7 +62,7 @@ export default async function handler(req, res) {
             included_segments: ['All']
         };
 
-        console.log('[API] 📤 Sending to OneSignal:', JSON.stringify(payload, null, 2));
+        console.log('[API] 📤 Sending to OneSignal...');
 
         // ✅ Send to OneSignal API
         const response = await fetch('https://onesignal.com/api/v1/notifications', {
@@ -73,7 +77,7 @@ export default async function handler(req, res) {
         const data = await response.json();
 
         if (!response.ok) {
-            console.error('[API] ❌ OneSignal API error:', data);
+            console.error('[API] ❌ OneSignal API error:', JSON.stringify(data, null, 2));
             return res.status(response.status).json({
                 error: 'OneSignal API error',
                 details: data
