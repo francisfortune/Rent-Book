@@ -1,6 +1,9 @@
 // MUST BE LINE 1: Import OneSignal ServiceWorker SDK
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 
+// Prevent multiple installations
+let isInstalling = false;
+
 // Message handler for Service Worker updates
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'SKIP_WAITING') {
@@ -8,7 +11,7 @@ self.addEventListener('message', (event) => {
     }
 });
 
-const CACHE_NAME = 'Tracknrent-v1.0.4';
+const CACHE_NAME = 'Tracknrent-v1.0.5';
 const DYNAMIC_CACHE = 'Tracknrent-dynamic-v1';
 
 const STATIC_ASSETS = [
@@ -40,13 +43,14 @@ const STATIC_ASSETS = [
     '/manifest.json'
 ];
 
-const CDN_ASSETS = [
-    'https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Raleway+Dots&family=Roboto:wght@300;400;500;700&display=swap',
-    'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200'
-];
-
-// Install event
+// Install event with lock to prevent loops
 self.addEventListener('install', (event) => {
+    if (isInstalling) {
+        event.waitUntil(Promise.resolve());
+        return;
+    }
+    isInstalling = true;
+    
     console.log('[ServiceWorker] Installing...');
     event.waitUntil(
         caches.open(CACHE_NAME)
@@ -58,28 +62,16 @@ self.addEventListener('install', (event) => {
                 );
             })
             .then(() => {
-                return caches.open(CACHE_NAME).then(cache => {
-                    return Promise.allSettled(
-                        CDN_ASSETS.map(url =>
-                            fetch(url, { mode: 'cors' })
-                                .then(response => {
-                                    if (response.ok) {
-                                        return cache.put(url, response);
-                                    }
-                                })
-                                .catch(err => console.log(`[ServiceWorker] Failed to cache CDN: ${url}`))
-                        )
-                    );
-                });
-            })
-            .then(() => {
                 console.log('[ServiceWorker] Installation complete');
                 return self.skipWaiting();
+            })
+            .finally(() => {
+                isInstalling = false;
             })
     );
 });
 
-// Activate event
+// Activate event - clean old caches
 self.addEventListener('activate', (event) => {
     console.log('[ServiceWorker] Activating...');
     event.waitUntil(
@@ -91,17 +83,20 @@ self.addEventListener('activate', (event) => {
                         .map(name => caches.delete(name))
                 );
             })
-            .then(() => self.clients.claim())
+            .then(() => {
+                return self.clients.claim();
+            })
     );
 });
 
-// Fetch event
+// Fetch event with network-first strategy
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
     if (request.method !== 'GET') return;
 
+    // Skip Firebase, Google APIs, OneSignal
     if (url.hostname.includes('firebaseapp.com') ||
         url.hostname.includes('googleapis.com') ||
         url.hostname.includes('gstatic.com') ||
@@ -111,28 +106,15 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    if (url.hostname !== location.hostname) {
-        event.respondWith(
-            caches.match(request).then(cachedResponse => {
-                if (cachedResponse) return cachedResponse;
-                return fetch(request).then(response => {
-                    if (response.ok) {
-                        const responseClone = response.clone();
-                        caches.open(DYNAMIC_CACHE).then(cache => cache.put(request, responseClone));
-                    }
-                    return response;
-                });
-            })
-        );
-        return;
-    }
-
+    // Network-first for all requests
     event.respondWith(
         fetch(request)
             .then(response => {
                 if (response.ok && response.type === 'basic') {
                     const responseClone = response.clone();
-                    caches.open(DYNAMIC_CACHE).then(cache => cache.put(request, responseClone));
+                    caches.open(DYNAMIC_CACHE).then(cache => {
+                        cache.put(request, responseClone).catch(() => {});
+                    });
                 }
                 return response;
             })
@@ -154,20 +136,8 @@ self.addEventListener('sync', (event) => {
 });
 
 async function syncBookings() {
+    // Implement sync logic if needed
     return [];
 }
-
-// Periodic Sync
-self.addEventListener('periodicsync', (event) => {
-    if (event.tag === 'check-reminders') {
-        event.waitUntil(
-            self.clients.matchAll().then(allClients => {
-                allClients.forEach(client => {
-                    client.postMessage({ type: 'TRIGGER_AUTO_CHECKS' });
-                });
-            })
-        );
-    }
-});
 
 console.log('[ServiceWorker] Service Worker loaded');
