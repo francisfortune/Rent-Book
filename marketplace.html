@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tracknrent Marketplace — Find Rental Businesses Near You</title>
+  <meta name="description" content="Discover verified rental businesses for equipment, vehicles, events, photography, furniture and sound & lighting." />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .font-display { font-family: 'Manrope', sans-serif; }
+    .card-scroll::-webkit-scrollbar { height: 6px; }
+    .card-scroll::-webkit-scrollbar-thumb { background: #c4b5fd; border-radius: 999px; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- Top Bar -->
+  <nav class="bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="/" class="font-display font-extrabold text-lg text-purple-950 tracking-tight">tracknrent</a>
+      <a href="signup.html" class="text-sm font-semibold text-purple-800 hover:text-purple-950 transition">List your business &rarr;</a>
+    </div>
+  </nav>
+
+  <!-- Hero / Search -->
+  <header class="relative bg-gradient-to-br from-purple-950 via-purple-900 to-indigo-950 text-white overflow-hidden">
+    <div class="absolute -top-32 -right-32 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-32 -left-32 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="relative z-10 max-w-3xl mx-auto px-4 py-16 md:py-24 text-center space-y-6">
+      <h1 class="font-display text-3xl md:text-5xl font-extrabold tracking-tight">Find rental businesses near you</h1>
+      <p class="text-purple-100/90 text-sm md:text-base max-w-xl mx-auto">Generators, chairs, cameras, sound systems — browse verified rental businesses and book directly on WhatsApp.</p>
+
+      <div class="flex items-center gap-2 bg-white rounded-2xl p-2 shadow-xl max-w-xl mx-auto">
+        <i data-lucide="search" class="w-5 h-5 text-slate-400 ml-2"></i>
+        <input id="search-input" type="text" placeholder="Try 'generator Lagos' or 'chairs'"
+          class="flex-1 text-slate-900 placeholder:text-slate-400 text-sm md:text-base py-2.5 px-1 outline-none" />
+        <button id="search-clear" class="hidden text-xs text-slate-400 hover:text-slate-600 px-2">Clear</button>
+      </div>
+
+      <!-- Category Chips -->
+      <div id="category-chips" class="flex flex-wrap items-center justify-center gap-2 pt-2">
+        <!-- injected -->
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto w-full px-4 py-10 space-y-14 flex-1">
+
+    <!-- Active filter banner -->
+    <div id="active-filter-banner" class="hidden bg-purple-50 border border-purple-100 text-purple-900 text-sm rounded-xl px-4 py-3 flex items-center justify-between">
+      <span id="active-filter-text"></span>
+      <button id="clear-filter-btn" class="font-semibold text-purple-700 hover:text-purple-900">Clear</button>
+    </div>
+
+    <!-- Results (shown when searching/filtering) -->
+    <section id="results-section" class="hidden space-y-6">
+      <div class="border-b border-slate-200 pb-3">
+        <h2 class="font-display text-xl font-bold text-slate-900">Results</h2>
+      </div>
+      <div id="results-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </section>
+
+    <!-- Default homepage sections -->
+    <div id="homepage-sections" class="space-y-14">
+
+      <!-- Growth Partners (Featured) -->
+      <section id="featured-section" class="hidden space-y-5">
+        <div class="border-b border-slate-200 pb-3">
+          <h2 class="font-display text-xl font-bold text-slate-900 flex items-center gap-2">
+            <span>🏆</span> Growth Partners
+          </h2>
+          <p class="text-xs text-slate-500 mt-0.5">Businesses that helped grow the Tracknrent community</p>
+        </div>
+        <div id="featured-scroll" class="card-scroll flex gap-5 overflow-x-auto pb-3"></div>
+      </section>
+
+      <!-- Newest Businesses -->
+      <section class="space-y-5">
+        <div class="border-b border-slate-200 pb-3">
+          <h2 class="font-display text-xl font-bold text-slate-900">Newest Businesses</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Recently joined the marketplace</p>
+        </div>
+        <div id="newest-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+      </section>
+
+      <!-- Browse by Location (built dynamically from real businesses across Nigeria) -->
+      <section class="space-y-5">
+        <div class="border-b border-slate-200 pb-3">
+          <h2 class="font-display text-xl font-bold text-slate-900">Browse by Location</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Rental businesses from across Nigeria — tap a location to filter</p>
+        </div>
+        <div id="city-chips" class="flex flex-wrap gap-2"></div>
+      </section>
+
+    </div>
+
+    <div id="empty-state" class="hidden text-center py-16">
+      <div class="w-14 h-14 bg-purple-50 text-purple-700 rounded-full flex items-center justify-center mx-auto mb-4 border border-purple-100">
+        <i data-lucide="search-x" class="w-6 h-6"></i>
+      </div>
+      <h3 class="font-display font-bold text-slate-900 mb-1">Nothing matches yet</h3>
+      <p class="text-sm text-slate-500">Try a different word, or browse by category above.</p>
+    </div>
+  </main>
+
+  <footer class="mt-auto py-8 bg-slate-900 text-slate-400 text-center text-xs border-t border-slate-800">
+    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p>&copy; 2026 Tracknrent. All rights reserved.</p>
+      <a href="https://tracknrent.vercel.app" class="text-purple-400 hover:text-purple-300 transition">tracknrent.vercel.app</a>
+    </div>
+  </footer>
+
+
+
+
+      <script src="assets/js/pwa.js"></script>
+ <script src="sw.js"></script>    
+      <script type="module" src="assets/js/firebase.js"></script>
+  <script type="module" src="assets/js/marketplace.js"></script>
+</body>
+</html>

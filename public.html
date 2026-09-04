@@ -1157,19 +1157,35 @@
       </div>
 
       <section class="dashboard">
-        <h2 class="page-title">Public Business Profile</h2>
-
-        <div
-          class="profile-card bg-purple-50 border border-purple-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:18px;">
           <div>
-            <h4 class="font-bold text-purple-900">Your profile is currently live!</h4>
-            <p class="text-xs text-purple-700">Share this link with your potential clients or paste it on your social
-              media bios.</p>
+            <h2 style="font-size:1.6rem; font-weight:800; color:#1e1030; margin:0;">Public Business Profile</h2>
+            <p style="font-size:0.85rem; color:#6b7280; margin-top:4px;">Control what customers see on your storefront and in the marketplace.</p>
           </div>
-          <a id="liveProfileLink" href="#" target="_blank"
-            class="bg-purple-700 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-purple-800 transition">View
-            Live Store</a>
         </div>
+
+        
+<div id="liveStatusBanner" class="profile-card" style="background: linear-gradient(135deg, #3b0764, #581c87 60%, #7e22ce); border-radius: 20px; padding: 20px 24px; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; box-shadow: 0 10px 30px rgba(88, 28, 135, 0.25);">
+  
+  <!-- Left Content Wrapper -->
+  <div style="display: flex; align-items: center; gap: 14px; flex: 1; min-width: 260px;">
+    <span style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, 0.15); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">🟢</span>
+    <div style="flex: 1; min-width: 0;">
+      <h4 style="color: #fff; font-weight: 800; margin: 0; font-size: 1.05rem; word-break: break-word;">Your profile is currently live!</h4>
+      <p style="color: #e9d5ff; font-size: 0.8rem; margin-top: 4px; margin-bottom: 0; line-height: 1.4;">Share this link with clients or paste it on your social media bios.</p>
+    </div>
+  </div>
+
+  <!-- Action Link Button -->
+  <a id="liveProfileLink" href="#" target="_blank"
+    class="w-full sm:w-auto inline-flex items-center justify-center text-center transition-opacity hover:opacity-90 shrink-0 shadow-sm"
+    style="background-color: white; color: purple; padding: 10px 20px; border-radius: 12px; font-weight: 700; font-size: 0.85rem; text-decoration: none; white-space: nowrap; margin-top: auto; margin-bottom: auto;">
+    View Live Store &rarr;
+  </a>
+
+</div>
+
+
         <div class="profile-card">
           <h3>🌐 Publish Your Store Link (URL)</h3>
 
@@ -1178,8 +1194,18 @@
             <div>
               <label for="publicProfileToggle" class="font-bold text-gray-800 m-0 text-sm">Go Online (Make my store
                 public)</label>
-              <span class="text-xs text-gray-500 block">Check this box to put your rental catalog online so customers
-                can see it.</span>
+              <span class="text-xs text-gray-500 block">Puts your storefront <em>and</em> your marketplace listing online
+                at the same time. Owner only.</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-4 p-3 bg-purple-50/50 rounded-xl mb-4 border border-purple-100">
+            <div id="logoPreview" style="width:64px; height:64px; border-radius:50%; background:purple; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.4rem; overflow:hidden; flex-shrink:0;">?</div>
+            <div style="flex:1;">
+              <label for="logoUploadInput" style="cursor:pointer; display:inline-block; font-size:0.8rem; font-weight:700; color:purple; text-decoration:underline; margin:0;">Change store logo / profile picture</label>
+              <span class="text-xs text-gray-500 block">Shown like a WhatsApp Business avatar on your storefront &amp; marketplace card. Owner only.</span>
+              <input type="file" id="logoUploadInput" accept="image/*" style="display:none;">
+              <p id="logoUploadStatus" class="text-xs text-emerald-600 font-medium" style="display:none; margin-top:4px;"></p>
             </div>
           </div>
 
@@ -1220,23 +1246,18 @@
             <input id="publicAddress" type="text" placeholder="e.g. No 12. Ogui Road, Enugu">
           </label>
 
-          <h4 class="font-bold text-purple-700 text-sm mt-6 mb-3 border-b pb-2">📍 Live Map Pin</h4>
-          <p class="text-xs text-gray-500 mb-3">Drop a pin so your storefront page shows a real, live map — not just
-            typed text.</p>
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs text-gray-500">Leave blank to fall back to searching your address above.</span>
-            <button type="button" id="btnUseMyLocation" class="text-xs font-semibold text-purple-700 hover:underline">Use My Current Location</button>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; background:#faf5ff; border:1px solid #e9d5ff; border-radius:12px; padding:12px 14px; margin-top:10px;">
+            <div>
+              <p style="font-weight:700; color:#4a1d73; font-size:0.85rem; margin:0;">📍 Pin your exact location</p>
+              <p id="pinStatus" style="font-size:0.75rem; color:#6b7280; margin:2px 0 0;">No coordinates saved yet — this is captured from your device, not typed in, so it can't be entered wrong.</p>
+            </div>
+            <button type="button" id="btnUseMyLocation"
+              style="padding:10px 16px; border-radius:10px; border:1px solid purple; background:#fff; color:purple; font-weight:700; font-size:0.85rem; cursor:pointer; white-space:nowrap; flex-shrink:0;">Use My Current Location</button>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label>
-              Latitude
-              <input id="publicLatitude" type="number" step="0.000001" placeholder="e.g. 6.524379">
-            </label>
-            <label>
-              Longitude
-              <input id="publicLongitude" type="number" step="0.000001" placeholder="e.g. 3.379206">
-            </label>
-          </div>
+          <!-- Captured automatically via navigator.geolocation — never a typed/editable field,
+               so no one can enter a fake or miscalculated coordinate here. -->
+          <input id="publicLatitude" type="hidden">
+          <input id="publicLongitude" type="hidden">
 
           <h4 class="font-bold text-purple-700 text-sm mt-6 mb-3 border-b pb-2">⚙️ What Customers See</h4>
 
@@ -1256,19 +1277,28 @@
             </div>
           </div>
 
-          <h4 class="font-bold text-purple-700 text-sm mt-6 mb-3 border-b pb-2">🖼️ Photos & Videos of Your Items</h4>
-          <p class="text-xs text-gray-500 mb-3">Add photos or short videos of your canopies, chairs, decorations, or
-            event setups to attract customers. Your team can also add these straight from your live store page.</p>
+          <h4 style="font-weight:700; color:purple; font-size:0.9rem; margin-top:24px; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid #eee;">🖼️ Photos &amp; Videos of Your Items</h4>
 
-          <div
-            class="border-2 border-dashed border-purple-300 rounded-xl p-6 text-center bg-purple-50/50 hover:bg-purple-50 transition relative cursor-pointer mb-2">
-            <input type="file" id="galleryUploadInput" accept="image/*,video/*"
-              class="absolute inset-0 opacity-0 cursor-pointer">
-            <span class="material-symbols-outlined" style="font-size: 2.5rem; color: purple;">cloud_upload</span>
-            <p class="text-sm font-semibold text-purple-900 mt-2">Tap here to choose a photo or video</p>
-            <p class="text-xs text-gray-400 mt-1">One at a time — add more whenever you like</p>
+          <!-- Team members see this instead of the settings fields above being editable -->
+          <div id="teamMemberNotice" style="display:none; align-items:flex-start; gap:10px; background:#fff7ed; border:1px solid #fed7aa; border-radius:14px; padding:14px 16px; margin-bottom:16px;">
+            <span style="font-size:1.2rem;">🔒</span>
+            <p style="font-size:0.8rem; color:#7c2d12; margin:0; line-height:1.5;">
+              You're signed in as a <strong>team member</strong>. You can add photos &amp; videos below, but store settings, the visibility toggle and the URL handle can only be changed by the business owner.
+            </p>
           </div>
-          <p id="galleryUploadStatus" class="text-xs text-emerald-600 font-medium mb-4"></p>
+
+          <!-- Upload dropzone — clickable/droppable area wrapping the file input.
+               Owner AND team members can both add media; only the owner can delete
+               (delete buttons are rendered conditionally in public-profile.js). -->
+          <label for="galleryUploadInput" id="galleryDropzone"
+            style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; text-align:center; cursor:pointer; border:2px dashed #d8b4fe; border-radius:14px; padding:24px 16px; margin-bottom:14px; background:#faf5ff; transition:0.2s;">
+            <span class="material-symbols-outlined" style="font-size:2rem; color:purple;">cloud_upload</span>
+            <span style="font-weight:700; color:#4a1d73; font-size:0.9rem;">Tap to add photos or a short video</span>
+            <span style="font-size:0.75rem; color:#6b7280;">JPG, PNG, MP4, MOV — uploaded straight to your gallery</span>
+          </label>
+          <input type="file" id="galleryUploadInput" accept="image/*,video/*" style="display:none;">
+
+          <p id="galleryUploadStatus" class="text-xs text-emerald-600 font-medium mb-2" style="display:none;"></p>
 
           <div id="imagePreviewGrid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 mb-6">
           </div>
@@ -1395,6 +1425,7 @@
     <script type="module" src="assets/js/avatar.js"></script>
     <script type="module" src="assets/js/firebase.js"></script>
     <script type="module" src="assets/js/public-profile.js"></script>
+
     <script src="assets/js/pwa.js"></script>
  <script src="sw.js"></script>    
 

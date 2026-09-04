@@ -1,15 +1,13 @@
-// MUST BE LINE 1 (No functions, no top-level awaits, no setTimeouts before it):
+// MUST BE LINE 1: Import OneSignal ServiceWorker SDK
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 
-// Register your own message handler immediately after:
+// Message handler for Service Worker updates
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();
     }
 });
 
-// ... rest of sw.js ...
-// 3. Service worker configuration
 const CACHE_NAME = 'Tracknrent-v1.0.4';
 const DYNAMIC_CACHE = 'Tracknrent-dynamic-v1';
 
@@ -42,27 +40,17 @@ const STATIC_ASSETS = [
     '/manifest.json'
 ];
 
-// ... rest of your install/fetch/push handlers ...
-
-
-// External CDN resources to cache
 const CDN_ASSETS = [
-    'https://cdn.tailwindcss.com',
     'https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Raleway+Dots&family=Roboto:wght@300;400;500;700&display=swap',
     'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200'
 ];
 
-
-
-// Install event - cache static assets
+// Install event
 self.addEventListener('install', (event) => {
     console.log('[ServiceWorker] Installing...');
-
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
-                console.log('[ServiceWorker] Caching static assets');
-                // Cache static assets - don't fail if some assets are missing
                 return Promise.allSettled(
                     STATIC_ASSETS.map(url =>
                         cache.add(url).catch(err => console.log(`[ServiceWorker] Failed to cache: ${url}`))
@@ -70,7 +58,6 @@ self.addEventListener('install', (event) => {
                 );
             })
             .then(() => {
-                // Cache CDN assets separately
                 return caches.open(CACHE_NAME).then(cache => {
                     return Promise.allSettled(
                         CDN_ASSETS.map(url =>
@@ -92,168 +79,85 @@ self.addEventListener('install', (event) => {
     );
 });
 
-// Activate event - clean up old caches
+// Activate event
 self.addEventListener('activate', (event) => {
     console.log('[ServiceWorker] Activating...');
-
     event.waitUntil(
         caches.keys()
             .then((cacheNames) => {
                 return Promise.all(
                     cacheNames
                         .filter(name => name !== CACHE_NAME && name !== DYNAMIC_CACHE)
-                        .map(name => {
-                            console.log(`[ServiceWorker] Deleting old cache: ${name}`);
-                            return caches.delete(name);
-                        })
+                        .map(name => caches.delete(name))
                 );
             })
-            .then(() => {
-                console.log('[ServiceWorker] Activation complete');
-                return self.clients.claim();
-            })
+            .then(() => self.clients.claim())
     );
 });
 
-
-// Fetch event - Network first with cache fallback for API, Cache first for static
+// Fetch event
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
-    // Skip non-GET requests
-    if (request.method !== 'GET') {
-        return;
-    }
+    if (request.method !== 'GET') return;
 
-    // Skip Firebase/external API requests (let them go to network)
     if (url.hostname.includes('firebaseapp.com') ||
         url.hostname.includes('googleapis.com') ||
         url.hostname.includes('gstatic.com') ||
         url.hostname.includes('firebase.google.com') ||
-        url.hostname.includes('firebaseio.com')) {
+        url.hostname.includes('firebaseio.com') ||
+        url.hostname.includes('onesignal.com')) {
         return;
     }
 
-    // For CDN assets - Cache first, then network
     if (url.hostname !== location.hostname) {
         event.respondWith(
-            caches.match(request)
-                .then(cachedResponse => {
-                    if (cachedResponse) {
-                        return cachedResponse;
+            caches.match(request).then(cachedResponse => {
+                if (cachedResponse) return cachedResponse;
+                return fetch(request).then(response => {
+                    if (response.ok) {
+                        const responseClone = response.clone();
+                        caches.open(DYNAMIC_CACHE).then(cache => cache.put(request, responseClone));
                     }
-                    return fetch(request)
-                        .then(response => {
-                            if (response.ok) {
-                                const responseClone = response.clone();
-                                caches.open(DYNAMIC_CACHE)
-                                    .then(cache => cache.put(request, responseClone));
-                            }
-                            return response;
-                        });
-                })
+                    return response;
+                });
+            })
         );
         return;
     }
 
-    // For local assets - Network first with cache fallback (for fresh data)
-event.respondWith(
-    fetch(request)
-        .then(response => {
-            if (response.ok && response.type === 'basic') {
-                const responseClone = response.clone();
-                caches.open(DYNAMIC_CACHE)
-                    .then(cache => cache.put(request, responseClone))
-                    .catch(err => console.log('[ServiceWorker] Cache put failed:', err));
-            }
-            return response;
-        })
-        .catch(() => {
-            return caches.match(request)
-                .then(cachedResponse => {
+    event.respondWith(
+        fetch(request)
+            .then(response => {
+                if (response.ok && response.type === 'basic') {
+                    const responseClone = response.clone();
+                    caches.open(DYNAMIC_CACHE).then(cache => cache.put(request, responseClone));
+                }
+                return response;
+            })
+            .catch(() => {
+                return caches.match(request).then(cachedResponse => {
                     if (cachedResponse) return cachedResponse;
                     if (request.mode === 'navigate') return caches.match('/offline.html');
-                    if (request.destination === 'image') {
-                        return new Response(
-                            '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="#ddd" width="200" height="200"/><text fill="#999" x="100" y="100" text-anchor="middle" dy=".3em">Offline</text></svg>',
-                            { headers: { 'Content-Type': 'image/svg+xml' } }
-                        );
-                    }
                     return new Response('Offline', { status: 503 });
                 });
-        })
-); 
+            })
+    );
 });
 
-// Background sync for offline bookings
+// Sync event
 self.addEventListener('sync', (event) => {
-    console.log('[ServiceWorker] Background sync:', event.tag);
-
     if (event.tag === 'sync-bookings') {
         event.waitUntil(syncBookings());
     }
 });
 
-// Sync pending bookings when back online
 async function syncBookings() {
-    try {
-        // Get pending bookings from IndexedDB
-        const pendingBookings = await getPendingBookings();
-
-        for (const booking of pendingBookings) {
-            // Attempt to sync each booking
-            // This would integrate with your Firebase service
-            console.log('[ServiceWorker] Syncing booking:', booking.id);
-        }
-    } catch (error) {
-        console.error('[ServiceWorker] Sync failed:', error);
-    }
-}
-
-// Helper to get pending bookings (placeholder - implement with IndexedDB)
-async function getPendingBookings() {
     return [];
 }
 
-// Push notification support
-self.addEventListener('push', (event) => {
-    console.log('[ServiceWorker] Push received');
-
-    const options = {
-        body: event.data ? event.data.text() : 'New notification from Tracknrent',
-        icon: '/assets/imgs/logo.png',
-        badge: '/assets/imgs/logo.png',
-        vibrate: [100, 50, 100],
-        data: {
-            dateOfArrival: Date.now(),
-            primaryKey: 1
-        },
-        actions: [
-            { action: 'view', title: 'View' },
-            { action: 'dismiss', title: 'Dismiss' }
-        ]
-    };
-
-    event.waitUntil(
-        self.registration.showNotification('Tracknrent', options)
-    );
-});
-
-// Handle notification clicks
-self.addEventListener('notificationclick', (event) => {
-    console.log('[ServiceWorker] Notification clicked:', event.action);
-
-    event.notification.close();
-
-    if (event.action === 'view') {
-        event.waitUntil(
-            clients.openWindow('/bookings.html')
-        );
-    }
-});
-
-// Periodic background sync for reminders
+// Periodic Sync
 self.addEventListener('periodicsync', (event) => {
     if (event.tag === 'check-reminders') {
         event.waitUntil(
