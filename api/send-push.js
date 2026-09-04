@@ -53,7 +53,7 @@ export default async function handler(req, res) {
             app_id: ONESIGNAL_APP_ID,
             contents: { en: message },
             headings: { en: 'Tracknrent' },
-            web_url: url,
+            web_url: url.startsWith('http') ? url : `https://tracknrent.vercel.app${url}`,
             chrome_web_image: 'https://tracknrent.vercel.app/assets/imgs/logo.png',
             data: { 
                 url: url,
