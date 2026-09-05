@@ -37,24 +37,24 @@ async function initAvatarAndDropdown() {
 
     dropdownEl.innerHTML = `
       <div style="padding: 4px 0;">
-        <a href="dashboard.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#5c00fc';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
+        <a href="dashboard.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#800080';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
           <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">home</span>
           Dashboard
         </a>
 
 
-        <a href="analytics.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#5c00fc';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
+        <a href="analytics.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#800080';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
           <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">bar_chart</span>
           Analytics
         </a>
 
 
-        <a href="ai-assistant.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#5c00fc';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
+        <a href="ai-assistant.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#800080';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
           <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">chat</span>
           AI Assistant
         </a>
 
-        <a href="settings.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#5c00fc';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
+        <a href="settings.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#800080';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
           <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">settings</span>
           Settings
         </a>

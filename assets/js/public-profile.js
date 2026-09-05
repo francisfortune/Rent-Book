@@ -733,6 +733,12 @@ async function checkSlugAvailable(slug, myBusinessId) {
    applyRoleToUI), and Firestore Security Rules re-enforce this
    server-side, so this handler only ever runs for the owner.
 ========================= */
+[publicPhone, publicWhatsapp].forEach((el) => {
+  el?.addEventListener("input", () => {
+    if (el.value.trim()) el.classList.remove("ring-2", "ring-red-400", "border-red-400");
+  });
+});
+
 if (saveBtn) {
   saveBtn.addEventListener("click", async () => {
     if (!isOwner) return;
@@ -741,6 +747,25 @@ if (saveBtn) {
     const enabled = publicProfileToggle.checked;
     const showInventory = showInventoryToggle ? showInventoryToggle.checked : true;
     const showAvailability = showAvailabilityToggle ? showAvailabilityToggle.checked : true;
+
+    // Phone and WhatsApp are marked `required` in the HTML, but that
+    // attribute only does anything on a native <form> submit — this is a
+    // plain button click, so it was never actually being enforced.
+    // Validate both explicitly here instead.
+    const phoneValue = (publicPhone?.value || "").trim();
+    const whatsappValue = (publicWhatsapp?.value || "").trim();
+    const missingContact = [];
+    if (!phoneValue) missingContact.push(publicPhone);
+    if (!whatsappValue) missingContact.push(publicWhatsapp);
+
+    [publicPhone, publicWhatsapp].forEach((el) => el?.closest("div")?.classList.remove("ring-2", "ring-red-400", "border-red-400"));
+
+    if (missingContact.length) {
+      missingContact.forEach((el) => el?.closest("div")?.classList.add("ring-2", "ring-red-400", "border-red-400"));
+      missingContact[0]?.focus();
+      alert("Phone and WhatsApp numbers are both required so customers can reach you.");
+      return;
+    }
 
     if (enabled && !cleanSlug) {
       alert("Please enter a custom URL handle to enable your public store.");
@@ -817,7 +842,7 @@ if (saveBtn) {
       profileSlug.value = cleanSlug;
       updateLiveLink(cleanSlug, enabled);
       await logActivity("settings_update", { enabled, slug: cleanSlug });
-      alert("Storefront settings updated successfully! 🌐");
+      alert("Storefront settings updated successfully!");
     } catch (err) {
       console.error("Save storefront error:", err);
       alert("Failed to save: " + err.message);
@@ -826,9 +851,4 @@ if (saveBtn) {
       saveBtn.textContent = "Save Store Link & Settings";
     }
   });
-}
-
-// After rendering content
-if (window.lucide) {
-  window.lucide.createIcons();
 }
