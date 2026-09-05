@@ -156,7 +156,7 @@ function renderProfile(name, profile, businessData) {
   const nameEl = document.getElementById("store-name");
   if (nameEl) nameEl.textContent = name;
 
-  // Logo / profile picture (WhatsApp-Business style avatar)
+  // Logo / profile picture
   const logoEl = document.getElementById("store-logo");
   if (logoEl) {
     logoEl.innerHTML = businessData.logoUrl
@@ -164,9 +164,7 @@ function renderProfile(name, profile, businessData) {
       : name.slice(0, 2).toUpperCase();
   }
 
-  // Verification / Growth Partner / dynamic achievement badges — the
-  // Featured & Verified badges mirror the marketplace card; the rest are
-  // computed automatically from the business's own stats, not set by hand.
+  // Badges
   const badgesEl = document.getElementById("profile-badges");
   if (badgesEl) {
     const marketplace = businessData.marketplace || {};
@@ -194,8 +192,7 @@ function renderProfile(name, profile, businessData) {
     badgesEl.innerHTML = badges;
   }
 
-  // Cover / banner image — behind the whole hero, faded in once loaded so
-  // there's no flash of a broken image on slow connections.
+  // Cover image
   const coverEl = document.getElementById("store-cover");
   if (coverEl) {
     if (businessData.coverImageUrl) {
@@ -212,8 +209,7 @@ function renderProfile(name, profile, businessData) {
     bioEl.textContent = profile.bio || "Welcome to our rental catalog. Browse available items and reach out to place an order.";
   }
 
-  // Services / categories tags — from the owner's tag editor. Hidden
-  // entirely when nothing has been set, same pattern as social links.
+  // Categories
   const categoriesEl = document.getElementById("store-categories");
   if (categoriesEl) {
     const cats = Array.isArray(profile.categories) && profile.categories.length
@@ -232,8 +228,7 @@ function renderProfile(name, profile, businessData) {
     }
   }
 
-  // Address, falling back to City, State (from the setup wizard) when the
-  // owner hasn't filled in a full street address on the storefront.
+  // Address
   const addrEl = document.getElementById("store-address");
   const addrContainer = document.getElementById("address-container");
   const cityState = [businessData.city, businessData.state].filter(Boolean).join(", ");
@@ -275,14 +270,12 @@ function renderProfile(name, profile, businessData) {
 
   const prevShowInventory = showInventoryGlobal;
   const prevShowAvailability = showAvailabilityGlobal;
-  showInventoryGlobal = profile.showInventory !== false; // default true
-  showAvailabilityGlobal = profile.showAvailability !== false; // default true
+  showInventoryGlobal = profile.showInventory !== false;
+  showAvailabilityGlobal = profile.showAvailability !== false;
 
   const catalogSection = document.getElementById("inventory-grid")?.closest("section");
   if (catalogSection) catalogSection.classList.toggle("hidden", !showInventoryGlobal);
 
-  // If either toggle flipped since the last inventory snapshot, re-render
-  // the grid immediately rather than waiting on the next inventory write.
   if (lastInventorySnapshot && (prevShowInventory !== showInventoryGlobal || prevShowAvailability !== showAvailabilityGlobal)) {
     renderInventoryGrid(lastInventorySnapshot);
   }
@@ -295,7 +288,6 @@ function renderProfile(name, profile, businessData) {
 
 /* =========================
    DEPOSIT & CAUTION POLICY BANNER
-   Owner-configured, optional — hidden entirely when nothing is set.
 ========================= */
 function renderDepositBanner(depositPolicy) {
   const section = document.getElementById("deposit-banner");
@@ -324,8 +316,6 @@ function renderDepositBanner(depositPolicy) {
 
 /* =========================
    SOCIAL HANDLES
-   Only rendered when the owner has filled at least one in. Accepts either
-   a bare handle ("@shopname") or a full URL.
 ========================= */
 function toSocialUrl(platform, value) {
   const trimmed = (value || "").trim();
@@ -372,7 +362,7 @@ function renderSocialLinks(profile) {
 }
 
 /* =========================
-   GALLERY — IMAGES + VIDEO (Cloudinary-aware)
+   GALLERY
 ========================= */
 function renderGallery(gallery) {
   const gallerySection = document.getElementById("gallery-section");
@@ -410,7 +400,6 @@ function renderGallery(gallery) {
 }
 
 function normalizeGalleryEntry(entry) {
-  // Backward compatible: old data may just be a plain URL string.
   if (typeof entry === "string") {
     const isVideo = /\.(mp4|webm|mov|m4v)(\?|$)/i.test(entry) || entry.includes("/video/upload/");
     return { url: entry, type: isVideo ? "video" : "image" };
@@ -478,15 +467,12 @@ function listenToCatalog(businessId) {
   );
 }
 
-// Renders the equipment grid from the latest inventory snapshot, honoring
-// the owner's "Show Inventory Catalog" / "Show Live Availability" toggles.
 function renderInventoryGrid(snap) {
   const grid = document.getElementById("inventory-grid");
   const countEl = document.getElementById("inventory-count");
   if (!grid) return;
 
   if (!showInventoryGlobal) {
-    // Section itself is hidden (see renderProfile), nothing to build.
     grid.innerHTML = "";
     return;
   }
@@ -507,8 +493,6 @@ function renderInventoryGrid(snap) {
     const totalQty = Number(item.totalQuantity ?? item.quantity ?? availableQty);
     const isAvailable = availableQty > 0;
 
-    // Without "Show Live Availability", visitors see only name & price —
-    // no stock counts, no booked/available status pill.
     const statusHtml = showAvailabilityGlobal
       ? `<span class="status-pill ${isAvailable ? "status-available" : "status-booked"}">
            ${isAvailable ? `${availableQty} left` : "Booked out"}
@@ -549,7 +533,7 @@ function renderInventoryGrid(snap) {
 }
 
 /* =========================
-   RATINGS & REVIEWS (built from scratch)
+   RATINGS & REVIEWS
 ========================= */
 function renderRatingSummary(businessData) {
   const ratingCount = Number(businessData.ratingCount || 0);
@@ -628,7 +612,7 @@ function listenToReviews(businessId) {
 }
 
 /* =========================
-   STAR ICONS HTML - FIXED to use Font Awesome
+   STAR ICONS HTML - Uses Font Awesome
 ========================= */
 function starIconsHtml(value) {
   const rounded = Math.round(value);
@@ -641,7 +625,7 @@ function starIconsHtml(value) {
 }
 
 /* =========================
-   WIRE REVIEW FORM - FIXED INTERACTIVE STARS
+   WIRE REVIEW FORM - Interactive Stars
 ========================= */
 function wireReviewForm(businessId) {
   const form = document.getElementById("review-form");
@@ -653,7 +637,7 @@ function wireReviewForm(businessId) {
   const submitBtn = document.getElementById("review-submit");
   let selectedRating = 0;
 
-  // Remove any existing listeners to prevent duplicates
+  // Setup star click handlers
   stars.forEach((star) => {
     star.removeEventListener('click', star._clickHandler);
     
@@ -674,7 +658,7 @@ function wireReviewForm(businessId) {
     star.addEventListener('click', star._clickHandler);
   });
 
-  // Reset stars when form is reset
+  // Reset stars on form reset
   form.addEventListener('reset', function() {
     selectedRating = 0;
     stars.forEach((s) => {
@@ -683,13 +667,15 @@ function wireReviewForm(businessId) {
     });
   });
 
-  // Form submit
+  // Handle form submit
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    
     if (selectedRating < 1) {
       alert("Please select a star rating before submitting.");
       return;
     }
+    
     const name = (nameInput?.value || "").trim() || "Anonymous";
     const comment = (commentInput?.value || "").trim();
 
@@ -719,6 +705,7 @@ function wireReviewForm(businessId) {
         s.classList.remove('star-filled');
         s.classList.add('star-empty');
       });
+      
       submitBtn.textContent = "Review submitted ✓";
       setTimeout(() => {
         submitBtn.textContent = "Submit review";
@@ -760,6 +747,7 @@ function showError(title, message) {
   refreshIcons();
 }
 
+// Initialize
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initViewer);
 } else {
