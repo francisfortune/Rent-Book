@@ -8,7 +8,7 @@ let notificationModalEl = null;
 
 const steps = [
   {
-    selector: ".navigation, .mobile-brand, .brand",
+    selector: ".brand",
     title: "Welcome to Tracknrent! 🚀",
     desc: "Easily manage your rental items, inventory, and event bookings all in one place. Let's show you around!"
   },
