@@ -10,10 +10,10 @@
   <link rel="stylesheet" href="assets/css/setting.css">
   <link rel="icon" type="image/x-icon" href="assets/imgs/logo.ico">
 
-  <!-- Font Awesome 5 -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<!-- Font Awesome 5 -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <!-- Font Awesome 5 (pinned; was being loaded twice as v6.5.0, which
+       doubled a render-blocking stylesheet request and slowed first
+       paint on this page) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
 
       <meta name="description"
@@ -1339,18 +1339,18 @@
   <div class="p-5 space-y-4" style="border-radius: 20px;">
 
     <!-- Phone -->
-   <div class="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-200 focus-within:ring-2 focus-within:ring-purple-400 focus-within:border-transparent transition-all">
-  <i class="fas fa-phone text-sm" style="color: #800000;"></i>
-  <input id="publicPhone" type="tel" placeholder="Phone number for calls" required
-         class="flex-1 bg-transparent text-sm focus:outline-none min-w-0 placeholder:text-gray-400">
-</div>
+    <div class="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-200 focus-within:ring-2 focus-within:ring-purple-400 focus-within:border-transparent transition-all">
+      <i class="fas fa-phone text-sm"  style="color: purple;"></i>
+      <input id="publicPhone" type="tel" placeholder="Phone number for calls (Required)" required
+             class="flex-1 bg-transparent text-sm focus:outline-none min-w-0 placeholder:text-gray-400">
+    </div>
 
     <!-- WhatsApp -->
     <div class="flex items-center gap-3 bg-[#25D366]/5 rounded-xl px-3 py-2.5 border border-[#25D366]/20 focus-within:ring-2 focus-within:ring-[#25D366]/40 focus-within:border-transparent transition-all">
-  <i class="fab fa-whatsapp text-[#25D366] text-sm"></i>
-  <input id="publicWhatsapp" type="tel" placeholder="WhatsApp number for messages" required
-         class="flex-1 bg-transparent text-sm focus:outline-none min-w-0 placeholder:text-gray-400">
-</div>
+      <i class="fab fa-whatsapp text-[#25D366] text-sm"></i>
+      <input id="publicWhatsapp" type="tel" placeholder="WhatsApp number for messages (Required)" required 
+             class="flex-1 bg-transparent text-sm focus:outline-none min-w-0 placeholder:text-gray-400">
+    </div>
 
     <!-- Instagram -->
     <div class="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-200 focus-within:ring-2 focus-within:ring-purple-400 focus-within:border-transparent transition-all">
@@ -1384,7 +1384,7 @@
     <div class="bg-purple-50/60 rounded-xl p-3.5 border border-purple-100/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
       <div>
         <p class="font-semibold text-sm flex items-center gap-1.5" style="color: purple;">
-          <i class="fas fa-location-dot text-sm"></i>
+          <i class="fas fa-map-marker-alt text-sm"></i>
           Pin your location
         </p>
         <p id="pinStatus" class="text-xs text-gray-500 mt-0.5">Tap the button to capture your current location</p>
@@ -1419,10 +1419,10 @@
         <p class="text-sm font-semibold text-gray-800">Make store public</p>
         <p class="text-xs text-gray-400">Show your storefront and marketplace listing</p>
       </div>
-     <label class="relative inline-flex items-center cursor-pointer">
-    <input type="checkbox" id="publicProfileToggle" class="sr-only peer">
-    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:shadow-inner" style="background-color: #800000;"></div>
-  </label>
+      <label class="relative inline-flex items-center cursor-pointer">
+        <input type="checkbox" id="publicProfileToggle" class="sr-only peer">
+        <div class="w-11 h-6 bg-gray-300 peer-checked:bg-[#800000] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:shadow-inner transition-colors"></div>
+      </label>
     </div>
 
     <!-- Inventory Toggle -->
@@ -1432,9 +1432,9 @@
         <p class="text-xs text-gray-400">Display your equipment list to visitors</p>
       </div>
       <label class="relative inline-flex items-center cursor-pointer">
-    <input type="checkbox" id="showInventoryToggle" class="sr-only peer" checked>
-    <div style="background-color: #800000;" class="w-11 h-6 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all shadow-inner"></div>
-  </label>
+        <input type="checkbox" id="showInventoryToggle" class="sr-only peer" checked>
+        <div class="w-11 h-6 bg-gray-300 peer-checked:bg-[#800000] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:shadow-inner transition-colors"></div>
+      </label>
     </div>
 
     <!-- Availability Toggle -->
@@ -1443,10 +1443,10 @@
         <p class="text-sm font-semibold text-gray-800">Show live availability</p>
         <p class="text-xs text-gray-400">Display stock counts next to each item</p>
       </div>
-       <label class="relative inline-flex items-center cursor-pointer">
-    <input type="checkbox" id="showAvailabilityToggle" class="sr-only peer" checked>
-    <div style="background-color: #800000;" class="w-11 h-6 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all shadow-inner"></div>
-  </label>
+      <label class="relative inline-flex items-center cursor-pointer">
+        <input type="checkbox" id="showAvailabilityToggle" class="sr-only peer" checked>
+        <div class="w-11 h-6 bg-gray-300 peer-checked:bg-[#800000] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:shadow-inner transition-colors"></div>
+      </label>
     </div>
 
   </div>
@@ -1676,5 +1676,3 @@
 </body>
 
 </html>
-
-
