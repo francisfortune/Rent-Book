@@ -9,12 +9,15 @@
   <!-- Preconnect for faster loading -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome 6 (Free) - Faster than 5 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- Lucide Icons -->
+  <!-- Lucide Icons (Lightweight) -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
@@ -22,33 +25,29 @@
        CUSTOM PROPERTIES
     ============================================ */
     :root {
-      --ink: #221030;
-      --purple-950: #2E1140;
-      --purple-800: #4C1D7A;
-      --purple-600: #7C3AED;
+      --purple-primary: #800000;
+      --purple-light: #9a1a1a;
+      --purple-dark: #4a0000;
       --amber: #F5A524;
-      --amber-dark: #C97B0E;
       --emerald: #10B981;
-      --slate-bg: #FBF9F6;
+      --slate-bg: #f8f6fc;
     }
 
     /* ============================================
        BASE STYLES
     ============================================ */
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--slate-bg);
-    }
-    .font-display {
-      font-family: 'Fraunces', serif;
+      color: #1a1a2e;
     }
 
     /* ============================================
-       STORE LOGO - FIXED
+       STORE LOGO
     ============================================ */
     .store-logo {
-      width: 56px;
-      height: 56px;
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
       background: rgba(255,255,255,.12);
       border: 2px solid rgba(255,255,255,.25);
@@ -56,7 +55,7 @@
       align-items: center;
       justify-content: center;
       font-weight: 800;
-      font-size: 1.2rem;
+      font-size: 1.3rem;
       color: #fff;
       overflow: hidden;
       flex-shrink: 0;
@@ -66,7 +65,7 @@
       .store-logo {
         width: 72px;
         height: 72px;
-        font-size: 1.4rem;
+        font-size: 1.5rem;
       }
     }
 
@@ -76,7 +75,7 @@
     .status-pill {
       font-size: 0.7rem;
       font-weight: 600;
-      padding: 0.28rem 0.6rem;
+      padding: 0.25rem 0.6rem;
       border-radius: 999px;
       white-space: nowrap;
     }
@@ -94,29 +93,31 @@
     ============================================ */
     .equipment-card {
       background: #fff;
-      border-radius: 1.1rem;
-      border: 1px solid #EEE9E2;
+      border-radius: 1rem;
+      border: 1px solid #e8e4ed;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      border-left: 4px solid #E5E1DA;
-      transition: border-color 0.2s, transform 0.2s;
+      border-left: 4px solid #d5d0db;
+      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 8px rgba(128, 0, 0, 0.06);
     }
     .equipment-card.is-available {
       border-left-color: var(--emerald);
     }
     .equipment-card.is-booked {
-      border-left-color: #F3B4B4;
+      border-left-color: #f3b4b4;
     }
     .equipment-card:hover {
-      transform: translateY(-2px);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(128, 0, 0, 0.10);
     }
     .equipment-card-body {
       padding: 1.25rem 1.25rem 0.75rem;
     }
     .equipment-card-footer {
-      padding: 1rem 1.25rem;
-      border-top: 1px solid #F4F1EA;
+      padding: 0.9rem 1.25rem;
+      border-top: 1px solid #f0edf5;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -126,14 +127,15 @@
     .equipment-inquire-btn {
       font-size: 0.75rem;
       font-weight: 700;
-      background: var(--ink);
+      background: var(--purple-primary);
       color: #fff;
       padding: 0.5rem 0.9rem;
       border-radius: 0.6rem;
       transition: background 0.15s;
+      text-decoration: none;
     }
     .equipment-inquire-btn:hover {
-      background: var(--purple-800);
+      background: var(--purple-dark);
     }
 
     /* ============================================
@@ -142,9 +144,9 @@
     .gallery-tile {
       position: relative;
       aspect-ratio: 1/1;
-      border-radius: 0.9rem;
+      border-radius: 0.75rem;
       overflow: hidden;
-      background: #EEE9E2;
+      background: #e8e4ed;
       cursor: pointer;
       border: none;
       padding: 0;
@@ -167,11 +169,11 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(34, 16, 48, 0.28);
+      background: rgba(34, 16, 48, 0.3);
     }
     .gallery-play i {
       background: #fff;
-      color: var(--ink);
+      color: var(--purple-primary);
       border-radius: 999px;
       padding: 0.5rem;
     }
@@ -183,7 +185,7 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(20, 10, 28, 0.92);
+      background: rgba(10, 5, 20, 0.92);
       z-index: 200;
       align-items: center;
       justify-content: center;
@@ -204,16 +206,31 @@
     }
 
     /* ============================================
-       RATINGS
+       RATINGS - FIXED INTERACTIVE STARS
     ============================================ */
     .star-filled {
       color: var(--amber);
       fill: var(--amber);
     }
     .star-empty {
-      color: #D8D2C6;
-      fill: #D8D2C6;
+      color: #d5d0db;
+      fill: #d5d0db;
     }
+    
+    /* Rating input stars - interactive */
+    .rating-input-star {
+      cursor: pointer;
+      font-size: 1.6rem;
+      transition: transform 0.15s, color 0.15s;
+      color: #d5d0db;
+    }
+    .rating-input-star:hover {
+      transform: scale(1.15);
+    }
+    .rating-input-star.star-filled {
+      color: var(--amber);
+    }
+
     .category-chip {
       font-size: 0.7rem;
       font-weight: 600;
@@ -221,9 +238,10 @@
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.12);
       border: 1px solid rgba(255, 255, 255, 0.22);
-      color: #EDE4F9;
+      color: #ede4f9;
       white-space: nowrap;
     }
+    
     .dist-row {
       display: flex;
       align-items: center;
@@ -241,7 +259,7 @@
       flex: 1;
       height: 6px;
       border-radius: 999px;
-      background: #EFEAE1;
+      background: #efeae1;
       overflow: hidden;
     }
     .dist-fill {
@@ -255,26 +273,14 @@
     }
     .review-row {
       padding: 1rem 0;
-      border-bottom: 1px solid #F4F1EA;
+      border-bottom: 1px solid #f0edf5;
     }
     .review-row:last-child {
       border-bottom: none;
     }
-    .rating-input-star {
-      cursor: pointer;
-      width: 1.6rem;
-      height: 1.6rem;
-    }
 
     /* ============================================
-       SCROLLBAR
-    ============================================ */
-    ::-webkit-scrollbar {
-      height: 6px;
-    }
-
-    /* ============================================
-       RESPONSIVE MOBILE CONTACT BAR
+       MOBILE CONTACT BAR
     ============================================ */
     .mobile-contact-bar {
       position: fixed;
@@ -283,8 +289,8 @@
       right: 0;
       z-index: 40;
       background: white;
-      border-top: 1px solid #EEE9E2;
-      padding: 12px 16px;
+      border-top: 1px solid #e8e4ed;
+      padding: 10px 16px;
       display: none;
       gap: 10px;
     }
@@ -316,12 +322,12 @@
       color: white;
     }
     .mobile-contact-bar .call {
-      background: var(--ink);
+      background: var(--purple-primary);
       color: white;
     }
 
     /* ============================================
-       RESPONSIVE ADJUSTMENTS
+       RESPONSIVE
     ============================================ */
     @media (max-width: 640px) {
       .equipment-card {
@@ -332,24 +338,15 @@
       }
       .equipment-card-footer {
         padding: 0.7rem 0.9rem;
-        flex-direction: row;
-        flex-wrap: wrap;
       }
       .gallery-tile {
         border-radius: 0.6rem;
       }
-      .category-chip {
-        font-size: 0.6rem;
-        padding: 0.2rem 0.5rem;
-      }
     }
 
     @media (max-width: 480px) {
-      .hero-padding {
-        padding: 1.5rem !important;
-      }
       .store-name {
-        font-size: 1.8rem !important;
+        font-size: 1.6rem !important;
       }
       .inventory-grid {
         grid-template-columns: 1fr !important;
@@ -362,33 +359,55 @@
         grid-template-columns: 1fr !important;
       }
     }
+
+    /* ============================================
+       ANIMATIONS - OPTIMIZED
+    ============================================ */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in {
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+
+    /* Skeleton pulse - faster */
+    .skeleton {
+      background: linear-gradient(90deg, #e8e4ed 25%, #f0edf5 50%, #e8e4ed 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1s ease-in-out infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
   </style>
 </head>
 
-<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+<body>
 
   <!-- ===== TOP NAV ===== -->
-  <nav class="text-white text-xs py-2 px-4 text-center border-b" style="background:var(--purple-950); border-color:rgba(255,255,255,.08);">
+  <nav class="text-white text-xs py-2 px-4 text-center border-b" style="background:var(--purple-primary); border-color:rgba(255,255,255,.08);">
     <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
       <span class="flex items-center gap-1.5 text-purple-200">
         <span class="w-2 h-2 rounded-full" style="background:var(--emerald);"></span>
         Verified Tracknrent Vendor
       </span>
-      <a href="https://tracknrent.vercel.app/marketplace.html" class="hover:text-white transition font-medium text-purple-300 text-center">
+      <a href="/marketplace.html" class="hover:text-white transition font-medium text-purple-300">
         Powered by Tracknrent Marketplace &rarr;
       </a>
     </div>
   </nav>
 
-  <!-- ===== SKELETON LOADER ===== -->
-  <div id="loader" class="max-w-5xl mx-auto w-full p-4 md:p-6 space-y-6 animate-pulse">
-    <div class="h-48 sm:h-56 md:h-64 rounded-3xl w-full" style="background:#EEE7F5;"></div>
-    <div class="h-8 rounded w-1/3" style="background:#EEE7F5;"></div>
-    <div class="h-4 rounded w-2/3" style="background:#EEE7F5;"></div>
+  <!-- ===== SKELETON LOADER (Optimized) ===== -->
+  <div id="loader" class="max-w-5xl mx-auto w-full p-4 md:p-6 space-y-6">
+    <div class="h-48 sm:h-56 md:h-64 rounded-3xl w-full skeleton"></div>
+    <div class="h-8 rounded w-1/3 skeleton"></div>
+    <div class="h-4 rounded w-2/3 skeleton"></div>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-      <div class="h-40 rounded-2xl" style="background:#EEE7F5;"></div>
-      <div class="h-40 rounded-2xl" style="background:#EEE7F5;"></div>
-      <div class="h-40 rounded-2xl" style="background:#EEE7F5;"></div>
+      <div class="h-40 rounded-2xl skeleton"></div>
+      <div class="h-40 rounded-2xl skeleton"></div>
+      <div class="h-40 rounded-2xl skeleton"></div>
     </div>
   </div>
 
@@ -396,46 +415,40 @@
   <main id="storefront" class="hidden max-w-5xl mx-auto w-full p-3 sm:p-4 md:p-6 space-y-8 md:space-y-12 flex-1 pb-20 md:pb-6">
 
     <!-- ===== HERO SECTION ===== -->
-    <header class="relative text-white rounded-2xl md:rounded-3xl p-5 sm:p-6 md:p-10 shadow-xl overflow-hidden border hero-padding"
-            style="background:linear-gradient(135deg,var(--purple-950),var(--purple-800) 65%,#2A0E45); border-color:rgba(255,255,255,.08);">
+    <header class="relative text-white rounded-2xl md:rounded-3xl p-5 sm:p-6 md:p-10 shadow-xl overflow-hidden border"
+            style="background:linear-gradient(135deg,var(--purple-dark),var(--purple-primary) 65%,#2a0a1a); border-color:rgba(255,255,255,.08);">
       
-      <!-- Cover Image Background -->
+      <!-- Cover Image -->
       <div id="store-cover" class="absolute inset-0 bg-cover bg-center opacity-0 transition-opacity duration-500" style="z-index:0;"></div>
-      <div class="absolute inset-0 pointer-events-none" style="z-index:1; background:linear-gradient(135deg, rgba(46,17,64,.88), rgba(76,29,122,.80) 65%, rgba(42,14,69,.9));"></div>
+      <div class="absolute inset-0 pointer-events-none" style="z-index:1; background:linear-gradient(135deg, rgba(74,0,0,.88), rgba(128,0,0,.80) 65%, rgba(42,10,26,.9));"></div>
 
-      <!-- Decorative Blob -->
-      <div class="absolute -top-24 -right-24 w-48 sm:w-64 md:w-96 h-48 sm:h-64 md:h-96 rounded-full blur-3xl pointer-events-none" style="background:rgba(124,58,237,.22); z-index:1;"></div>
+      <!-- Decorative -->
+      <div class="absolute -top-24 -right-24 w-48 sm:w-64 md:w-96 h-48 sm:h-64 md:h-96 rounded-full blur-3xl pointer-events-none" style="background:rgba(128,0,0,.25); z-index:1;"></div>
 
       <!-- Content -->
       <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
         
-        <!-- Left: Logo + Name + Bio -->
         <div class="space-y-2 sm:space-y-3 max-w-2xl w-full">
           <div class="flex items-center gap-3 sm:gap-4">
-            <!-- ✅ FIXED: Store Logo using CSS class -->
             <div id="store-logo" class="store-logo">?</div>
             <div id="profile-badges" class="flex flex-wrap items-center gap-1.5 sm:gap-2"></div>
           </div>
           
-          <h1 id="store-name" class="store-name font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight text-white break-words">Loading store…</h1>
+          <h1 id="store-name" class="store-name font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl tracking-tight text-white break-words">Loading store…</h1>
           
           <p id="store-bio" class="text-purple-100/90 text-sm sm:text-base leading-relaxed"></p>
 
-          <!-- Categories -->
           <div id="store-categories" class="hidden flex-wrap items-center gap-1.5 pt-0.5"></div>
 
-          <!-- Rating -->
           <div class="flex items-center gap-2 pt-1 flex-wrap">
             <span id="rating-average-stars" class="flex items-center gap-0.5"></span>
             <span id="rating-average" class="text-sm font-bold text-white">—</span>
             <span id="rating-count" class="text-xs text-purple-200">No reviews yet</span>
           </div>
 
-          <!-- Social Links -->
           <div id="social-links" class="hidden items-center gap-3 pt-1"></div>
         </div>
 
-        <!-- Right: Action Buttons -->
         <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
           <a id="btn-whatsapp" target="_blank" rel="noopener noreferrer"
              class="inline-flex items-center justify-center gap-2.5 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold transition active:scale-95 text-sm sm:text-base"
@@ -450,7 +463,6 @@
         </div>
       </div>
 
-      <!-- Address -->
       <div id="address-container" class="relative z-10 mt-4 sm:mt-6 md:mt-8 pt-4 sm:pt-6 border-t flex items-center gap-2 text-xs sm:text-sm text-purple-200" style="border-color:rgba(255,255,255,.14);">
         <i data-lucide="map-pin" class="w-4 h-4 text-purple-300"></i>
         <span id="store-address">Location not specified</span>
@@ -458,8 +470,8 @@
     </header>
 
     <!-- ===== DEPOSIT BANNER ===== -->
-    <section id="deposit-banner" class="hidden bg-white rounded-2xl border p-4 sm:p-5 flex items-start gap-3" style="border-color:#F0D9A8; background:#FFFBF0;">
-      <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center flex-shrink-0" style="background:#FDF1D6; color:#C97B0E;">
+    <section id="deposit-banner" class="hidden bg-white rounded-2xl border p-4 sm:p-5 flex items-start gap-3" style="border-color:#f0d9a8; background:#fffbf0;">
+      <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center flex-shrink-0" style="background:#fdf1d6; color:#c97b0e;">
         <i data-lucide="shield-check" class="w-4 h-4 sm:w-5 sm:h-5"></i>
       </div>
       <div class="min-w-0">
@@ -470,12 +482,12 @@
 
     <!-- ===== EQUIPMENT CATALOG ===== -->
     <section class="space-y-4 sm:space-y-6">
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b pb-3 sm:pb-4" style="border-color:#EEE9E2;">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b pb-3 sm:pb-4" style="border-color:#e8e4ed;">
         <div>
-          <h2 class="font-display text-xl sm:text-2xl font-semibold text-slate-900">Available equipment</h2>
+          <h2 class="font-bold text-xl sm:text-2xl text-slate-900">Available equipment</h2>
           <p class="text-xs text-slate-500 mt-0.5">Updates live as the owner adjusts stock</p>
         </div>
-        <span id="inventory-count" class="text-xs font-semibold px-3 py-1 rounded-full mt-2 sm:mt-0" style="background:#F1E9FB; color:var(--purple-800);">0 items</span>
+        <span id="inventory-count" class="text-xs font-semibold px-3 py-1 rounded-full mt-2 sm:mt-0" style="background:#f0edf5; color:var(--purple-primary);">0 items</span>
       </div>
 
       <div id="inventory-grid" class="inventory-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5"></div>
@@ -483,8 +495,8 @@
 
     <!-- ===== GALLERY ===== -->
     <section id="gallery-section" class="hidden space-y-4 sm:space-y-6">
-      <div class="border-b pb-3 sm:pb-4" style="border-color:#EEE9E2;">
-        <h2 class="font-display text-xl sm:text-2xl font-semibold text-slate-900">Gallery &amp; past setups</h2>
+      <div class="border-b pb-3 sm:pb-4" style="border-color:#e8e4ed;">
+        <h2 class="font-bold text-xl sm:text-2xl text-slate-900">Gallery &amp; past setups</h2>
         <p class="text-xs text-slate-500 mt-0.5">Photos and video from previous events</p>
       </div>
       <div id="gallery-grid" class="gallery-grid grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4"></div>
@@ -492,39 +504,38 @@
 
     <!-- ===== RATINGS & REVIEWS ===== -->
     <section class="space-y-4 sm:space-y-6">
-      <div class="border-b pb-3 sm:pb-4" style="border-color:#EEE9E2;">
-        <h2 class="font-display text-xl sm:text-2xl font-semibold text-slate-900">Ratings &amp; reviews</h2>
+      <div class="border-b pb-3 sm:pb-4" style="border-color:#e8e4ed;">
+        <h2 class="font-bold text-xl sm:text-2xl text-slate-900">Ratings &amp; reviews</h2>
         <p class="text-xs text-slate-500 mt-0.5">From customers who've booked with this store</p>
       </div>
 
       <div class="reviews-grid grid grid-cols-1 md:grid-cols-5 gap-6 md:gap-8">
-        <!-- Left: Rating Distribution + Review Form -->
         <div class="md:col-span-2 space-y-4 sm:space-y-6">
-          <div class="bg-white rounded-2xl border p-4 sm:p-5" style="border-color:#EEE9E2;">
+          <div class="bg-white rounded-2xl border p-4 sm:p-5" style="border-color:#e8e4ed;">
             <div id="rating-distribution"></div>
           </div>
 
-          <form id="review-form" class="bg-white rounded-2xl border p-4 sm:p-5 space-y-3" style="border-color:#EEE9E2;">
+          <!-- ===== REVIEW FORM - FIXED INTERACTIVE STARS ===== -->
+          <form id="review-form" class="bg-white rounded-2xl border p-4 sm:p-5 space-y-3" style="border-color:#e8e4ed;">
             <h3 class="font-semibold text-sm text-slate-900">Leave a review</h3>
             <div class="flex gap-1" id="rating-input-stars">
-              <i data-lucide="star" class="rating-input-star star-empty" data-value="1"></i>
-              <i data-lucide="star" class="rating-input-star star-empty" data-value="2"></i>
-              <i data-lucide="star" class="rating-input-star star-empty" data-value="3"></i>
-              <i data-lucide="star" class="rating-input-star star-empty" data-value="4"></i>
-              <i data-lucide="star" class="rating-input-star star-empty" data-value="5"></i>
+              <i class="fas fa-star rating-input-star star-empty" data-value="1"></i>
+              <i class="fas fa-star rating-input-star star-empty" data-value="2"></i>
+              <i class="fas fa-star rating-input-star star-empty" data-value="3"></i>
+              <i class="fas fa-star rating-input-star star-empty" data-value="4"></i>
+              <i class="fas fa-star rating-input-star star-empty" data-value="5"></i>
             </div>
             <input id="review-name" type="text" placeholder="Your name"
-                   class="w-full text-sm px-3 py-2.5 rounded-lg border outline-none" style="border-color:#E5E1DA;">
+                   class="w-full text-sm px-3 py-2.5 rounded-lg border outline-none" style="border-color:#e0dbe8;">
             <textarea id="review-comment" rows="3" placeholder="How was your rental experience?"
-                      class="w-full text-sm px-3 py-2.5 rounded-lg border outline-none resize-none" style="border-color:#E5E1DA;"></textarea>
+                      class="w-full text-sm px-3 py-2.5 rounded-lg border outline-none resize-none" style="border-color:#e0dbe8;"></textarea>
             <button id="review-submit" type="submit"
-                    class="w-full text-sm font-semibold text-white py-2.5 rounded-lg transition"
-                    style="background:var(--ink);">Submit review</button>
+                    class="w-full text-sm font-semibold text-white py-2.5 rounded-lg transition hover:opacity-90"
+                    style="background:var(--purple-primary);">Submit review</button>
           </form>
         </div>
 
-        <!-- Right: Reviews List -->
-        <div id="reviews-list" class="md:col-span-3 bg-white rounded-2xl border p-4 sm:p-5" style="border-color:#EEE9E2;"></div>
+        <div id="reviews-list" class="md:col-span-3 bg-white rounded-2xl border p-4 sm:p-5" style="border-color:#e8e4ed;"></div>
       </div>
     </section>
   </main>
@@ -532,41 +543,41 @@
   <!-- ===== MOBILE CONTACT BAR ===== -->
   <div class="mobile-contact-bar" id="mobile-contact-bar">
     <a id="mobile-btn-whatsapp" href="#" target="_blank" rel="noopener noreferrer" class="whatsapp">
-      <i data-lucide="message-square" class="w-4 h-4"></i> WhatsApp
+      <i class="fab fa-whatsapp"></i> WhatsApp
     </a>
     <a id="mobile-btn-phone" href="#" class="call">
-      <i data-lucide="phone" class="w-4 h-4"></i> Call
+      <i class="fas fa-phone"></i> Call
     </a>
   </div>
 
   <!-- ===== ERROR STATE ===== -->
-  <div id="error-state" class="hidden max-w-md mx-auto my-auto text-center p-6 sm:p-8 bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-slate-100 text-slate-800">
-    <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto mb-4 border" style="background:#F1E9FB; color:var(--purple-800); border-color:#E4D6F7;">
-      <i data-lucide="store" class="w-6 h-6 sm:w-8 sm:h-8"></i>
+  <div id="error-state" class="hidden max-w-md mx-auto my-auto text-center p-6 sm:p-8 bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-slate-100">
+    <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto mb-4 border" style="background:#f0edf5; color:var(--purple-primary); border-color:#e0dbe8;">
+      <i class="fas fa-store w-6 h-6 sm:w-8 sm:h-8 text-2xl"></i>
     </div>
     <h2 id="error-title" class="text-xl sm:text-2xl font-bold text-slate-900 mb-2">Store unavailable</h2>
     <p id="error-message" class="text-slate-600 text-sm mb-6">This storefront link may be incorrect, inactive, or removed by the owner.</p>
-    <a href="https://tracknrent.vercel.app/marketplace.html" class="inline-block text-white px-6 py-3 rounded-xl font-medium text-sm transition" style="background:var(--purple-950);">Return to Tracknrent</a>
+    <a href="/marketplace.html" class="inline-block text-white px-6 py-3 rounded-xl font-medium text-sm transition hover:opacity-90" style="background:var(--purple-primary);">Return to Tracknrent</a>
   </div>
 
   <!-- ===== FOOTER ===== -->
-  <footer class="mt-auto py-6 sm:py-8 text-center text-xs border-t" style="background:var(--ink); color:#B9AEC7; border-color:rgba(255,255,255,.06);">
+  <footer class="mt-auto py-6 sm:py-8 text-center text-xs border-t" style="background:var(--purple-primary); color:#b9aec7; border-color:rgba(255,255,255,.06);">
     <div class="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
       <p>&copy; 2026 Tracknrent. All rights reserved.</p>
-      <a href="https://tracknrent.vercel.app/marketplace.html" class="hover:text-white transition" style="color:#C9A6F0;">tracknrent.vercel.app</a>
+      <a href="/marketplace.html" class="hover:text-white transition" style="color:#d4b0e8;">tracknrent.vercel.app</a>
     </div>
   </footer>
 
   <!-- ===== SCRIPTS ===== -->
   <script>
-    // Mirror the hero contact buttons into the mobile sticky bar
+    // Mirror contact buttons to mobile bar
     const mo = new MutationObserver(() => {
       const wa = document.getElementById("btn-whatsapp");
       const ph = document.getElementById("btn-phone");
       const mWa = document.getElementById("mobile-btn-whatsapp");
       const mPh = document.getElementById("mobile-btn-phone");
       const bar = document.getElementById("mobile-contact-bar");
-      if (!wa || !ph) return;
+      if (!wa || !ph || !mWa || !mPh) return;
       if (wa.href && wa.href !== "#") { 
         mWa.href = wa.href; 
         mWa.style.display = "flex";
@@ -579,9 +590,9 @@
     });
     mo.observe(document.body, { attributes: true, subtree: true, attributeFilter: ["href", "class"] });
 
-    // Lucide Icons refresh
+    // Lucide icons
     if (window.lucide) {
-      window.lucide.createIcons();
+      document.addEventListener('DOMContentLoaded', () => lucide.createIcons());
     }
   </script>
 
