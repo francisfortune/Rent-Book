@@ -1,0 +1,11 @@
+User-agent: *
+Disallow: /dashboard.html
+Disallow: /bookings.html
+Disallow: /add.html
+Disallow: /inventory.html
+Disallow: /settings.html
+Disallow: /analytics.html
+Disallow: /ai-assistant.html
+Disallow: /setup.html
+
+Sitemap: https://tracknrent.vercel.app/sitemap.xml

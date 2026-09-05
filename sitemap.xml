@@ -2,10 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
-  <!-- =========================================== -->
-  <!-- MAIN PAGES - High Priority                  -->
-  <!-- =========================================== -->
-  
+  <!-- Main Landing Page -->
   <url>
     <loc>https://tracknrent.vercel.app/</loc>
     <lastmod>2026-09-05</lastmod>
@@ -14,6 +11,7 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://tracknrent.vercel.app/"/>
   </url>
 
+  <!-- Marketplace & Public Stores -->
   <url>
     <loc>https://tracknrent.vercel.app/marketplace.html</loc>
     <lastmod>2026-09-05</lastmod>
@@ -22,131 +20,27 @@
   </url>
 
   <url>
-    <loc>https://tracknrent.vercel.app/signup.html</loc>
-    <lastmod>2026-09-05</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://tracknrent.vercel.app/log-in.html</loc>
-    <lastmod>2026-09-05</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <!-- =========================================== -->
-  <!-- DASHBOARD PAGES - Medium Priority           -->
-  <!-- =========================================== -->
-
-  <url>
-    <loc>https://tracknrent.vercel.app/dashboard.html</loc>
-    <lastmod>2026-09-05</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <url>
-    <loc>https://tracknrent.vercel.app/bookings.html</loc>
-    <lastmod>2026-09-05</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <url>
-    <loc>https://tracknrent.vercel.app/add.html</loc>
-    <lastmod>2026-09-05</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <url>
-    <loc>https://tracknrent.vercel.app/inventory.html</loc>
-    <lastmod>2026-09-05</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <url>
-    <loc>https://tracknrent.vercel.app/settings.html</loc>
-    <lastmod>2026-09-05</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
     <loc>https://tracknrent.vercel.app/public.html</loc>
     <lastmod>2026-09-05</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.8</priority>
   </url>
 
-  <!-- =========================================== -->
-  <!-- AI & ANALYTICS - Lower Priority             -->
-  <!-- =========================================== -->
-
+  <!-- Auth Pages -->
   <url>
-    <loc>https://tracknrent.vercel.app/ai-assistant.html</loc>
+    <loc>https://tracknrent.vercel.app/signup.html</loc>
     <lastmod>2026-09-05</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
+    <priority>0.7</priority>
   </url>
 
-  <url>
-    <loc>https://tracknrent.vercel.app/analytics.html</loc>
-    <lastmod>2026-09-05</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
 
-  <!-- =========================================== -->
-  <!-- LEGAL PAGES - Low Priority                  -->
-  <!-- =========================================== -->
-
+  <!-- Legal & Support Pages -->
   <url>
     <loc>https://tracknrent.vercel.app/terms.html</loc>
     <lastmod>2026-09-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
-  </url>
-
-  <url>
-    <loc>https://tracknrent.vercel.app/reset.html</loc>
-    <lastmod>2026-09-05</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.2</priority>
-  </url>
-
-  <url>
-    <loc>https://tracknrent.vercel.app/setup.html</loc>
-    <lastmod>2026-09-05</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <!-- =========================================== -->
-  <!-- STATIC ASSETS                               -->
-  <!-- =========================================== -->
-
-  <url>
-    <loc>https://tracknrent.vercel.app/sitemap.xml</loc>
-    <lastmod>2026-09-05</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.1</priority>
-  </url>
-
-  <url>
-    <loc>https://tracknrent.vercel.app/manifest.json</loc>
-    <lastmod>2026-09-05</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.1</priority>
-  </url>
-
-  <url>
-    <loc>https://tracknrent.vercel.app/sw.js</loc>
-    <lastmod>2026-09-05</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.1</priority>
   </url>
 
 </urlset>
