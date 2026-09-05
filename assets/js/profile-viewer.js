@@ -740,3 +740,122 @@ if (document.readyState === "loading") {
 } else {
   initViewer();
 }
+
+
+
+// ===== WIRE REVIEW FORM - FIXED INTERACTIVE STARS =====
+function wireReviewForm(businessId) {
+  const form = document.getElementById("review-form");
+  if (!form) return;
+
+  const nameInput = document.getElementById("review-name");
+  const commentInput = document.getElementById("review-comment");
+  const stars = Array.from(document.querySelectorAll(".rating-input-star"));
+  const submitBtn = document.getElementById("review-submit");
+  let selectedRating = 0;
+
+  // Remove any existing listeners to prevent duplicates
+  stars.forEach((star) => {
+    star.removeEventListener('click', star._clickHandler);
+    
+    star._clickHandler = function() {
+      selectedRating = Number(this.dataset.value);
+      stars.forEach((s) => {
+        const val = Number(s.dataset.value);
+        if (val <= selectedRating) {
+          s.classList.remove('star-empty');
+          s.classList.add('star-filled');
+        } else {
+          s.classList.remove('star-filled');
+          s.classList.add('star-empty');
+        }
+      });
+    };
+    
+    star.addEventListener('click', star._clickHandler);
+  });
+
+  // Reset stars when form is reset
+  form.addEventListener('reset', function() {
+    selectedRating = 0;
+    stars.forEach((s) => {
+      s.classList.remove('star-filled');
+      s.classList.add('star-empty');
+    });
+  });
+
+  // Form submit
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (selectedRating < 1) {
+      alert("Please select a star rating before submitting.");
+      return;
+    }
+    const name = (nameInput?.value || "").trim() || "Anonymous";
+    const comment = (commentInput?.value || "").trim();
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
+
+    try {
+      await addDoc(collection(db, "businesses", businessId, "reviews"), {
+        name,
+        rating: selectedRating,
+        comment,
+        createdAt: serverTimestamp()
+      });
+
+      const businessRef = doc(db, "businesses", businessId);
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(businessRef);
+        const data = snap.data() || {};
+        const newSum = Number(data.ratingSum || 0) + selectedRating;
+        const newCount = Number(data.ratingCount || 0) + 1;
+        tx.update(businessRef, { ratingSum: newSum, ratingCount: newCount });
+      });
+
+      form.reset();
+      selectedRating = 0;
+      stars.forEach((s) => {
+        s.classList.remove('star-filled');
+        s.classList.add('star-empty');
+      });
+      submitBtn.textContent = "Review submitted ✓";
+      setTimeout(() => {
+        submitBtn.textContent = "Submit review";
+        submitBtn.disabled = false;
+      }, 1800);
+    } catch (err) {
+      console.error("Review submit error:", err);
+      alert("Failed to submit review: " + err.message);
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit review";
+    }
+  });
+}
+
+// ===== STAR ICONS HTML - FIXED to use Font Awesome =====
+function starIconsHtml(value) {
+  const rounded = Math.round(value);
+  let html = "";
+  for (let i = 1; i <= 5; i++) {
+    const filled = i <= rounded;
+    html += `<i class="fas fa-star ${filled ? 'star-filled' : 'star-empty'}"></i>`;
+  }
+  return html;
+}
+
+// ===== RENDER RATING SUMMARY - FIXED =====
+function renderRatingSummary(businessData) {
+  const ratingCount = Number(businessData.ratingCount || 0);
+  const ratingSum = Number(businessData.ratingSum || 0);
+  const avg = ratingCount > 0 ? ratingSum / ratingCount : 0;
+
+  const avgEl = document.getElementById("rating-average");
+  const countEl = document.getElementById("rating-count");
+  const starsEl = document.getElementById("rating-average-stars");
+
+  if (avgEl) avgEl.textContent = ratingCount > 0 ? avg.toFixed(1) : "—";
+  if (countEl) countEl.textContent = ratingCount === 0 ? "No reviews yet" : `${ratingCount} review${ratingCount === 1 ? "" : "s"}`;
+  if (starsEl) starsEl.innerHTML = starIconsHtml(avg);
+}
