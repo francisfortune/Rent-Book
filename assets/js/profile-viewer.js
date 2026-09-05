@@ -164,17 +164,47 @@ function renderProfile(name, profile, businessData) {
       : name.slice(0, 2).toUpperCase();
   }
 
-  // Verification / Growth Partner badges — mirrors the marketplace card
+  // Verification / Growth Partner / dynamic achievement badges — the
+  // Featured & Verified badges mirror the marketplace card; the rest are
+  // computed automatically from the business's own stats, not set by hand.
   const badgesEl = document.getElementById("profile-badges");
   if (badgesEl) {
     const marketplace = businessData.marketplace || {};
+    const verification = businessData.verification || {};
+    const ratingCount = Number(businessData.ratingCount || 0);
+    const ratingSum = Number(businessData.ratingSum || 0);
+    const avgRating = ratingCount > 0 ? ratingSum / ratingCount : 0;
+    const completedRentals = Number(businessData.completedRentals || 0);
+
     let badges = "";
     if (marketplace.featured) {
       badges += `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:rgba(245,165,36,.18); color:#FBBF24; border:1px solid rgba(245,165,36,.35);">🏆 Growth Partner</span>`;
     } else if (marketplace.verified) {
       badges += `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:rgba(16,185,129,.15); color:#34D399; border:1px solid rgba(16,185,129,.3);"><i data-lucide="badge-check" class="w-3 h-3"></i> Verified</span>`;
     }
+    if (verification.idUploaded === true) {
+      badges += `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:rgba(124,58,237,.15); color:#C4B5FD; border:1px solid rgba(124,58,237,.3);"><i data-lucide="shield-check" class="w-3 h-3"></i> Identity Verified</span>`;
+    }
+    if (avgRating >= 4.5 && ratingCount >= 10) {
+      badges += `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:rgba(245,165,36,.15); color:#FCD34D; border:1px solid rgba(245,165,36,.3);"><i data-lucide="star" class="w-3 h-3"></i> Top Rated</span>`;
+    }
+    if (completedRentals >= 50) {
+      badges += `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:rgba(59,130,246,.15); color:#93C5FD; border:1px solid rgba(59,130,246,.3);"><i data-lucide="trending-up" class="w-3 h-3"></i> High Volume</span>`;
+    }
     badgesEl.innerHTML = badges;
+  }
+
+  // Cover / banner image — behind the whole hero, faded in once loaded so
+  // there's no flash of a broken image on slow connections.
+  const coverEl = document.getElementById("store-cover");
+  if (coverEl) {
+    if (businessData.coverImageUrl) {
+      coverEl.style.backgroundImage = `url('${businessData.coverImageUrl}')`;
+      coverEl.style.opacity = "1";
+    } else {
+      coverEl.style.backgroundImage = "";
+      coverEl.style.opacity = "0";
+    }
   }
 
   const bioEl = document.getElementById("store-bio");
@@ -182,10 +212,34 @@ function renderProfile(name, profile, businessData) {
     bioEl.textContent = profile.bio || "Welcome to our rental catalog. Browse available items and reach out to place an order.";
   }
 
+  // Services / categories tags — from the owner's tag editor. Hidden
+  // entirely when nothing has been set, same pattern as social links.
+  const categoriesEl = document.getElementById("store-categories");
+  if (categoriesEl) {
+    const cats = Array.isArray(profile.categories) && profile.categories.length
+      ? profile.categories
+      : (Array.isArray(businessData.categories) && businessData.categories.length
+          ? businessData.categories
+          : (businessData.category ? [businessData.category] : []));
+    if (cats.length) {
+      categoriesEl.innerHTML = cats.map((c) => `<span class="category-chip">${escapeHtml(c)}</span>`).join("");
+      categoriesEl.classList.remove("hidden");
+      categoriesEl.classList.add("flex");
+    } else {
+      categoriesEl.classList.add("hidden");
+      categoriesEl.classList.remove("flex");
+      categoriesEl.innerHTML = "";
+    }
+  }
+
+  // Address, falling back to City, State (from the setup wizard) when the
+  // owner hasn't filled in a full street address on the storefront.
   const addrEl = document.getElementById("store-address");
   const addrContainer = document.getElementById("address-container");
-  if (profile.address) {
-    if (addrEl) addrEl.textContent = profile.address;
+  const cityState = [businessData.city, businessData.state].filter(Boolean).join(", ");
+  const addressText = profile.address || cityState;
+  if (addressText) {
+    if (addrEl) addrEl.textContent = addressText;
     if (addrContainer) addrContainer.classList.remove("hidden");
   } else if (addrContainer) {
     addrContainer.classList.add("hidden");
@@ -233,8 +287,88 @@ function renderProfile(name, profile, businessData) {
     renderInventoryGrid(lastInventorySnapshot);
   }
 
+  renderDepositBanner(profile.depositPolicy || {});
+  renderSocialLinks(profile);
   renderGallery(profile.gallery || []);
   renderRatingSummary(businessData);
+}
+
+/* =========================
+   DEPOSIT & CAUTION POLICY BANNER
+   Owner-configured, optional — hidden entirely when nothing is set.
+========================= */
+function renderDepositBanner(depositPolicy) {
+  const section = document.getElementById("deposit-banner");
+  const contentEl = document.getElementById("deposit-banner-content");
+  if (!section || !contentEl) return;
+
+  const cautionFee = (depositPolicy.cautionFee || "").trim();
+  const idRequirement = (depositPolicy.idRequirement || "").trim();
+  const notes = (depositPolicy.notes || "").trim();
+
+  if (!cautionFee && !idRequirement && !notes) {
+    section.classList.add("hidden");
+    contentEl.innerHTML = "";
+    return;
+  }
+
+  let rows = "";
+  if (cautionFee) rows += `<p><span class="font-medium text-slate-800">Caution deposit:</span> ${escapeHtml(cautionFee)}</p>`;
+  if (idRequirement) rows += `<p><span class="font-medium text-slate-800">ID requirement:</span> ${escapeHtml(idRequirement)}</p>`;
+  if (notes) rows += `<p>${escapeHtml(notes)}</p>`;
+
+  contentEl.innerHTML = rows;
+  section.classList.remove("hidden");
+  refreshIcons();
+}
+
+/* =========================
+   SOCIAL HANDLES
+   Only rendered when the owner has filled at least one in. Accepts either
+   a bare handle ("@shopname") or a full URL.
+========================= */
+function toSocialUrl(platform, value) {
+  const trimmed = (value || "").trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  const handle = trimmed.replace(/^@/, "");
+  if (platform === "instagram") return `https://instagram.com/${handle}`;
+  if (platform === "tiktok") return `https://tiktok.com/@${handle}`;
+  if (platform === "facebook") return `https://facebook.com/${handle}`;
+  return null;
+}
+
+function renderSocialLinks(profile) {
+  const container = document.getElementById("social-links");
+  if (!container) return;
+
+  const links = [
+    { platform: "instagram", url: toSocialUrl("instagram", profile.instagram), icon: "instagram" },
+    { platform: "tiktok", url: toSocialUrl("tiktok", profile.tiktok), icon: "music" },
+    { platform: "facebook", url: toSocialUrl("facebook", profile.facebook), icon: "facebook" }
+  ].filter((l) => l.url);
+
+  if (links.length === 0) {
+    container.classList.add("hidden");
+    container.classList.remove("flex");
+    container.innerHTML = "";
+    return;
+  }
+
+  container.innerHTML = links
+    .map(
+      (l) => `
+      <a href="${l.url}" target="_blank" rel="noopener noreferrer"
+         class="w-8 h-8 rounded-full flex items-center justify-center transition"
+         style="background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); color:#fff;"
+         aria-label="${l.platform}">
+        <i data-lucide="${l.icon}" class="w-4 h-4"></i>
+      </a>`
+    )
+    .join("");
+  container.classList.remove("hidden");
+  container.classList.add("flex");
+  refreshIcons();
 }
 
 /* =========================

@@ -41,8 +41,19 @@ const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOU
 const functions = getFunctions();
 const deleteGalleryMediaFn = httpsCallable(functions, "deleteGalleryMedia");
 
+// Quick-add suggestions for the Services & Categories tag editor. Kept in
+// sync (loosely) with the marketplace's top-level CATEGORIES list, plus a
+// few finer-grained service tags vendors commonly want.
+const CATEGORY_SUGGESTIONS = [
+  "Equipment", "Vehicles", "Event Rentals", "Photography", "Furniture",
+  "Sound & Lighting", "Decor", "Catering", "Bounce Castles", "Tents & Canopies",
+  "Chairs & Tables", "Generators", "Power Tools", "Party Supplies"
+];
+const MAX_CATEGORIES = 12;
+
 let currentBusinessId = null;
 let currentGallery = []; // array of { id, url, type, publicId, resourceType, addedBy, addedAt }
+let currentCategories = []; // array of strings, e.g. ["Equipment", "Tents & Canopies"]
 let currentUid = null;
 let isOwner = false;
 let unsubscribeBusiness = null;
@@ -55,6 +66,12 @@ const profileSlug = document.getElementById("profileSlug");
 const businessBio = document.getElementById("businessBio");
 const publicPhone = document.getElementById("publicPhone");
 const publicWhatsapp = document.getElementById("publicWhatsapp");
+const publicInstagram = document.getElementById("publicInstagram");
+const publicTiktok = document.getElementById("publicTiktok");
+const publicFacebook = document.getElementById("publicFacebook");
+const depositCautionFee = document.getElementById("depositCautionFee");
+const depositIdRequirement = document.getElementById("depositIdRequirement");
+const depositNotes = document.getElementById("depositNotes");
 const publicAddress = document.getElementById("publicAddress");
 const publicLatitude = document.getElementById("publicLatitude");
 const publicLongitude = document.getElementById("publicLongitude");
@@ -67,6 +84,15 @@ const galleryUploadStatus = document.getElementById("galleryUploadStatus");
 const logoPreview = document.getElementById("logoPreview");
 const logoUploadInput = document.getElementById("logoUploadInput");
 const logoUploadStatus = document.getElementById("logoUploadStatus");
+const coverImagePreview = document.getElementById("coverImagePreview");
+const coverImagePreviewWrap = document.getElementById("coverImagePreviewWrap");
+const coverUploadInput = document.getElementById("coverUploadInput");
+const coverUploadStatus = document.getElementById("coverUploadStatus");
+const removeCoverBtn = document.getElementById("removeCoverBtn");
+const categoryTagsList = document.getElementById("categoryTagsList");
+const categoryInput = document.getElementById("categoryInput");
+const categoryAddBtn = document.getElementById("categoryAddBtn");
+const categorySuggestions = document.getElementById("categorySuggestions");
 const saveBtn = document.getElementById("savePublicSettings");
 const liveProfileLink = document.getElementById("liveProfileLink");
 const teamMemberNotice = document.getElementById("teamMemberNotice");
@@ -79,10 +105,20 @@ const OWNER_ONLY_FIELDS = [
   businessBio,
   publicPhone,
   publicWhatsapp,
+  publicInstagram,
+  publicTiktok,
+  publicFacebook,
+  depositCautionFee,
+  depositIdRequirement,
+  depositNotes,
   publicAddress,
   showInventoryToggle,
   showAvailabilityToggle,
   logoUploadInput,
+  coverUploadInput,
+  removeCoverBtn,
+  categoryInput,
+  categoryAddBtn,
   btnUseMyLocation
 ];
 
@@ -207,6 +243,13 @@ function applyProfileToForm(data) {
   if (businessBio) businessBio.value = profile.bio || "";
   if (publicPhone) publicPhone.value = profile.phone || "";
   if (publicWhatsapp) publicWhatsapp.value = profile.whatsapp || "";
+  if (publicInstagram) publicInstagram.value = profile.instagram || "";
+  if (publicTiktok) publicTiktok.value = profile.tiktok || "";
+  if (publicFacebook) publicFacebook.value = profile.facebook || "";
+  const deposit = profile.depositPolicy || {};
+  if (depositCautionFee) depositCautionFee.value = deposit.cautionFee || "";
+  if (depositIdRequirement) depositIdRequirement.value = deposit.idRequirement || "";
+  if (depositNotes) depositNotes.value = deposit.notes || "";
   if (publicAddress) publicAddress.value = profile.address || "";
   if (publicLatitude) publicLatitude.value = profile.latitude ?? "";
   if (publicLongitude) publicLongitude.value = profile.longitude ?? "";
@@ -219,10 +262,37 @@ function applyProfileToForm(data) {
       : (data.name || "?").slice(0, 2).toUpperCase();
   }
 
+  applyCoverToPreview(data.coverImageUrl || "");
+
+  // Categories can live on either publicProfile.categories (new) or the
+  // top-level `categories`/`category` fields (older/simpler records) —
+  // read whichever is present so nothing regresses for existing vendors.
+  currentCategories = normalizeCategories(
+    profile.categories || data.categories || (data.category ? [data.category] : [])
+  );
+  renderCategoryTags();
+  renderCategorySuggestions();
+
   currentGallery = normalizeGallery(profile.gallery);
 
   updateLiveLink(profile.slug, profile.enabled);
   renderGallery();
+}
+
+function normalizeCategories(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const raw of list) {
+    const tag = String(raw || "").trim();
+    if (!tag) continue;
+    const key = tag.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(tag);
+    if (out.length >= MAX_CATEGORIES) break;
+  }
+  return out;
 }
 
 // Older records stored gallery as a plain array of URL strings.
@@ -242,11 +312,170 @@ function updateLiveLink(slug, enabled) {
   if (enabled && slug) {
     const url = `${window.location.origin}/p/${slug}`;
     liveProfileLink.href = url;
-    liveProfileLink.textContent = `View Live Store &rarr;`;
+    liveProfileLink.textContent = `View Store `;
     if (parentCard) parentCard.style.display = "";
   } else if (parentCard) {
     parentCard.style.display = "none";
   }
+}
+
+/* =========================
+   COVER / BANNER IMAGE (Owner only)
+========================= */
+function applyCoverToPreview(url) {
+  if (!coverImagePreview) return;
+  if (url) {
+    coverImagePreview.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;" alt="Store cover image">`;
+    if (removeCoverBtn && isOwner) removeCoverBtn.classList.remove("hidden");
+  } else {
+    coverImagePreview.innerHTML = `<span class="w-full h-full flex items-center justify-center text-white/70 text-xs font-medium">No banner uploaded yet</span>`;
+    if (removeCoverBtn) removeCoverBtn.classList.add("hidden");
+  }
+}
+
+if (coverUploadInput) {
+  coverUploadInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file || !currentBusinessId || !isOwner) return;
+
+    if (coverUploadStatus) {
+      coverUploadStatus.classList.remove("hidden");
+      coverUploadStatus.textContent = "Uploading cover image...";
+    }
+    if (coverImagePreviewWrap) coverImagePreviewWrap.style.opacity = "0.6";
+
+    try {
+      const result = await uploadToCloudinary(file);
+      const businessRef = doc(db, "businesses", currentBusinessId);
+      await updateDoc(businessRef, { coverImageUrl: result.secure_url });
+
+      applyCoverToPreview(result.secure_url);
+      await logActivity("cover_update", { url: result.secure_url });
+      if (coverUploadStatus) coverUploadStatus.textContent = "Cover image updated ✓";
+    } catch (err) {
+      console.error("Cover upload failed:", err);
+      if (coverUploadStatus) coverUploadStatus.textContent = "Upload failed. Try again.";
+    } finally {
+      coverUploadInput.value = "";
+      if (coverImagePreviewWrap) coverImagePreviewWrap.style.opacity = "1";
+      setTimeout(() => { if (coverUploadStatus) coverUploadStatus.classList.add("hidden"); }, 3000);
+    }
+  });
+}
+
+if (removeCoverBtn) {
+  removeCoverBtn.addEventListener("click", async () => {
+    if (!isOwner || !currentBusinessId) return;
+    if (!confirm("Remove your storefront's cover image?")) return;
+    try {
+      const businessRef = doc(db, "businesses", currentBusinessId);
+      await updateDoc(businessRef, { coverImageUrl: "" });
+      applyCoverToPreview("");
+      await logActivity("cover_remove", {});
+    } catch (err) {
+      console.error("Cover remove failed:", err);
+      alert("Failed to remove cover image: " + err.message);
+    }
+  });
+}
+
+/* =========================
+   SERVICES & CATEGORIES TAG EDITOR (Owner only)
+   A real add/remove tag editor — not decorative. Tags live in-memory in
+   `currentCategories` as the user edits, and are persisted to Firestore
+   (publicProfile.categories) when "Save" is pressed, same as every other
+   field on this page.
+========================= */
+function renderCategoryTags() {
+  if (!categoryTagsList) return;
+
+  if (currentCategories.length === 0) {
+    categoryTagsList.innerHTML = `<p class="text-xs text-gray-400">No services added yet — add one below.</p>`;
+    return;
+  }
+
+  categoryTagsList.innerHTML = currentCategories
+    .map((tag) => `
+      <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+            style="background:#F1E9FB; color:purple; border:1px solid #E4D6F7;">
+        ${escapeHtmlLocal(tag)}
+        ${isOwner ? `<button type="button" data-tag="${escapeHtmlLocal(tag)}" class="remove-category-tag hover:text-red-600 transition-colors" aria-label="Remove ${escapeHtmlLocal(tag)}">
+          <i class="fas fa-times text-[10px]"></i>
+        </button>` : ""}
+      </span>`)
+    .join("");
+
+  if (isOwner) {
+    categoryTagsList.querySelectorAll(".remove-category-tag").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        currentCategories = currentCategories.filter((t) => t !== btn.dataset.tag);
+        renderCategoryTags();
+        renderCategorySuggestions();
+      });
+    });
+  }
+}
+
+function renderCategorySuggestions() {
+  if (!categorySuggestions) return;
+  const activeLower = new Set(currentCategories.map((t) => t.toLowerCase()));
+  const remaining = CATEGORY_SUGGESTIONS.filter((s) => !activeLower.has(s.toLowerCase()));
+
+  if (remaining.length === 0) {
+    categorySuggestions.innerHTML = `<p class="text-xs text-gray-400">All suggestions added — type your own above.</p>`;
+    return;
+  }
+
+  categorySuggestions.innerHTML = remaining
+    .map((s) => `
+      <button type="button" data-suggestion="${escapeHtmlLocal(s)}"
+              class="category-suggestion-chip text-xs font-semibold px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-gray-600 hover:border-purple-300 hover:text-purple-700 hover:bg-purple-50 transition-colors">
+        + ${escapeHtmlLocal(s)}
+      </button>`)
+    .join("");
+
+  categorySuggestions.querySelectorAll(".category-suggestion-chip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (!isOwner) return;
+      addCategoryTag(btn.dataset.suggestion);
+    });
+  });
+}
+
+function addCategoryTag(rawValue) {
+  if (!isOwner) return;
+  const tag = String(rawValue || "").trim();
+  if (!tag) return;
+  if (currentCategories.some((t) => t.toLowerCase() === tag.toLowerCase())) {
+    if (categoryInput) categoryInput.value = "";
+    return;
+  }
+  if (currentCategories.length >= MAX_CATEGORIES) {
+    alert(`You can add up to ${MAX_CATEGORIES} services/categories.`);
+    return;
+  }
+  currentCategories.push(tag);
+  renderCategoryTags();
+  renderCategorySuggestions();
+  if (categoryInput) categoryInput.value = "";
+}
+
+if (categoryAddBtn) {
+  categoryAddBtn.addEventListener("click", () => addCategoryTag(categoryInput?.value));
+}
+if (categoryInput) {
+  categoryInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addCategoryTag(categoryInput.value);
+    }
+  });
+}
+
+function escapeHtmlLocal(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
 }
 
 /* =========================
@@ -519,7 +748,7 @@ if (saveBtn) {
     }
 
     saveBtn.disabled = true;
-    saveBtn.textContent = "Saving changes...";
+    saveBtn.textContent = "Saving...";
 
     try {
       const businessRef = doc(db, "businesses", currentBusinessId);
@@ -546,6 +775,15 @@ if (saveBtn) {
         await deleteDoc(doc(db, "publicSlugs", oldSlug));
       }
 
+      // Optional — leave blank if not applicable. Only stored when at
+      // least one field has content, so the banner on the storefront
+      // stays hidden for vendors who don't use a deposit policy.
+      const depositPolicy = {
+        cautionFee: (depositCautionFee?.value || "").trim(),
+        idRequirement: (depositIdRequirement?.value || "").trim(),
+        notes: (depositNotes?.value || "").trim()
+      };
+
       await updateDoc(businessRef, {
         publicProfile: {
           enabled,
@@ -555,12 +793,22 @@ if (saveBtn) {
           bio: businessBio.value.trim(),
           phone: publicPhone.value.trim(),
           whatsapp: publicWhatsapp.value.trim(),
+          instagram: (publicInstagram?.value || "").trim(),
+          tiktok: (publicTiktok?.value || "").trim(),
+          facebook: (publicFacebook?.value || "").trim(),
+          depositPolicy,
+          categories: currentCategories,
           address: publicAddress.value.trim(),
           latitude: publicLatitude && publicLatitude.value !== "" ? Number(publicLatitude.value) : null,
           longitude: publicLongitude && publicLongitude.value !== "" ? Number(publicLongitude.value) : null,
           gallery: currentGallery,
           updatedAt: new Date().toISOString()
         },
+        // Keep the legacy top-level `category` field (singular) in sync
+        // with the first tag, so marketplace cards/filters that only know
+        // about a single category continue to work for existing vendors.
+        categories: currentCategories,
+        category: currentCategories[0] || "Equipment",
         // The "Go Online" toggle controls both the storefront AND the
         // marketplace listing at once — one switch, not two.
         "marketplace.visible": enabled
@@ -578,4 +826,9 @@ if (saveBtn) {
       saveBtn.textContent = "Save Store Link & Settings";
     }
   });
+}
+
+// After rendering content
+if (window.lucide) {
+  window.lucide.createIcons();
 }

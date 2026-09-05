@@ -91,12 +91,29 @@ async function createInitialInventory(businessId) {
 
 
 
+// Maps the "Business Type" radio (step 1) to a marketplace category so
+// the storefront/marketplace card has something sensible to show before
+// the owner picks their own service tags in public.html.
+function businessTypeToCategory(type) {
+  switch (type) {
+    case "event": return "Event Rentals";
+    case "equipment": return "Equipment";
+    case "mixed": return "Mixed Rentals";
+    default: return "Equipment";
+  }
+}
+
 function generateReferralCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";
   for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
   return code;
 }
+
+// assets/js/setup.js
+// ============================================
+// FIX: TIERED REFERRAL REWARDS
+// ============================================
 
 async function processReferral(user, newBusinessId) {
   try {
@@ -111,34 +128,147 @@ async function processReferral(user, newBusinessId) {
     const referrerDoc = snap.docs[0];
     if (referrerDoc.id === newBusinessId) return; // no self-referrals
 
+    // Get referrer business data
+    const referrerData = referrerDoc.data();
+    const referrerBusinessId = referrerDoc.id;
+
+    // Check if this referral already exists
+    const existingRefs = await getDocs(query(
+      collection(db, "referrals"),
+      where("referrerBusinessId", "==", referrerBusinessId),
+      where("referredBusinessId", "==", newBusinessId)
+    ));
+    if (!existingRefs.empty) return; // Already counted
+
+    // Get referred business name
+    const referredBizSnap = await getDoc(doc(db, "businesses", newBusinessId));
+    const referredBizName = referredBizSnap.exists() ? referredBizSnap.data().name : "New Business";
+
+    // Create referral record
     await addDoc(collection(db, "referrals"), {
       referrerBusinessId: referrerDoc.id,
       referredBusinessId: newBusinessId,
+      referredBusinessName: referredBizName,
       referralCode: refCode,
       status: "valid",
       createdAt: serverTimestamp()
     });
 
-    const newCount = (referrerDoc.data().referralCount || 0) + 1;
+    // ✅ NEW: Calculate new referral count
+    const newCount = (referrerData.referralCount || 0) + 1;
     const updates = { referralCount: newCount };
-    if (newCount >= 10) updates["features.marketplace"] = true;
+    
+    // ============================================
+    // 🏆 TIERED REWARDS SYSTEM
+    // ============================================
+    
+    // ✅ Tier 1: 1 Referral = Verified Badge
+    if (newCount >= 1 && !referrerData.marketplace?.verified) {
+      updates["marketplace.verified"] = true;
+      updates["verification.verifiedAt"] = serverTimestamp();
+      
+      await addDoc(collection(db, "businesses", referrerBusinessId, "notifications"), {
+        message: `✅ Verified Badge Unlocked! You've earned your first referral. Customers will now see the Verified badge on your storefront.`,
+        type: "referral_milestone",
+        triggeredBy: "Tracknrent",
+        createdAt: serverTimestamp(),
+        readBy: [],
+        deletedFor: []
+      });
+    }
+    
+    // ✅ Tier 2: 3 Referrals = High Volume Badge
+    if (newCount >= 3) {
+      updates["marketplace.highVolume"] = true;
+      
+      await addDoc(collection(db, "businesses", referrerBusinessId, "notifications"), {
+        message: `📈 High Volume Badge Unlocked! ${newCount} businesses have joined through you. You're building a strong network!`,
+        type: "referral_milestone",
+        triggeredBy: "Tracknrent",
+        createdAt: serverTimestamp(),
+        readBy: [],
+        deletedFor: []
+      });
+    }
+    
+    // ✅ Tier 3: 5 Referrals = Trusted Partner
+    if (newCount >= 5) {
+      updates["marketplace.trustedPartner"] = true;
+      
+      await addDoc(collection(db, "businesses", referrerBusinessId, "notifications"), {
+        message: `🤝 Trusted Partner Status! ${newCount} businesses trust you enough to join through your referral. You're now a Tracknrent Trusted Partner!`,
+        type: "referral_milestone",
+        triggeredBy: "Tracknrent",
+        createdAt: serverTimestamp(),
+        readBy: [],
+        deletedFor: []
+      });
+    }
+    
+    // ✅ Tier 4: 10 Referrals = Featured + Verified (Keep existing)
+    if (newCount >= 10) {
+      updates["marketplace.featured"] = true;
+      updates["marketplace.verified"] = true;
+      updates["features.marketplace"] = true;
+      
+      await addDoc(collection(db, "businesses", referrerBusinessId, "notifications"), {
+        message: `🏆 FEATURED STATUS UNLOCKED! ${newCount} businesses have joined through you. Your business is now FEATURED on the Tracknrent Marketplace!`,
+        type: "referral_milestone",
+        triggeredBy: "Tracknrent",
+        createdAt: serverTimestamp(),
+        readBy: [],
+        deletedFor: []
+      });
+    }
+    
+    // ✅ Bonus: Every 5 referrals after 10
+    if (newCount >= 10 && newCount % 5 === 0) {
+      await addDoc(collection(db, "businesses", referrerBusinessId, "notifications"), {
+        message: `🌟 Amazing! You've reached ${newCount} referrals. Keep sharing and growing your network!`,
+        type: "referral_milestone",
+        triggeredBy: "Tracknrent",
+        createdAt: serverTimestamp(),
+        readBy: [],
+        deletedFor: []
+      });
+    }
+
+    // Update the referrer business
     await updateDoc(doc(db, "businesses", referrerDoc.id), updates);
 
+    // ✅ NEW: Add referral analytics tracking
+    await addDoc(collection(db, "businesses", referrerBusinessId, "referralAnalytics"), {
+      referredBusinessId: newBusinessId,
+      referredBusinessName: referredBizName,
+      referralCount: newCount,
+      milestone: newCount >= 10 ? "featured" : newCount >= 5 ? "trusted" : newCount >= 3 ? "high_volume" : "verified",
+      createdAt: serverTimestamp()
+    });
+
+    // Send referral notification to referrer
     await addDoc(collection(db, "businesses", referrerDoc.id, "notifications"), {
-      message: newCount >= 10
-        ? "🎉 Referral milestone reached! Your business now has a featured Marketplace listing."
-        : `🤝 A business you referred just completed setup! (${newCount}/10 referrals)`,
+      message: `🤝 ${referredBizName} just completed setup using your referral! (${newCount}/10 referrals)`,
       type: "referral",
       triggeredBy: "Tracknrent",
       createdAt: serverTimestamp(),
       readBy: [],
       deletedFor: []
     });
+
+    // ✅ NEW: Send welcome notification to referred business
+    await addDoc(collection(db, "businesses", newBusinessId, "notifications"), {
+      message: `👋 Welcome ${referredBizName}! You were referred by ${referrerData.name || "another Tracknrent business"}. Welcome to the community!`,
+      type: "welcome_referral",
+      triggeredBy: "Tracknrent",
+      createdAt: serverTimestamp(),
+      readBy: [],
+      deletedFor: []
+    });
+
   } catch (err) {
     console.error("Referral processing failed:", err);
   }
 }
-
 
 
 
@@ -151,17 +281,30 @@ async function processReferral(user, newBusinessId) {
 
   try {
     const businessName = document.getElementById("businessName").value.trim();
+    const businessTypeInput = document.querySelector('input[name="businessType"]:checked');
+    const businessType = businessTypeInput ? businessTypeInput.value : "equipment";
+    const city = (document.getElementById("city")?.value || "").trim();
+    const state = (document.getElementById("state")?.value || "").trim();
 
     // 1️⃣ Create business
     const businessRef = await addDoc(collection(db, "businesses"), {
       name: businessName,
       ownerId: user.uid,
       currency: "NGN",
-      location: "Enugu",
+      // city/state come straight from the setup wizard (step 2) and drive
+      // the "· City" line on marketplace cards and the storefront address
+      // fallback. `location` is kept as a human-readable combo for any
+      // older UI that still reads a single string field.
+      city,
+      state,
+      location: [city, state].filter(Boolean).join(", ") || "Enugu",
+      category: businessTypeToCategory(businessType),
+      businessType,
 
   referralCode: generateReferralCode(),   // ← add
   referralCount: 0,                       // ← add
   features: { marketplace: false },       // ← add
+  marketplace: { visible: false, featured: false, verified: false }, // ← add
       settings: {
         inventoryEditableByStaff: false
       },

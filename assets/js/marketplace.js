@@ -6,310 +6,532 @@ import {
   where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const CATEGORIES = ["Equipment", "Vehicles", "Event Rentals", "Photography", "Furniture", "Sound & Lighting"];
+// ============================================
+// CONFIG
+// ============================================
+
+// Kept in sync with the quick-add suggestions in public.html's Services &
+// Categories tag editor, so a tag a vendor picks there always has a
+// matching filter chip here.
+const CATEGORIES = [
+  "All", "Equipment", "Vehicles", "Event Rentals", "Photography", "Furniture",
+  "Sound & Lighting", "Decor", "Catering", "Bounce Castles", "Tents & Canopies",
+  "Chairs & Tables", "Generators", "Power Tools", "Party Supplies"
+];
+
+// ============================================
+// DOM REFS
+// ============================================
 
 const searchInput = document.getElementById("search-input");
 const searchClear = document.getElementById("search-clear");
+const searchBtn = document.getElementById("search-btn");
 const categoryChipsEl = document.getElementById("category-chips");
-const cityChipsEl = document.getElementById("city-chips");
-const activeFilterBanner = document.getElementById("active-filter-banner");
-const activeFilterText = document.getElementById("active-filter-text");
-const clearFilterBtn = document.getElementById("clear-filter-btn");
-
-const resultsSection = document.getElementById("results-section");
+const verifiedOnlyChip = document.getElementById("verified-only-chip");
+const sortRatingBtn = document.getElementById("sort-rating-btn");
+const sortNewestBtn = document.getElementById("sort-newest-btn");
+const sortSelect = document.getElementById("sort-select");
+const clearFiltersBtn = document.getElementById("clear-filters-btn");
+const resetEmptyBtn = document.getElementById("reset-empty-btn");
 const resultsGrid = document.getElementById("results-grid");
-const homepageSections = document.getElementById("homepage-sections");
-const featuredSection = document.getElementById("featured-section");
-const featuredScroll = document.getElementById("featured-scroll");
-const newestGrid = document.getElementById("newest-grid");
+const resultsTitle = document.getElementById("results-title");
+const resultsCount = document.getElementById("results-count");
 const emptyState = document.getElementById("empty-state");
+const activeFilters = document.getElementById("active-filters");
+const activeFilterTags = document.getElementById("active-filter-tags");
+
+// ============================================
+// STATE
+// ============================================
 
 let allBusinesses = [];
-let activeCategory = null;
-let activeCity = null;
+let filteredBusinesses = [];
+let activeCategory = "All";
+let verifiedOnly = false;
+let searchQuery = "";
+let currentSort = "newest";
+let currentPage = 1;
+const PAGE_SIZE = 12;
 
-function refreshIcons() {
-  if (window.lucide && typeof window.lucide.createIcons === "function") {
-    window.lucide.createIcons();
-  }
-}
+// ============================================
+// LOAD BUSINESSES (LIVE)
+// ============================================
 
-/* =========================
-   LIVE MARKETPLACE LISTING
-   onSnapshot instead of a one-time getDocs — the moment a business
-   goes visible, gets marked featured/verified, or a rating changes,
-   every open marketplace tab updates itself. No refresh needed.
-========================= */
 function loadBusinesses() {
-  // The dashboard's single "Go Online" toggle writes publicProfile.enabled
-  // AND marketplace.visible together in the same update (see
-  // public-profile.js), so marketplace.visible is the correct — and only
-  // — field this catalog needs to filter on.
   const q = query(collection(db, "businesses"), where("marketplace.visible", "==", true));
 
   onSnapshot(
     q,
     (snap) => {
       allBusinesses = snap.docs.map(d => normalizeBusiness(d.id, d.data()));
-      rankBusinesses(allBusinesses);
-      renderCityChips();
-      // Keep whatever view (homepage vs filtered results) is currently active in sync
-      const isFiltering = searchInput.value.trim().length > 0 || activeCategory || activeCity;
-      isFiltering ? applyFilters() : renderHomepage();
+      applyFiltersAndSort();
     },
     (err) => {
-      console.error("Failed to load marketplace businesses:", err);
-      if (emptyState) {
-        emptyState.classList.remove("hidden");
-        emptyState.querySelector("h3").textContent = "Couldn't load the marketplace";
-        emptyState.querySelector("p").textContent = "Please check your connection and try again.";
-      }
+      console.error("Failed to load marketplace:", err);
+      showEmptyState("Couldn't load the marketplace", "Please check your connection and try again.");
     }
   );
 }
 
-// Pulls a short, chip-friendly location (e.g. "Port Harcourt") out of a
-// freeform address like "No 12 Ogui Road, Port Harcourt, Rivers State".
-// Falls back gracefully since owners type addresses however they like.
-function deriveLocation(business) {
-  if (business.city) return business.city;
-  if (!business.address) return "";
-  const parts = business.address.split(",").map(s => s.trim()).filter(Boolean);
-  if (parts.length === 0) return "";
-  // Prefer the second-to-last segment (usually the city) over the last
-  // (often a state, or "Nigeria"), but fall back sensibly either way.
-  const stateLike = /state|nigeria/i;
-  const last = parts[parts.length - 1];
-  const secondLast = parts[parts.length - 2];
-  if (secondLast && !stateLike.test(secondLast)) return secondLast;
-  if (last && !stateLike.test(last)) return last;
-  return secondLast || last;
-}
+// ============================================
+// NORMALIZE BUSINESS DATA
+// ============================================
 
 function normalizeBusiness(id, data) {
   const marketplace = data.marketplace || {};
   const profile = data.publicProfile || {};
-  const business = {
+
+  // Categories can be a tag array (new "Services & Categories" editor in
+  // public.html) or just the legacy single `category` string. `category`
+  // (singular) is kept as the primary/first tag for anything that still
+  // expects one string (card display, sort-by-category, etc).
+  const categories = Array.isArray(profile.categories) && profile.categories.length
+    ? profile.categories
+    : (Array.isArray(data.categories) && data.categories.length
+        ? data.categories
+        : (data.category ? [data.category] : ["Equipment"]));
+
+  return {
     id,
     name: data.name || "Unnamed Business",
-    category: data.category || "Equipment",
+    category: categories[0] || "Equipment",
+    categories,
     city: data.city || "",
     address: profile.address || "",
     rating: Number(data.rating || 0),
+    ratingCount: Number(data.ratingCount || 0),
     logoUrl: data.logoUrl || "",
+    coverImageUrl: data.coverImageUrl || "",
     slug: profile.slug || "",
     visible: profile.enabled === true,
     featured: marketplace.featured === true,
     verified: marketplace.verified === true,
     referralCount: Number(data.referrals?.count || 0),
-    createdAt: data.createdAt || null
+    createdAt: data.createdAt ? data.createdAt.toDate?.() || new Date(data.createdAt) : null,
+    whatsapp: profile.whatsapp || "",
+    phone: profile.phone || "",
+    instagram: profile.instagram || "",
+    tiktok: profile.tiktok || "",
+    facebook: profile.facebook || "",
+    description: profile.bio || data.description || ""
   };
-  business.location = deriveLocation(business);
-  return business;
 }
 
-// Featured (Growth Partner) > Verified > Rating > Newest
-function rankBusinesses(list) {
-  list.sort((a, b) => {
-    if (a.featured !== b.featured) return a.featured ? -1 : 1;
-    if (a.verified !== b.verified) return a.verified ? -1 : 1;
-    if (b.rating !== a.rating) return b.rating - a.rating;
-    return (b.createdAt || "") > (a.createdAt || "") ? 1 : -1;
-  });
-  return list;
-}
-
-/* =========================
-   CARD RENDERER
-   The single source of truth for how a business appears anywhere
-   in the marketplace — homepage strips, search results, category
-   pages all call this.
-========================= */
-function buildBusinessCard(business, { featuredStyle = false } = {}) {
-  const storeUrl = business.slug ? `/p/${business.slug}` : "#";
+// ============================================
+// RENDER BUSINESS CARD (MODERN)
+// ============================================
+// ============================================
+// RENDER BUSINESS CARD (MODERN WITH SOCIAL HANDLES)
+// ============================================
+function renderBusinessCard(business) {
   const initials = business.name.slice(0, 2).toUpperCase();
+  const starCount = Math.round(business.rating);
+  const stars = Array.from({ length: 5 }, (_, i) => 
+    i < starCount ? '★' : '☆'
+  ).join('');
 
-  const badge = business.featured
-    ? `<span class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">🏆 Growth Partner</span>`
-    : business.verified
-      ? `<span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200"><i data-lucide="badge-check" class="w-3 h-3"></i> Verified</span>`
-      : "";
+  // Badges with LinkedIn-style pill design
+  let badges = '';
+  if (business.featured) {
+    badges += `<span class="badge-featured">⭐ Featured</span>`;
+  }
+  if (business.verified) {
+    badges += `<span class="badge-verified">✓ Verified</span>`;
+  }
 
-  const stars = "★".repeat(Math.round(business.rating)) + "☆".repeat(5 - Math.round(business.rating));
+  // Social Handles - LinkedIn style icons
+  const socials = [];
+  if (business.instagram) {
+    socials.push(`<a href="${business.instagram}" target="_blank" rel="noopener" class="social-link" title="Instagram">
+      <i class="fab fa-instagram"></i>
+    </a>`);
+  }
+  if (business.tiktok) {
+    socials.push(`<a href="${business.tiktok}" target="_blank" rel="noopener" class="social-link" title="TikTok">
+      <i class="fab fa-tiktok"></i>
+    </a>`);
+  }
+  if (business.facebook) {
+    socials.push(`<a href="${business.facebook}" target="_blank" rel="noopener" class="social-link" title="Facebook">
+      <i class="fab fa-facebook"></i>
+    </a>`);
+  }
+  if (business.whatsapp) {
+    socials.push(`<a href="https://wa.me/${business.whatsapp}" target="_blank" rel="noopener" class="social-link whatsapp" title="WhatsApp">
+      <i class="fab fa-whatsapp"></i>
+    </a>`);
+  }
+  if (business.phone) {
+    socials.push(`<a href="tel:${business.phone}" class="social-link phone" title="Call">
+      <i class="fas fa-phone"></i>
+    </a>`);
+  }
 
-  const cardBorder = featuredStyle
-    ? "border-2 border-amber-400 shadow-md"
-    : "border border-slate-200 shadow-sm";
+  const socialHtml = socials.length > 0 
+    ? `<div class="social-row">${socials.join('')}</div>`
+    : '';
+
+  // Rating display - LinkedIn style
+  const ratingDisplay = business.rating > 0 
+    ? `<div class="rating-wrapper">
+         <span class="star-rating">${stars}</span>
+         <span class="rating-number">${business.rating.toFixed(1)}</span>
+         <span class="rating-total">(${business.ratingCount || 0} reviews)</span>
+       </div>`
+    : `<span class="no-reviews-text">Be the first to review</span>`;
+
+  // Cover image with proper z-index layering
+  const coverImage = business.coverImage || business.coverImageUrl || '';
+  const cardImageStyle = coverImage
+    ? `style="background-image: url('${coverImage}'); background-size: cover; background-position: center;"`
+    : `style="background: linear-gradient(135deg, #800080, #9b4d9b, #800080);"`;
+
+  // Categories with tags
+  const allCategories = business.categories || business.serviceTags || [];
+  const primaryCategory = business.category || allCategories[0] || 'Equipment';
+  const extraTags = allCategories.slice(1, 5);
+  
+  const extraTagsHtml = extraTags.length
+    ? `<div class="tags-container">
+         ${extraTags.map(t => `<span class="tag-item">${t}</span>`).join('')}
+       </div>`
+    : '';
+
+  // Location
+  const locationText = business.city 
+    ? `${business.city}${business.state ? `, ${business.state}` : ''}`
+    : '';
 
   return `
-    <a href="${storeUrl}" style="width:290px; height:380px; text-align:center; background:alicewhite;" class="group block bg-white ${cardBorder} rounded-2xl p-5 hover:shadow-lg transition flex flex-col gap-3 min-w-[140px]">
-      <div class="flex items-start justify-between gap-2">
-        <div style="border-radius:50px; margin:auto; width:150px; height:150px;" class="w-10 h-14 rounded-xl bg-purple-950 text-white flex items-center justify-center font-display font-bold text-bm overflow-hidden">
-          ${business.logoUrl ? `<img src="${business.logoUrl}" class="w-full h-full object-cover" alt="${business.name} logo">` : initials}
+    <a href="/p/${business.slug || '#'}" class="card-link">
+      <div class="linkedin-card">
+        <!-- Cover Image - Layer 1 (bottom) -->
+        <div class="cover-section" ${cardImageStyle}>
+          <div class="cover-overlay"></div>
+          
+          <!-- Badges - Layer 2 -->
+          <div class="badge-section">${badges}</div>
         </div>
-        ${badge}
-      </div>
-      <div>
-        <h3 style="font-size:20px; font-weight:bold; text-align:center;" class="font-display font-bold text-slate-900 group-hover:text-purple-800 transition">${business.name}</h3>
-        <p style="font-weight:400; font-size:14px; text-align:center; padding-top:3px;" class="text-xs text-slate-500 mt-0.5">${business.category}${business.location ? ` · ${business.location}` : ""}</p>
-        ${business.address ? `<p style="text-align:center;" class="text-xs text-slate-400 mt-1 flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3 mt-0.5 flex-shrink-0"></i><span class="line-clamp-1">${business.address}</span></p>` : ""}
-      </div>
-      <div class="flex items-center justify-between pt-2 border-t border-slate-50">
-        <span class="text-amber-500 text-sm tracking-tight">${business.rating > 0 ? stars : ""}</span>
-        <span style=" margin: auto;
-    margin-top: 60px; color:purple; font-weight:500;">View Store &rarr;</span>
+        
+        <!-- Avatar - Layer 3 (floats above cover) -->
+        <div class="avatar-section">
+          <div class="avatar-circle">
+            ${business.logoUrl 
+              ? `<img src="${business.logoUrl}" alt="${business.name}" loading="lazy">` 
+              : initials}
+          </div>
+        </div>
+        
+        <!-- Content - Layer 4 (top) -->
+        <div class="content-section">
+          <!-- Business Name -->
+          <h3 class="business-title">${business.name}</h3>
+          
+          <!-- Category & Location Row -->
+          <div class="info-row">
+            <span class="category-tag">
+              <i class="fas fa-briefcase"></i> ${primaryCategory}
+            </span>
+            ${locationText ? `<span class="location-tag"><i class="fas fa-map-marker-alt"></i> ${locationText}</span>` : ''}
+          </div>
+          
+          <!-- Extra Tags -->
+          ${extraTagsHtml}
+          
+          <!-- Address -->
+          ${business.address ? `<p class="address-line"><i class="fas fa-location-dot"></i> ${business.address}</p>` : ''}
+          
+          <!-- Social Handles -->
+          ${socialHtml}
+          
+          <!-- Footer: Rating + Connect Button -->
+          <div class="card-footer-actions">
+            ${ratingDisplay}
+            <button class="connect-btn" onclick="event.preventDefault(); window.location.href='/p/${business.slug || '#'}'">
+              View Store <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
       </div>
     </a>
   `;
 }
 
-/* =========================
-   HOMEPAGE (default view)
-========================= */
-function renderHomepage() {
-  resultsSection.classList.add("hidden");
-  homepageSections.classList.remove("hidden");
-  emptyState.classList.add("hidden");
+// ============================================
+// FILTERING ENGINE
+// ============================================
 
-  const featured = allBusinesses.filter(b => b.featured);
-  if (featured.length > 0) {
-    featuredSection.classList.remove("hidden");
-    featuredScroll.innerHTML = featured.map(b => buildBusinessCard(b, { featuredStyle: true })).join("");
-  } else {
-    featuredSection.classList.add("hidden");
+function applyFiltersAndSort() {
+  let result = [...allBusinesses];
+
+  // 1. Category filter — a business matches if ANY of its tags (not just
+  // the primary/first one) equals the active chip, so a vendor tagged
+  // ["Equipment", "Tents & Canopies"] still shows up under "Tents & Canopies".
+  if (activeCategory !== "All") {
+    const wanted = activeCategory.toLowerCase();
+    result = result.filter(b =>
+      (b.categories || [b.category]).some(c => (c || "").toLowerCase() === wanted)
+    );
   }
 
-  const newest = [...allBusinesses].slice(0, 9);
-  newestGrid.innerHTML = newest.length
-    ? newest.map(b => buildBusinessCard(b)).join("")
-    : `<p class="col-span-full text-center text-slate-400 py-8">No businesses listed yet — be the first!</p>`;
+  // 2. Search filter (name, all category tags, location, address)
+  if (searchQuery.trim()) {
+    const query = searchQuery.toLowerCase().trim();
+    const tokens = query.split(/\s+/).filter(Boolean);
+    result = result.filter(b => {
+      const haystack = `${b.name} ${(b.categories || [b.category]).join(" ")} ${b.city} ${b.address}`.toLowerCase();
+      return tokens.every(t => haystack.includes(t));
+    });
+  }
 
-  refreshIcons();
+  // 3. Verified filter
+  if (verifiedOnly) {
+    result = result.filter(b => b.verified || b.featured);
+  }
+
+  // 4. Sorting
+  switch (currentSort) {
+    case "newest":
+      result.sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+      break;
+    case "rating":
+      result.sort((a, b) => b.rating - a.rating);
+      break;
+    case "name":
+      result.sort((a, b) => a.name.localeCompare(b.name));
+      break;
+    case "featured":
+      result.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+      break;
+    default:
+      break;
+  }
+
+  filteredBusinesses = result;
+  renderResults();
+  updateActiveFilters();
 }
 
-/* =========================
-   SEARCH + FILTERS
-========================= */
-function matchesQuery(business, tokens) {
-  const haystack = `${business.name} ${business.category} ${business.location} ${business.address}`.toLowerCase();
-  return tokens.every(t => haystack.includes(t));
+// ============================================
+// RENDER RESULTS
+// ============================================
+
+function renderResults() {
+  const hasResults = filteredBusinesses.length > 0;
+  const displayItems = filteredBusinesses.slice(0, currentPage * PAGE_SIZE);
+  const hasMore = filteredBusinesses.length > displayItems.length;
+
+  // Update title & count
+  const count = filteredBusinesses.length;
+  resultsTitle.textContent = activeCategory !== "All" ? `${activeCategory}` : "All Businesses";
+  resultsCount.textContent = `${count} business${count !== 1 ? 'es' : ''} found`;
+
+  // Render cards
+  resultsGrid.innerHTML = displayItems.map(b => renderBusinessCard(b)).join("");
+
+  // Empty state
+  if (!hasResults) {
+    showEmptyState("No businesses found", "Try adjusting your filters or search terms.");
+  } else {
+    emptyState.classList.add("hidden");
+  }
+
+  // Load more
+  const loadMoreContainer = document.getElementById("load-more-container");
+  if (loadMoreContainer) {
+    if (hasMore) {
+      loadMoreContainer.classList.remove("hidden");
+    } else {
+      loadMoreContainer.classList.add("hidden");
+    }
+  }
+
+  // Refresh Lucide icons
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
 }
 
-function applyFilters() {
-  const rawQuery = searchInput.value.trim().toLowerCase();
-  const tokens = rawQuery.split(/\s+/).filter(Boolean);
+// ============================================
+// UPDATE ACTIVE FILTERS DISPLAY
+// ============================================
 
-  const isFiltering = tokens.length > 0 || activeCategory || activeCity;
+function updateActiveFilters() {
+  const tags = [];
+  
+  if (activeCategory !== "All") {
+    tags.push({ label: `Category: ${activeCategory}`, type: 'category' });
+  }
+  if (verifiedOnly) {
+    tags.push({ label: '✓ Verified only', type: 'verified' });
+  }
+  if (searchQuery.trim()) {
+    tags.push({ label: `"${searchQuery.trim()}"`, type: 'search' });
+  }
 
-  searchClear.classList.toggle("hidden", tokens.length === 0);
-
-  if (!isFiltering) {
-    activeFilterBanner.classList.add("hidden");
-    renderHomepage();
+  if (tags.length === 0) {
+    activeFilters.classList.add("hidden");
     return;
   }
 
-  let filtered = allBusinesses.filter(b => {
-    if (activeCategory && b.category !== activeCategory) return false;
-    if (activeCity && b.location.toLowerCase() !== activeCity.toLowerCase()) return false;
-    if (tokens.length > 0 && !matchesQuery(b, tokens)) return false;
-    return true;
+  activeFilters.classList.remove("hidden");
+  activeFilterTags.innerHTML = tags.map(t => `
+    <span class="inline-flex items-center gap-1 text-xs bg-purple-50 text-purple-700 px-2.5 py-1 rounded-full border border-purple-100">
+      ${t.label}
+      <button class="remove-filter" data-type="${t.type}" data-value="${t.label}" aria-label="Remove filter">
+        <i data-lucide="x" class="w-3 h-3 hover:text-purple-900"></i>
+      </button>
+    </span>
+  `).join("");
+
+  // Add remove handlers
+  document.querySelectorAll(".remove-filter").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const type = btn.dataset.type;
+      switch (type) {
+        case 'category':
+          activeCategory = "All";
+          updateCategoryChips();
+          break;
+        case 'verified':
+          verifiedOnly = false;
+          verifiedOnlyChip.classList.remove("active");
+          break;
+        case 'search':
+          searchInput.value = "";
+          searchQuery = "";
+          break;
+      }
+      applyFiltersAndSort();
+    });
   });
 
-  rankBusinesses(filtered);
-
-  // Filter banner
-  const labelParts = [];
-  if (activeCategory) labelParts.push(activeCategory);
-  if (activeCity) labelParts.push(activeCity);
-  if (tokens.length > 0) labelParts.push(`"${rawQuery}"`);
-  activeFilterText.textContent = `Showing results for ${labelParts.join(" · ")}`;
-  activeFilterBanner.classList.remove("hidden");
-
-  homepageSections.classList.add("hidden");
-  resultsSection.classList.toggle("hidden", filtered.length === 0);
-  emptyState.classList.toggle("hidden", filtered.length > 0);
-
-  resultsGrid.innerHTML = filtered.map(b => buildBusinessCard(b, { featuredStyle: b.featured })).join("");
-  refreshIcons();
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
 }
 
-function clearFilters() {
-  searchInput.value = "";
-  activeCategory = null;
-  activeCity = null;
-  document.querySelectorAll("[data-category-chip]").forEach(el => el.classList.remove("bg-purple-800", "text-white"));
-  document.querySelectorAll("[data-city-chip]").forEach(el => el.classList.remove("bg-purple-800", "text-white"));
-  applyFilters();
+// ============================================
+// EMPTY STATE
+// ============================================
+
+function showEmptyState(title, message) {
+  emptyState.classList.remove("hidden");
+  resultsGrid.innerHTML = "";
+  emptyState.querySelector("h3").textContent = title;
+  emptyState.querySelector("p").textContent = message;
 }
 
-searchInput.addEventListener("input", applyFilters);
-searchClear.addEventListener("click", clearFilters);
-clearFilterBtn.addEventListener("click", clearFilters);
+// ============================================
+// CATEGORY CHIPS
+// ============================================
 
-/* =========================
-   CHIPS (categories + cities)
-========================= */
-function renderChips() {
+function renderCategoryChips() {
   categoryChipsEl.innerHTML = CATEGORIES.map(cat => `
-    <button data-category-chip data-value="${cat}"
-      class="text-xs md:text-sm font-medium px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 transition">
+    <button class="filter-chip ${activeCategory === cat ? 'active' : ''}" data-category="${cat}">
       ${cat}
     </button>
   `).join("");
 
-  document.querySelectorAll("[data-category-chip]").forEach(btn => {
+  document.querySelectorAll("[data-category]").forEach(btn => {
     btn.addEventListener("click", () => {
-      const value = btn.dataset.value;
-      activeCategory = activeCategory === value ? null : value;
-      document.querySelectorAll("[data-category-chip]").forEach(el => el.classList.remove("bg-white", "text-purple-900"));
-      if (activeCategory) btn.classList.add("bg-white", "text-purple-900");
-      applyFilters();
+      activeCategory = btn.dataset.category;
+      updateCategoryChips();
+      applyFiltersAndSort();
     });
   });
 }
 
-/* =========================
-   LOCATION CHIPS (dynamic)
-   This is a nationwide marketplace, so instead of a fixed handful of
-   cities, we surface whatever real locations businesses have actually
-   listed — sorted by how many businesses are there, most first.
-========================= */
-function renderCityChips() {
-  if (!cityChipsEl) return;
-
-  const counts = new Map();
-  allBusinesses.forEach(b => {
-    if (!b.location) return;
-    counts.set(b.location, (counts.get(b.location) || 0) + 1);
+function updateCategoryChips() {
+  document.querySelectorAll("[data-category]").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.category === activeCategory);
   });
+}
 
-  const locations = [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 16)
-    .map(([location]) => location);
+// ============================================
+// EVENT LISTENERS
+// ============================================
 
-  if (locations.length === 0) {
-    cityChipsEl.innerHTML = `<p class="text-sm text-slate-400">Locations will show up here as businesses join.</p>`;
-    return;
+// Search
+searchInput.addEventListener("input", () => {
+  searchQuery = searchInput.value;
+  searchClear.classList.toggle("hidden", !searchQuery);
+  applyFiltersAndSort();
+});
+
+searchClear.addEventListener("click", () => {
+  searchInput.value = "";
+  searchQuery = "";
+  searchClear.classList.add("hidden");
+  applyFiltersAndSort();
+});
+
+searchBtn.addEventListener("click", () => {
+  searchQuery = searchInput.value;
+  applyFiltersAndSort();
+});
+
+searchInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") {
+    searchQuery = searchInput.value;
+    applyFiltersAndSort();
   }
+});
 
-  cityChipsEl.innerHTML = locations.map(loc => `
-    <button data-city-chip data-value="${loc}"
-      class="text-sm font-medium px-4 py-2 rounded-full bg-white border border-slate-200 hover:border-purple-300 hover:text-purple-800 transition ${activeCity === loc ? "bg-purple-800 text-white border-purple-800" : ""}">
-      ${loc}
-    </button>
-  `).join("");
+// Verified filter
+verifiedOnlyChip.addEventListener("click", () => {
+  verifiedOnly = !verifiedOnly;
+  verifiedOnlyChip.classList.toggle("active");
+  applyFiltersAndSort();
+});
 
-  document.querySelectorAll("[data-city-chip]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const value = btn.dataset.value;
-      activeCity = activeCity === value ? null : value;
-      renderCityChips();
-      applyFilters();
-    });
-  });
+// Sort buttons
+sortRatingBtn.addEventListener("click", () => {
+  currentSort = "rating";
+  sortSelect.value = "rating";
+  applyFiltersAndSort();
+});
+
+sortNewestBtn.addEventListener("click", () => {
+  currentSort = "newest";
+  sortSelect.value = "newest";
+  applyFiltersAndSort();
+});
+
+// Sort select
+sortSelect.addEventListener("change", () => {
+  currentSort = sortSelect.value;
+  applyFiltersAndSort();
+});
+
+// Clear all filters
+clearFiltersBtn.addEventListener("click", resetAllFilters);
+resetEmptyBtn?.addEventListener("click", resetAllFilters);
+
+function resetAllFilters() {
+  activeCategory = "All";
+  verifiedOnly = false;
+  searchQuery = "";
+  searchInput.value = "";
+  searchClear.classList.add("hidden");
+  verifiedOnlyChip.classList.remove("active");
+  sortSelect.value = "newest";
+  currentSort = "newest";
+  updateCategoryChips();
+  applyFiltersAndSort();
 }
 
-renderChips();
+// Load more
+document.getElementById("load-more-btn")?.addEventListener("click", () => {
+  currentPage++;
+  renderResults();
+});
+
+// ============================================
+// INIT
+// ============================================
+
+renderCategoryChips();
 loadBusinesses();
+
+console.log("✅ Marketplace loaded successfully!");

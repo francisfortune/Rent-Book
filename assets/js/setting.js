@@ -14,6 +14,7 @@ import {
   getDocs,
   query,
   where,
+   orderBy,  
   addDoc,
   serverTimestamp,
   onSnapshot
@@ -101,9 +102,124 @@ function renderReferralProgress(data) {
   if (referralUnlockedBadge) referralUnlockedBadge.style.display = unlocked ? "block" : "none";
 }
 
+// assets/js/settings.js
+// ============================================
+// ADD THIS FUNCTION - REFERRAL ANALYTICS
+// ============================================
 
+// assets/js/settings.js
+// ============================================
+// FIXED: REFERRAL ANALYTICS WITH orderBy
+// ============================================
 
+async function loadReferralAnalytics(businessId) {
+  try {
+    const referralList = document.getElementById("referralList");
+    const referralStats = document.getElementById("referralStats");
+    
+    if (!referralList) {
+      console.warn("Referral list element not found");
+      return;
+    }
 
+    // ✅ orderBy is now imported and working
+    const refsSnap = await getDocs(query(
+      collection(db, "referrals"),
+      where("referrerBusinessId", "==", businessId),
+      orderBy("createdAt", "desc")
+    ));
+
+    // Update stats
+    if (referralStats) {
+      const total = refsSnap.size;
+      const verified = refsSnap.docs.filter(d => d.data().status === "valid").length;
+      const pending = refsSnap.docs.filter(d => d.data().status === "pending").length;
+      
+      referralStats.innerHTML = `
+        <div class="grid grid-cols-3 gap-4 mb-4">
+          <div class="bg-purple-50 p-3 rounded-xl text-center">
+            <div class="text-2xl font-bold text-purple-700">${total}</div>
+            <div class="text-xs text-gray-500">Total Referrals</div>
+          </div>
+          <div class="bg-green-50 p-3 rounded-xl text-center">
+            <div class="text-2xl font-bold text-green-700">${verified}</div>
+            <div class="text-xs text-gray-500">Active</div>
+          </div>
+          <div class="bg-yellow-50 p-3 rounded-xl text-center">
+            <div class="text-2xl font-bold text-yellow-700">${pending}</div>
+            <div class="text-xs text-gray-500">Pending</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Build referral list
+    if (refsSnap.empty) {
+      referralList.innerHTML = `
+        <div class="text-center py-8 text-gray-400">
+          <i class="fas fa-users text-3xl mb-2 block"></i>
+          <p>No referrals yet. Share your referral link to grow your network!</p>
+        </div>
+      `;
+      return;
+    }
+
+    let html = `<div class="space-y-2">`;
+    
+    refsSnap.docs.forEach((doc, index) => {
+      const ref = doc.data();
+      const date = ref.createdAt?.toDate?.() || new Date();
+      const statusColors = {
+        'valid': 'bg-green-100 text-green-700',
+        'pending': 'bg-yellow-100 text-yellow-700',
+        'invalid': 'bg-red-100 text-red-700'
+      };
+      
+      const statusText = ref.status || 'valid';
+      
+      html += `
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 hover:shadow-sm transition">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs">
+              ${index + 1}
+            </span>
+            <div>
+              <p class="font-semibold text-gray-800 text-sm">
+                ${ref.referredBusinessName || "Unnamed Business"}
+              </p>
+              <p class="text-xs text-gray-400">
+                <i class="fas fa-calendar-alt mr-1"></i>
+                ${date.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </p>
+            </div>
+          </div>
+          <span class="px-2 py-1 rounded-full text-[10px] font-bold uppercase ${statusColors[statusText] || 'bg-gray-100 text-gray-600'}">
+            ${statusText}
+          </span>
+        </div>
+      `;
+    });
+    
+    html += `</div>`;
+    referralList.innerHTML = html;
+
+  } catch (err) {
+    console.error("Failed to load referral analytics:", err);
+    const referralList = document.getElementById("referralList");
+    if (referralList) {
+      referralList.innerHTML = `
+        <div class="text-center py-4 text-red-400">
+          <i class="fas fa-exclamation-circle text-2xl mb-2 block"></i>
+          <p class="text-sm">Failed to load referral data. Please refresh.</p>
+          <p class="text-xs text-gray-400 mt-2">Error: ${err.message}</p>
+        </div>
+      `;
+    }
+  }
+}
+
+// ===== AUTH GUARD =====
+// assets/js/settings.js
 // ===== AUTH GUARD =====
 onAuthStateChanged(auth, async (user) => {
   if (!user) return window.location.href = "signup.html";
@@ -127,6 +243,11 @@ onAuthStateChanged(auth, async (user) => {
       currentRole = memberSnap.docs[0].data().role;
     }
 
+    // ✅ NEW: Load referral analytics HERE
+    await loadReferralAnalytics(businessId);
+
+  
+    
 // ✅ TRIGGER 1: WATCH FOR ACCEPTANCE
 onSnapshot(query(membersRef, where("businessId", "==", businessId)), (snapshot) => {
   snapshot.docChanges().forEach(async (change) => {
@@ -147,6 +268,76 @@ onSnapshot(query(membersRef, where("businessId", "==", businessId)), (snapshot) 
         await sendPush(`🎉 ${data.email} has joined your business!`, "/settings.html");
 
         
+        // assets/js/settings.js
+// ============================================
+// FIX: AUTO-GENERATE REFERRAL CODE FOR BUSINESSES WITHOUT ONE
+// ============================================
+
+onSnapshot(businessRef, async (docSnap) => {
+  if (!docSnap.exists()) return;
+  const data = docSnap.data();
+  const newName = data.name || "";
+  
+  if (businessNameInput) businessNameInput.value = newName;
+  if (brandNameMobileEl) brandNameMobileEl.textContent = newName;
+  if (feedbackBusinessName) feedbackBusinessName.value = newName;
+  if (topNavBrand) topNavBrand.textContent = newName;
+
+  // ============================================
+  // ✅ FIX: AUTO-GENERATE REFERRAL CODE IF MISSING
+  // ============================================
+  
+  // ✅ CORRECT: referralCode belongs to the BUSINESS document
+  let referralCode = data.referralCode;
+  
+  // If no referral code exists, generate one for this business
+  if (!referralCode) {
+    referralCode = generateReferralCode();
+    try {
+      // ✅ CORRECT: Update the BUSINESS document with referralCode
+      await updateDoc(businessRef, { 
+        referralCode: referralCode,
+        referralCodeGeneratedAt: serverTimestamp()
+      });
+      console.log("✅ Auto-generated referral code for business:", referralCode);
+      console.log("Business Name:", data.name);
+    } catch (err) {
+      console.error("Failed to save referral code:", err);
+    }
+  }
+  
+  // ============================================
+  // ✅ ENSURE MARKETPLACE OBJECT EXISTS
+  // ============================================
+  if (!data.marketplace) {
+    await updateDoc(businessRef, {
+      marketplace: {
+        visible: false,
+        verified: false,
+        featured: false,
+        highVolume: false,
+        trustedPartner: false
+      }
+    });
+  }
+  
+  // ============================================
+  // ✅ ENSURE FEATURES OBJECT EXISTS
+  // ============================================
+  if (!data.features) {
+    await updateDoc(businessRef, {
+      features: { marketplace: false }
+    });
+  }
+
+  // Update referral link input with business referral code
+  if (referralLinkInput) {
+    referralLinkInput.value = `${SITE_URL}/signup.html?ref=${referralCode}`;
+  }
+  
+  // Render referral progress
+  renderReferralProgress(data);
+});
 
 
         
@@ -289,6 +480,9 @@ if (notifCheckbox && soundCheckbox) {
     }
 
     // ===== 5. INVITE PARTNER (ANYONE CAN// ===== 5. INVITE PARTNER =====
+
+// In settings.js - Update the invite partner form submission
+
 if (inviteForm) {
   inviteForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -346,6 +540,11 @@ if (inviteForm) {
       return alert("User already added.");
     }
 
+    // ✅ CHECK: Only owner can assign another owner
+    if (role === "owner" && currentRole !== "owner") {
+      return alert("Only the business owner can assign another owner.");
+    }
+
     // Add partner doc
     const newMemberDoc = {
       role,
@@ -365,7 +564,7 @@ if (inviteForm) {
 
     const displayId = email || phone;
 
-    // ✅ TRIGGER 2: NOTIFICATION FOR INVITE SENT
+    // Notification for invite sent
     await addDoc(collection(db, "businesses", businessId, "notifications"), {
       message: `✉️ Invite Sent: ${displayId} has been invited as a ${role}.`,
       type: "invite_pending",
@@ -374,7 +573,6 @@ if (inviteForm) {
       readBy: []
     });
 
-    // onesignal push notification
     await sendPush(`✉️ Invite Sent: ${displayId} has been invited as a ${role}.`, "/settings.html");
 
     inviteForm.reset();
@@ -382,7 +580,9 @@ if (inviteForm) {
   });
 }
 
+
 // ===== 6. LOAD PARTNERS (LIVE WITH EDIT/DELETE) =====
+
 function listenToPartners() {
   const q = query(membersRef, where("businessId", "==", businessId));
   onSnapshot(q, (snap) => {
@@ -398,37 +598,46 @@ function listenToPartners() {
       const firstChar = identifier.charAt(0).toUpperCase();
 
       const div = document.createElement("div");
-      div.className = "p-3 bg-gray-50 border border-gray-200 rounded mb-2 flex justify-between items-center shadow-sm hover:shadow-md transition-shadow";
+      div.className = "p-3 bg-gray-50 border border-gray-200 rounded-xl mb-3 shadow-sm hover:shadow-md transition-shadow";
+      
+      // ✅ Responsive layout: flex-wrap for small screens
+      div.style.display = "flex";
+      div.style.flexWrap = "wrap";
+      div.style.alignItems = "center";
+      div.style.justifyContent = "space-between";
+      div.style.gap = "8px";
 
       div.innerHTML = `
-        <div class="flex items-center gap-3">
-          <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs uppercase">
+        <div class="flex items-center gap-3" style="flex: 1 1 200px; min-width: 150px;">
+          <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs uppercase flex-shrink-0">
             ${firstChar}
           </div>
           <div>
-            <p class="font-bold text-gray-800 text-sm mb-0">${identifier}</p>
-            <div class="flex items-center gap-2">
-               <span class="px-2 py-[2px] rounded-full text-[10px] font-bold ${
-  p.role === "owner"
-    ? "bg-purple-100 text-purple-700"
-    : p.role === "partner"
-    ? "bg-blue-100 text-blue-700"
-    : "bg-gray-100 text-gray-600"
-}">
-  ${p.role}
-</span>
-               <span class="w-1 h-1 bg-gray-300 rounded-full"></span>
-               <span class="${status === 'pending' ? 'text-yellow-600' : 'text-green-600'} text-[10px] font-bold uppercase">${status}</span>
+            <p class="font-bold text-gray-800 text-sm mb-0 break-words">${identifier}</p>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="px-2 py-[2px] rounded-full text-[10px] font-bold ${
+                p.role === "owner"
+                  ? "bg-purple-100 text-purple-700"
+                  : p.role === "partner"
+                  ? "bg-blue-100 text-blue-700"
+                  : "bg-gray-100 text-gray-600"
+              }">
+                ${p.role}
+              </span>
+              <span class="w-1 h-1 bg-gray-300 rounded-full"></span>
+              <span class="${status === 'pending' ? 'text-yellow-600' : 'text-green-600'} text-[10px] font-bold uppercase">${status}</span>
             </div>
           </div>
         </div>
-        <div class="flex gap-1">
+        <div class="flex gap-1 flex-wrap" style="flex: 0 0 auto;">
           ${isOwner ? `
-            <button onclick="editPartner('${pId}', '${p.email || ''}', '${p.phone || ''}', '${p.role}')" class="p-2 text-blue-500 hover:bg-blue-50 rounded-lg">
-              <span class="material-symbols-outlined">edit</span>
+            <button onclick="editPartner('${pId}', '${p.email || ''}', '${p.phone || ''}', '${p.role}')" 
+                    class="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
+              <span class="material-symbols-outlined" style="font-size: 20px;">edit</span>
             </button>
-            <button onclick="deletePartner('${pId}', '${identifier}')" class="p-2 text-red-500 hover:bg-red-50 rounded-lg">
-              <span class="material-symbols-outlined">delete</span>
+            <button onclick="deletePartner('${pId}', '${identifier}')" 
+                    class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+              <span class="material-symbols-outlined" style="font-size: 20px;">delete</span>
             </button>
           ` : `<span class="text-[8px] text-gray-300 font-bold uppercase mr-2 italic">Protected</span>`}
         </div>
@@ -441,6 +650,7 @@ function listenToPartners() {
     }
   });
 }
+
 
 listenToPartners();
 
@@ -461,11 +671,25 @@ window.editPartner = function (docId, email, phone, role) {
   document.getElementById("editPartnerModal").classList.remove("hidden");
 };
 
-// CLOSE EDIT MODAL
+// CLOSE EDIT MODAL - Multiple ways
 document.getElementById("closeEditModal").onclick = () => {
   document.getElementById("editPartnerModal").classList.add("hidden");
 };
 
+// Also close when clicking outside (already handled by fixed overlay)
+document.getElementById("editPartnerModal").addEventListener("click", function(e) {
+  if (e.target === this) {
+    this.classList.add("hidden");
+  }
+});
+
+
+
+document.getElementById("deletePartnerModal").addEventListener("click", function(e) {
+  if (e.target === this) {
+    this.classList.add("hidden");
+  }
+});
 // SAVE EDIT
 document.getElementById("savePartnerChanges").onclick = async () => {
   const inputVal = document.getElementById("editPartnerEmail").value.trim();
@@ -529,6 +753,18 @@ window.deletePartner = function (docId, identifier) {
 document.getElementById("cancelDeletePartner").onclick = () => {
   document.getElementById("deletePartnerModal").classList.add("hidden");
 };
+
+// CLOSE DELETE MODAL
+document.getElementById("cancelDeletePartner").onclick = () => {
+  document.getElementById("deletePartnerModal").classList.add("hidden");
+};
+
+document.getElementById("deletePartnerModal").addEventListener("click", function(e) {
+  if (e.target === this) {
+    this.classList.add("hidden");
+  }
+});
+
 
 // CONFIRM DELETE
 document.getElementById("confirmDeletePartner").onclick = async () => {

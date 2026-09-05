@@ -98,7 +98,7 @@ function recalcTotal() {
     `*BOOKING CONFIRMATION - ${currentBusinessName.toUpperCase()}*\n\n` +
     `Hi ${document.getElementById("clientName")?.value || "Customer"}, your booking is confirmed! ✅\n\n` +
     `Event Date: ${document.getElementById("eventDate")?.value || "Date"}\n` +
-    `Return Date: ${document.getElementById("returnDate")?.value || "Not Set"}\n` +
+    `Return Date: ${document.getElementById("returnDate")?.value || "Date"}\n` +
     `Location: ${document.getElementById("eventLocation")?.value || "Not specified"}\n\n` +
     `Items Ordered: \n${itemsSummary}\n` +
     `Total: ₦${formattedTotal}\n` +
@@ -229,40 +229,6 @@ window.addItemRow = function () {
   container.appendChild(row);
   updateSelectOptions();
 };
-
-/* =========================
-   RECEIPT IMAGE UPLOAD (Cloudinary)
-========================= */
-async function uploadReceiptImage(businessId, file) {
-  if (!file) return null;
-
-  const cloudName = "jbavo7nr";
-  const uploadPreset = "add_receipt_img";
-  const url = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
-
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", uploadPreset);
-  // Optional: organize uploads into folders on Cloudinary
-  formData.append("folder", `receipts/${businessId}`);
-
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      body: formData
-    });
-
-    if (!response.ok) {
-      throw new Error(`Cloudinary upload failed: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.secure_url; // Returns the public HTTPS URL for Firestore
-  } catch (error) {
-    console.error("Cloudinary Upload Error:", error);
-    throw error;
-  }
-}
 
 
 let businessId = "";
