@@ -1,15 +1,20 @@
 // MUST BE LINE 1: Import OneSignal ServiceWorker SDK
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+// ============================================
+// ✅ MESSAGE HANDLER - MUST BE AT TOP LEVEL
+// ============================================
+self.addEventListener('message', (event) => {
+    console.log('[SW] Message received:', event.data);
+    
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        console.log('[SW] Skipping waiting...');
+        self.skipWaiting();
+    }
+});
 
 // Prevent multiple installations
 let isInstalling = false;
 
-// Message handler for Service Worker updates
-self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SKIP_WAITING') {
-        self.skipWaiting();
-    }
-});
 
 const CACHE_NAME = 'Tracknrent-v1.0.5';
 const DYNAMIC_CACHE = 'Tracknrent-dynamic-v1';

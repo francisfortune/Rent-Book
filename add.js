@@ -1,8 +1,5 @@
 import { auth, db, storage } from "./firebase.js";
 import { deductInventory } from "./services/inventoryService.js";
-import { getBusinessIdByEmail } from "./shared.js";
-import { sendPush } from "./onesignal.js";
-import { uploadReceiptImage } from "./utils/upload.js";
 
 import {
   collection,
@@ -15,11 +12,13 @@ import {
   doc,
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-
 import { onAuthStateChanged } from
   "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 let currentBusinessName = "Our Business"; 
 let inventoryItems = [];
@@ -42,13 +41,45 @@ async function sendNotification(businessId, message, userEmail, type = "general"
 /* =========================
    BUSINESS LOOKUP
 ========================= */
+async function getBusinessIdByEmail(email) {
+  const user = auth.currentUser;
+  if (!user) throw new Error("No user");
+  const cacheKey = `businessId_${user.uid}`;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) return cached;
 
+  let businessId = null;
+  if (user.email) {
+    const emailLower = user.email.toLowerCase().trim();
+    const q = query(collection(db, "businessMembers"), where("email", "==", emailLower));
+    let snap = await getDocs(q);
+    if (snap.empty && user.email.trim() !== emailLower) {
+      const qRaw = query(collection(db, "businessMembers"), where("email", "==", user.email.trim()));
+      snap = await getDocs(qRaw);
+    }
+    if (!snap.empty) businessId = snap.docs[0].data().businessId;
+  }
+  if (!businessId && user.phoneNumber) {
+    const q = query(collection(db, "businessMembers"), where("phone", "==", user.phoneNumber.trim()));
+    const snap = await getDocs(q);
+    if (!snap.empty) businessId = snap.docs[0].data().businessId;
+  }
+
+  if (!businessId) {
+    if (!navigator.onLine) {
+      if (cached) return cached;
+      throw new Error("OFFLINE_NO_CACHE");
+    }
+    throw new Error("No business");
+  }
+
+  localStorage.setItem(cacheKey, businessId);
+  return businessId;
+}
 
 /* =========================
    TOTAL CALCULATION
 ========================= */
-
-
 
 function recalcTotal() {
   let total = 0;
@@ -60,100 +91,51 @@ function recalcTotal() {
     const qty = Number(row.querySelector(".item-qty")?.value || 0);
     const price = Number(row.querySelector(".item-price")?.value || 0);
     
+    // Updated selector to find the vendor name inside the new container
     const vendor = row.querySelector(".vendor-name")?.value;
     
     const rowTotal = qty * price;
     total += rowTotal;
 
     if (qty > 0) {
+      // Improved logic: only show the tag if a vendor name is actually typed
       const vendorTag = vendor ? ` [Ext: ${vendor}]` : "";
       itemsSummary += `• ${name} (x${qty})${vendorTag} - ₦${rowTotal.toLocaleString()}\n`;
     }
   });
 
-  const totalAmountInput = document.getElementById("totalAmount");
-  const amountPaidInput = document.getElementById("amountPaid");
-
-  // ✅ Set raw number (NO commas) for text inputs
-  if (totalAmountInput && !totalAmountInput.dataset.userEdited) {
-    totalAmountInput.value = total || 0;
+  // Update hidden total input
+  if (document.getElementById("totalAmount")) {
+    document.getElementById("totalAmount").value = total;
   }
 
-  // Get Paid Amount - handle both formatted and raw values
-  const paidRaw = amountPaidInput ? amountPaidInput.value.replace(/,/g, '') : '0';
-  const paidValue = parseFloat(paidRaw) || 0;
-
-  if (amountPaidInput && !amountPaidInput.dataset.userEdited) {
-    amountPaidInput.value = paidValue || 0;
-  }
+   // Read Amount Paid
+// ✅ FIXED: Get Paid Amount correctly
+  const paidInput = document.getElementById("amountPaid");
+  const paidValue = paidInput ? parseFloat(paidInput.value) || 0 : 0;
 
   const balance = total - paidValue;
 
-  // ✅ Format with commas ONLY for display preview
-  const formattedTotal = total.toLocaleString('en-NG');
-  const formattedPaid = paidValue.toLocaleString('en-NG');
-
-  // Build Preview with formatted values
-  const previewText = 
-    `*BOOKING CONFIRMATION - ${currentBusinessName.toUpperCase()}*\n\n` +
-    `Hi ${document.getElementById("clientName")?.value || "Customer"}, your booking is confirmed! ✅\n\n` +
-    `Event Date: ${document.getElementById("eventDate")?.value || "Date"}\n` +
-    `Return Date: ${document.getElementById("returnDate")?.value || "Not Set"}\n` +
-    `Location: ${document.getElementById("eventLocation")?.value || "Not specified"}\n\n` +
-    `Items Ordered: \n${itemsSummary}\n` +
-    `Total: ₦${formattedTotal}\n` +
-    `Paid: ₦${formattedPaid}\n` +
-    `Balance: ₦${balance.toLocaleString()}\n\n` +
-    `Thank you for choosing ${currentBusinessName}!\n\n` +
-    `--- \n` + 
-    `_Powered by Tracknrent_ \n` + 
-    `👉 https://tracknrent.vercel.app`;
-  
+  // Build Preview with Dynamic Business Name
+ const previewText = 
+  `*BOOKING CONFIRMATION - ${currentBusinessName.toUpperCase()}*\n\n` +
+  `Hi ${document.getElementById("clientName")?.value || "Customer"}, your booking is confirmed! ✅\n\n` +
+  `Date: ${document.getElementById("eventDate")?.value || "Date"}\n` +
+  `Location: ${document.getElementById("eventLocation")?.value || "Not specified"}\n\n` +
+  `Items Ordered: \n${itemsSummary}\n` +
+  `Total: ₦${total.toLocaleString()}\n` +
+  `Paid: ₦${paidValue.toLocaleString()}\n` +
+  `Balance: ₦${balance.toLocaleString()}\n\n` +
+`Thank you for choosing ${currentBusinessName}!\n\n` +
+  `--- \n` + 
+  `_Powered by Tracknrent_ \n` + 
+  `👉 https://tracknrent.vercel.app`;
+  ;
   const previewBox = document.getElementById("liveReceiptText");
   if (previewBox) {
     previewBox.innerText = previewText;
   }
 }
-
-
-
-// ✅ Add event listeners to detect user editing
-// ✅ Add event listeners for text inputs (type="text" with inputmode="numeric")
-document.addEventListener('DOMContentLoaded', function() {
-  const totalAmountInput = document.getElementById("totalAmount");
-  const amountPaidInput = document.getElementById("amountPaid");
-  
-  if (totalAmountInput) {
-    totalAmountInput.addEventListener('focus', function() {
-      // Show raw number when focused
-      const raw = this.value.replace(/,/g, '');
-      if (raw) this.value = raw;
-    });
-    totalAmountInput.addEventListener('blur', function() {
-      // Keep raw value (no commas in input)
-      const raw = parseFloat(this.value.replace(/,/g, '')) || 0;
-      this.value = raw;
-    });
-    totalAmountInput.addEventListener('input', function() {
-      this.dataset.userEdited = 'true';
-    });
-  }
-  
-  if (amountPaidInput) {
-    amountPaidInput.addEventListener('focus', function() {
-      const raw = this.value.replace(/,/g, '');
-      if (raw) this.value = raw;
-    });
-    amountPaidInput.addEventListener('blur', function() {
-      const raw = parseFloat(this.value.replace(/,/g, '')) || 0;
-      this.value = raw;
-    });
-    amountPaidInput.addEventListener('input', function() {
-      this.dataset.userEdited = 'true';
-    });
-  }
-});
-
 
 /* =========================
    ADD ITEM ROW
@@ -231,39 +213,19 @@ window.addItemRow = function () {
 };
 
 /* =========================
-   RECEIPT IMAGE UPLOAD (Cloudinary)
+   RECEIPT IMAGE UPLOAD
 ========================= */
 async function uploadReceiptImage(businessId, file) {
   if (!file) return null;
 
-  const cloudName = "jbavo7nr";
-  const uploadPreset = "add_receipt_img";
-  const url = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
+  const timestamp = Date.now();
+  const fileName = `receipts/${businessId}/${timestamp}_${file.name}`;
+  const storageRef = ref(storage, fileName);
 
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", uploadPreset);
-  // Optional: organize uploads into folders on Cloudinary
-  formData.append("folder", `receipts/${businessId}`);
-
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      body: formData
-    });
-
-    if (!response.ok) {
-      throw new Error(`Cloudinary upload failed: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.secure_url; // Returns the public HTTPS URL for Firestore
-  } catch (error) {
-    console.error("Cloudinary Upload Error:", error);
-    throw error;
-  }
+  await uploadBytes(storageRef, file);
+  const downloadURL = await getDownloadURL(storageRef);
+  return downloadURL;
 }
-
 
 let businessId = "";
 let currentUser = null;
@@ -281,15 +243,6 @@ function showOfflineBanner() {
   document.body.appendChild(banner);
 }
 
-function showErrorBanner(message) {
-  if (document.getElementById("errorBanner")) return;
-  const banner = document.createElement("div");
-  banner.id = "errorBanner";
-  banner.style.cssText = "position: fixed; top: 0; left: 0; right: 0; background: rgba(220, 38, 38, 0.95); backdrop-filter: blur(10px); color: white; text-align: center; padding: 12px; z-index: 99999; font-weight: 500; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; gap: 8px;";
-  banner.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px; vertical-align: middle;">error</span> Error: ${message}. Please refresh or try logging out.`;
-  document.body.appendChild(banner);
-}
-
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "signup.html";
@@ -298,7 +251,7 @@ onAuthStateChanged(auth, async (user) => {
 
   try {
     currentUser = user; // ✅ SAVE USER
-    businessId = await getBusinessIdByEmail(user.email, user); // ✅ NO const
+    businessId = await getBusinessIdByEmail(user.email); // ✅ NO const
     if (!navigator.onLine) {
       showOfflineBanner();
     }
@@ -318,7 +271,7 @@ onAuthStateChanged(auth, async (user) => {
     }));
 
 // ✅ ADD LISTENERS FOR LIVE UPDATES
-    const liveFields = ["clientName", "eventDate", "eventLocation", "amountPaid","returnDate"];
+    const liveFields = ["clientName", "eventDate", "eventLocation", "amountPaid"];
     liveFields.forEach(id => {
       const el = document.getElementById(id);
       if (el) {
@@ -334,16 +287,11 @@ onAuthStateChanged(auth, async (user) => {
     console.error("Auth Init Error:", error);
     if (!navigator.onLine || error.message === "OFFLINE_NO_CACHE") {
       showOfflineBanner();
-    } else if (error.message === "NO_BUSINESS" || error.message === "Business not found") {
-      if (user && user.uid) {
-        localStorage.removeItem(`businessId_${user.uid}`);
-      }
-      window.location.href = "setup.html";
     } else {
       if (user && user.uid) {
         localStorage.removeItem(`businessId_${user.uid}`);
       }
-      showErrorBanner(error.message || error);
+      window.location.href = "setup.html";
     }
   }
 });
@@ -456,46 +404,35 @@ if (overbookedItems.length) {
           receiptImageUrl = await uploadReceiptImage(businessId, receiptFile);
         }
 
-// Inside the submit event listener, before creating bookingData:
+        const bookingData = {
+          client: {
+            name: clientName.value.trim(),
+            phone: clientPhone.value.trim(),
+            email: clientEmail.value.trim() || ""
+          },
+          event: {
+            type: eventType.value,
+            date: eventDate.value,
+  deliveryDate: deliveryDate.value || "", // ✅ NEW
+            returnDate: returnDate.value,
+            location: eventLocation.value || ""
+          },
+          items,
+          payment: {
+            total: Number(totalAmount.value),
+            paid: Number(amountPaid.value || 0),
+            method: paymentMethod.value
+          },
+          receiptImage: receiptImageUrl,
+          notes: document.getElementById("notes")?.value || "",
+          status: "active",
+         createdBy: {
+  uid: currentUser.uid,
+  email: currentUser.email
+},
+          createdAt: serverTimestamp()
+        };
 
-// ✅ Remove commas from total and paid before saving
-const totalAmount = document.getElementById("totalAmount");
-const amountPaid = document.getElementById("amountPaid");
-
-const cleanTotal = parseFloat(totalAmount.value.replace(/,/g, '')) || 0;
-const cleanPaid = parseFloat(amountPaid.value.replace(/,/g, '')) || 0;
-
-
-
-// ✅ Update the bookingData payment section
-const bookingData = {
-  client: {
-    name: clientName.value.trim(),
-    phone: clientPhone.value.trim(),
-    email: clientEmail.value.trim() || ""
-  },
-  event: {
-    type: eventType.value,
-    date: eventDate.value,
-    deliveryDate: deliveryDate.value || "",
-    returnDate: returnDate.value,
-    location: eventLocation.value || ""
-  },
-  items,
-  payment: {
-    total: cleanTotal,
-    paid: cleanPaid,
-    method: paymentMethod.value
-  },
-  receiptImage: receiptImageUrl,
-  notes: document.getElementById("notes")?.value || "",
-  status: "active",
-  createdBy: {
-    uid: currentUser.uid,
-    email: currentUser.email
-  },
-  createdAt: serverTimestamp()
-};
        
   /* ===== SAVE BOOKING ===== */
 const bookingRef = await addDoc(
@@ -519,12 +456,6 @@ await sendNotification(
   currentUser.email, // ✅ FIXED
   "booking_added",      // type
   bookingRef.id         // bookingId
-);
-
-// Send real-time OneSignal push notification
-await sendPush(
-  `New booking added for ${bookingData.client.name} on ${bookingData.event.date}`,
-  `/bookings.html?highlight=${bookingRef.id}`
 );
 
 // 🎇 2. WELCOME NOTIFICATION (Add this part)
@@ -715,7 +646,5 @@ window.shareToWhatsApp = function() {
   updateBtnSize();
   */
 // })();
-
-
 
 

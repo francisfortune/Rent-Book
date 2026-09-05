@@ -18,7 +18,7 @@
   <style>
     :root {
       --primary: purple;
-      --primary-dark: #540b9e;
+      --primary-dark: purple;
       --bg: #f9fafb;
       --text: #1f2937;
       --sidebar-bg: purple;
@@ -252,7 +252,7 @@
       width: 120px;
       height: 120px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #7c3aed, #6d28d9);
+      background: purple;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -286,7 +286,7 @@
     }
 
     .coming-soon-title span {
-      background: linear-gradient(135deg, #7c3aed, #a78bfa);
+      background: purple;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -326,12 +326,12 @@
     .coming-soon-feature:hover {
       background: #ede9fe;
       border-color: #c4b5fd;
-      color: #5b21b6;
+      color: purple;
     }
 
     .coming-soon-feature .material-symbols-outlined {
       font-size: 1.1rem;
-      color: #7c3aed;
+      color: purple;
     }
 
     .coming-soon-progress {
@@ -359,7 +359,7 @@
     .coming-soon-progress-bar .fill {
       height: 100%;
       width: 75%;
-      background: linear-gradient(90deg, #7c3aed, #a78bfa);
+      background: purple;
       border-radius: 99px;
       animation: progressPulse 2s ease-in-out infinite;
     }
@@ -387,13 +387,13 @@
     }
 
     .coming-soon-notify input:focus {
-      border-color: #7c3aed;
+      border-color: purple;
       box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
     }
 
     .coming-soon-notify button {
       padding: 12px 24px;
-      background: linear-gradient(135deg, #7c3aed, #6d28d9);
+      background: purple;
       color: white;
       border: none;
       border-radius: 12px;
@@ -690,6 +690,118 @@
       }
     }
 
+
+/* Modern Backdrop Overlay */
+.coming-soon-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Glassmorphism Card */
+.coming-soon-card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-radius: 24px;
+  padding: 32px;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.coming-soon-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(128, 0, 128, 0.1);
+  color: purple;
+  font-weight: 600;
+  font-size: 0.8rem;
+  border-radius: 20px;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.coming-soon-card h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.coming-soon-card p {
+  color: #4b5563;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.coming-soon-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn-dismiss {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #374151;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-dismiss:hover {
+  background: #f3f4f6;
+}
+
+.btn-primary {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: none;
+  background: purple;
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  background: purple;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+
     /* Material Symbols */
     @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined");
     @import url("https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap");
@@ -748,7 +860,7 @@
         <!-- ========== COMING SOON OVERLAY ========== -->
         <div class="coming-soon-overlay" id="comingSoonOverlay">
           <button class="coming-soon-close" id="closeOverlayBtn" aria-label="Close overlay">
-            <span class="material-symbols-outlined">close</span>
+            <span class="material-symbols-outlined" style="color: purple;">close</span>
           </button>
 
           <div class="coming-soon-icon">
@@ -870,27 +982,8 @@
       const notifyBtn = document.getElementById('notifyBtn');
       const notifyEmail = document.getElementById('notifyEmail');
 
-      // Close overlay (user can dismiss)
-      if (closeBtn) {
-        closeBtn.addEventListener('click', function() {
-          overlay.style.opacity = '0';
-          overlay.style.transform = 'scale(0.95)';
-          setTimeout(function() {
-            overlay.style.display = 'none';
-          }, 400);
-        });
-      }
+  
 
-      // Click outside to close (optional)
-      overlay.addEventListener('click', function(e) {
-        if (e.target === overlay) {
-          overlay.style.opacity = '0';
-          overlay.style.transform = 'scale(0.95)';
-          setTimeout(function() {
-            overlay.style.display = 'none';
-          }, 400);
-        }
-      });
 
       // Notify Me button
       if (notifyBtn) {

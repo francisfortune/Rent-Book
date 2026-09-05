@@ -10,6 +10,11 @@
   <link rel="stylesheet" href="assets/css/setting.css">
   <link rel="icon" type="image/x-icon" href="assets/imgs/logo.ico">
 
+  <!-- Font Awesome 5 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<!-- Font Awesome 5 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 
       <meta name="description"
         content="Get Discovered through Tracknrent Rental Business Catalog.">
@@ -1157,248 +1162,388 @@
 
       <section class="min-h-screen bg-[#f8f6fc] pb-24">
 
-  <!-- ==================== HEADER ==================== -->
-  <div class="bg-white border-b border-purple-100/50 sticky top-0 z-10 px-4 sm:px-6 py-4 flex items-center justify-between shadow-sm">
-    <div class="flex items-center gap-3">
-      <div style="background-color: purple;" class="w-10 h-10 rounded-xl text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-md shadow-purple-200">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      </div>
-      <div>
-        <h1 class="text-base font-bold text-gray-800 leading-tight">Public Profile</h1>
-        <p class="text-xs text-gray-400">Manage your storefront visibility</p>
-      </div>
-    </div>
-    <button id="savePublicSettings" style="background-color: purple;" class="hover:bg-purple-700 text-white px-5 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95 shadow-lg shadow-purple-200/50 flex items-center gap-2">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-      Save
-    </button>
-  </div>
 
   <!-- ==================== MAIN CONTENT ==================== -->
   <div class="max-w-4xl mx-auto px-4 sm:px-6 py-5 space-y-4">
 
     <!-- ===== LIVE STATUS BANNER ===== -->
-    <div id="liveStatusBanner" 
-         class="relative overflow-hidden rounded-2xl p-5 flex items-center justify-between gap-4"
-         style="background: purple; box-shadow: 0 8px 32px rgba(124, 58, 237, 0.25);">
-      
-      <!-- Decorative glow -->
-      <div class="absolute -top-12 -right-12 w-40 h-40 rounded-full blur-3xl pointer-events-none" style="background:rgba(167,139,250,0.15);"></div>
-      
-      <div class="relative z-10 flex items-center gap-4 flex-1 min-w-0">
-        <div class="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-xl flex-shrink-0 border border-white/20">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        </div>
-        <div class="min-w-0">
-          <p class="text-white font-bold text-sm sm:text-base truncate">Your store is live</p>
-          <p class="text-purple-200 text-xs sm:text-sm truncate">Share your link with customers</p>
-        </div>
-      </div>
+<div id="liveStatusBanner" 
+     class="relative overflow-hidden rounded-2xl p-5 flex items-center justify-between gap-4"
+     style="background: purple; box-shadow: 0 8px 32px rgba(124, 58, 237, 0.25);">
+  
+  <!-- Decorative glow -->
+  <div class="absolute -top-12 -right-12 w-40 h-40 rounded-full blur-3xl pointer-events-none" style="background:rgba(167,139,250,0.15);"></div>
+  
+  <div class="relative z-10 flex items-center gap-4 flex-1 min-w-0">
+    <div class="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-xl flex-shrink-0 border border-white/20">
+      <i class="fas fa-check-circle text-white text-2xl"></i>
+    </div>
+    <div class="min-w-0">
+      <p class="text-white font-bold text-sm sm:text-base truncate">Your store is live</p>
+      <p class="text-purple-200 text-xs sm:text-sm truncate">Share your link with customers</p>
+    </div>
+  </div>
 
-      <a id="liveProfileLink" href="#" target="_blank" style="color: purple;"
-         class="relative z-10 flex items-center gap-1.5 bg-white px-4 py-2 rounded-xl text-xs sm:text-sm font-bold hover:bg-gray-50 transition shadow-lg whitespace-nowrap">
-        View Store
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-      </a>
+  <a id="liveProfileLink" href="#" target="_blank" style="color: purple;"
+     class="relative z-10 flex items-center gap-1.5 bg-white px-4 py-2 rounded-xl text-xs sm:text-sm font-bold hover:bg-gray-50 transition shadow-lg whitespace-nowrap">
+    Activate Store
+     <i class="fas fa-link text-xs mr-1"></i>
+  </a>
+</div>
+
+<!-- ===== COVER / BANNER IMAGE CARD ===== -->
+<div class="bg-white rounded-2xl shadow-sm border border-purple-50/80 overflow-hidden">
+
+  <div class="bg-gradient-to-r from-purple-50/80 to-purple-100/30 px-5 py-3.5 border-b border-purple-100/50">
+    <h3 class="text-sm font-bold flex items-center gap-2" style="color: purple;">
+      <i class="fas fa-image text-sm"></i>
+      Cover / Banner Image
+    </h3>
+    <p class="text-xs text-gray-400 mt-0.5">Shown at the top of your storefront and as your marketplace card image.</p>
+  </div>
+
+  <div class="p-5 space-y-3">
+    <div id="coverImagePreviewWrap"
+         class="relative w-full rounded-xl overflow-hidden border border-gray-200"
+         style="aspect-ratio: 16 / 5; min-height: 110px; background: linear-gradient(135deg, purple, #9d4edd);">
+      <div id="coverImagePreview" class="w-full h-full flex items-center justify-center text-white/70 text-xs font-medium">
+        No banner uploaded yet
+      </div>
+      <button type="button" id="removeCoverBtn"
+              class="hidden absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow transition-colors">
+        <i class="fas fa-trash text-xs mr-1"></i>Remove
+      </button>
     </div>
 
-    <!-- ===== PROFILE CARD ===== -->
-    <div class="bg-white rounded-2xl shadow-sm border border-purple-50/80 overflow-hidden">
-      
-      <!-- Card Header -->
-      <div class="bg-gradient-to-r from-purple-50/80 to-purple-100/30 px-5 py-3.5 border-b border-purple-100/50">
-        <h3 class="text-sm font-bold text-gray-700 flex items-center gap-2">
-          <span class="text-lg">👤</span>
-          Profile Information
-        </h3>
-      </div>
-
-      <!-- Card Body -->
-      <div class="p-5 space-y-5">
-
-        <!-- Profile Picture Row -->
-        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <div id="logoPreview" style="background-color: purple;"
-               class="w-20 h-20 rounded-full text-white flex items-center justify-center font-extrabold text-3xl flex-shrink-0 overflow-hidden shadow-lg shadow-purple-200/50 border-2 border-purple-100">
-            ?
-          </div>
-          <div class="flex-1 min-w-0">
-            <label for="logoUploadInput" style="color: purple;" class="inline-flex items-center gap-2 text-sm font-semibold text-purple-600 hover:text-purple-700 cursor-pointer transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              Change profile photo
-            </label>
-            <p class="text-xs text-gray-400 mt-0.5">PNG, JPG • Max 5MB • Square recommended</p>
-            <input type="file" id="logoUploadInput" accept="image/*" style="display:none;">
-            <p id="logoUploadStatus" class="text-xs text-emerald-600 font-medium mt-1 hidden"></p>
-          </div>
-        </div>
-
-        <!-- Store Link -->
-        <div>
-          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Store URL</label>
-          <div class="flex items-stretch bg-gray-50 rounded-xl border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-purple-400 focus-within:border-transparent transition-all">
-            <span class="bg-gray-100 text-gray-500 text-xs px-3 py-2.5 flex items-center whitespace-nowrap border-r border-gray-200 font-medium">tracknrent.app/p/</span>
-            <input id="profileSlug" type="text" placeholder="your-shop-name" 
-                   class="flex-1 px-3 py-2.5 text-sm bg-transparent focus:outline-none min-w-0 placeholder:text-gray-400">
-          </div>
-          <p class="text-xs text-gray-400 mt-1">Choose a unique name for your storefront link</p>
-        </div>
-
-        <!-- About / Bio -->
-        <div>
-          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">About your Business</label>
-          <textarea id="businessBio" rows="3" 
-                    class="w-full px-3 py-2.5 text-sm bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all resize-none placeholder:text-gray-400"
-                    placeholder="Tell customers what items you rent, your location, and what makes your shop special..."></textarea>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- ===== CONTACT CARD ===== -->
-    <div class="bg-white rounded-2xl shadow-sm border border-purple-50/80 overflow-hidden">
-      
-      <div class="bg-gradient-to-r from-purple-50/80 to-purple-100/30 px-5 py-3.5 border-b border-purple-100/50">
-        <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
-          <span class="text-lg">📞</span>
-          Contact Details
-        </h3>
-      </div>
-
-      <div class="p-5 space-y-4">
-
-        <!-- Phone -->
-        <div class="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-200 focus-within:ring-2 focus-within:ring-purple-400 focus-within:border-transparent transition-all">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-          <input id="publicPhone" type="tel" placeholder="Phone number for calls" 
-                 class="flex-1 bg-transparent text-sm focus:outline-none min-w-0 placeholder:text-gray-400">
-        </div>
-
-        <!-- WhatsApp -->
-        <div class="flex items-center gap-3 bg-[#25D366]/5 rounded-xl px-3 py-2.5 border border-[#25D366]/20 focus-within:ring-2 focus-within:ring-[#25D366]/40 focus-within:border-transparent transition-all">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-          <input id="publicWhatsapp" type="tel" placeholder="WhatsApp number for messages" 
-                 class="flex-1 bg-transparent text-sm focus:outline-none min-w-0 placeholder:text-gray-400">
-        </div>
-
-        <!-- Address -->
-        <div class="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-200 focus-within:ring-2 focus-within:ring-purple-400 focus-within:border-transparent transition-all">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          <input id="publicAddress" type="text" placeholder="Shop / warehouse address" 
-                 class="flex-1 bg-transparent text-sm focus:outline-none min-w-0 placeholder:text-gray-400">
-        </div>
-
-        <!-- Location Picker -->
-        <div class="bg-purple-50/60 rounded-xl p-3.5 border border-purple-100/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
-            <p class="font-semibold text-sm flex items-center gap-1.5" style="color: purple;">
-              <span>📍</span> Pin your location
-            </p>
-            <p id="pinStatus" class="text-xs text-gray-500 mt-0.5">Tap the button to capture your current location</p>
-          </div>
-          <button type="button" id="btnUseMyLocation" style="color: purple; border-color: purple;"
-                  class="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border bg-white font-semibold text-sm hover:bg-purple-50 transition-all w-full sm:w-auto">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>
-            Use my location
-          </button>
-        </div>
-        <input id="publicLatitude" type="hidden">
-        <input id="publicLongitude" type="hidden">
-
-      </div>
-    </div>
-
-    <!-- ===== VISIBILITY CARD ===== -->
-    <div class="bg-white rounded-2xl shadow-sm border border-purple-50/80 overflow-hidden">
-      
-      <div class="bg-gradient-to-r from-purple-50/80 to-purple-100/30 px-5 py-3.5 border-b border-purple-100/50">
-        <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
-          <span class="text-lg">⚙️</span>
-          Visibility Settings
-        </h3>
-      </div>
-
-      <div class="p-5 space-y-4">
-
-        <!-- Public Toggle -->
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-semibold text-gray-800">Make store public</p>
-            <p class="text-xs text-gray-400">Show your storefront and marketplace listing</p>
-          </div>
-          <label class="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" id="publicProfileToggle" class="sr-only peer">
-            <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:0shadow-inner" style="background-color: purple;"></div>
-          </label>
-        </div>
-
-        <!-- Inventory Toggle -->
-        <div class="flex items-center justify-between pt-3 border-t border-gray-100/80">
-          <div>
-            <p class="text-sm font-semibold text-gray-800">Show inventory catalog</p>
-            <p class="text-xs text-gray-400">Display your equipment list to visitors</p>
-          </div>
-          <label class="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" id="showInventoryToggle" class="sr-only peer" checked>
-            <div style="background-color: purple;" class="w-11 h-6 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all shadow-inner"></div>
-          </label>
-        </div>
-
-        <!-- Availability Toggle -->
-        <div class="flex items-center justify-between pt-3 border-t border-gray-100/80">
-          <div>
-            <p class="text-sm font-semibold text-gray-800">Show live availability</p>
-            <p class="text-xs text-gray-400">Display stock counts next to each item</p>
-          </div>
-          <label class="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" id="showAvailabilityToggle" class="sr-only peer" checked>
-            <div style="background-color: purple;" class="w-11 h-6 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all shadow-inner"></div>
-          </label>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- ===== GALLERY CARD ===== -->
-    <div class="bg-white rounded-2xl shadow-sm border border-purple-50/80 overflow-hidden">
-      
-      <div class="bg-gradient-to-r from-purple-50/80 to-purple-100/30 px-5 py-3.5 border-b border-purple-100/50">
-        <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
-          <span class="text-lg">🖼️</span>
-          Gallery
-        </h3>
-      </div>
-
-      <div class="p-5">
-
-        <!-- Team Member Notice -->
-        <div id="teamMemberNotice" class="hidden bg-amber-50/80 rounded-xl p-3.5 mb-4 flex items-start gap-3 border border-amber-200/60">
-          <span class="text-base flex-shrink-0">🔒</span>
-          <p class="text-xs text-amber-800 leading-relaxed">
-            You're signed in as a <strong>team member</strong>. You can add photos &amp; videos, but store settings and the visibility toggle can only be changed by the business owner.
-          </p>
-        </div>
-
-        <!-- Upload Dropzone -->
-        <label for="galleryUploadInput" id="galleryDropzone"
-               class="flex flex-col sm:flex-row items-center justify-center gap-3 w-full py-5 px-4 bg-purple-50/60 hover:bg-purple-50 rounded-xl border-2 border-dashed border-purple-300/50 cursor-pointer transition-all hover:border-purple-400">
-          <span class="text-3xl">📸</span>
-          <div class="text-center sm:text-left">
-            <p class="text-sm font-semibold" style="color: purple;">Add photos or videos</p>
-            <p class="text-xs text-gray-400">JPG, PNG, MP4, MOV • Max 10MB each</p>
-          </div>
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+      <div>
+        <label for="coverUploadInput" style="color: purple;" class="inline-flex items-center gap-2 text-sm font-semibold hover:text-purple-700 cursor-pointer transition-colors">
+          <i class="fas fa-cloud-upload-alt text-sm"></i>
+          Upload cover image
         </label>
-        <input type="file" id="galleryUploadInput" accept="image/*,video/*" style="display:none;" multiple>
+        <p class="text-xs text-gray-400 mt-0.5">JPG, PNG • Max 8MB • Wide (16:5) images look best</p>
+      </div>
+      <input type="file" id="coverUploadInput" accept="image/*" style="display:none;">
+    </div>
+    <p id="coverUploadStatus" class="text-xs text-emerald-600 font-medium hidden"></p>
+  </div>
+</div>
 
-        <p id="galleryUploadStatus" class="text-xs text-emerald-600 font-medium mt-2 hidden"></p>
+<!-- ===== PROFILE CARD ===== -->
+<div class="bg-white rounded-2xl shadow-sm border border-purple-50/80 overflow-hidden">
+  
+  <!-- Card Header -->
+  <div class="bg-gradient-to-r from-purple-50/80 to-purple-100/30 px-5 py-3.5 border-b border-purple-100/50">
+    <h3 class="text-sm font-bold flex items-center gap-2" style="color: purple;">
+      <i class="fas fa-user text-sm"></i>
+      Profile Information
+    </h3>
+  </div>
 
-        <!-- Gallery Grid -->
-        <div id="imagePreviewGrid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 mt-4">
-          <!-- Rendered by JavaScript -->
-        </div>
+  <!-- Card Body -->
+  <div class="p-5 space-y-5">
 
+    <!-- Profile Picture Row -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+      <div id="logoPreview" style="background-color: purple;"
+           class="w-20 h-20 rounded-full text-white flex items-center justify-center font-extrabold text-3xl flex-shrink-0 overflow-hidden shadow-lg shadow-purple-200/50 border-2 border-purple-100">
+        ?
+      </div>
+      <div class="flex-1 min-w-0">
+        <label for="logoUploadInput" style="color: purple;" class="inline-flex items-center gap-2 text-sm font-semibold text-purple-600 hover:text-purple-700 cursor-pointer transition-colors">
+          <i class="fas fa-camera text-sm"></i>
+          Change profile photo
+        </label>
+        <p class="text-xs text-gray-400 mt-0.5">PNG, JPG • Max 5MB • Square recommended</p>
+        <input type="file" id="logoUploadInput" accept="image/*" style="display:none;">
+        <p id="logoUploadStatus" class="text-xs text-emerald-600 font-medium mt-1 hidden"></p>
       </div>
     </div>
+
+    <!-- Store Link -->
+    <div>
+      <label class="block text-xs font-semibold uppercase tracking-wider mb-1.5" style="color: purple;">Store URL</label>
+      <div class="flex items-stretch bg-gray-50 rounded-xl border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-purple-400 focus-within:border-transparent transition-all">
+        <span class="bg-gray-100 text-gray-500 text-xs px-3 py-2.5 flex items-center whitespace-nowrap border-r border-gray-200 font-medium">
+          <i class="fas fa-link text-xs mr-1"></i>
+          tracknrent.app/p/
+        </span>
+        <input id="profileSlug" type="text" placeholder="your-shop-name" 
+               class="flex-1 px-3 py-2.5 text-sm bg-transparent focus:outline-none min-w-0 placeholder:text-gray-400">
+      </div>
+      <p class="text-xs text-gray-400 mt-1">Choose a unique name for your storefront link</p>
+    </div>
+
+    <!-- About / Bio -->
+    <div>
+      <label class="block text-xs font-semibold uppercase tracking-wider mb-1.5" style="color: purple;">About your Business</label>
+      <textarea id="businessBio" rows="3" 
+                class="w-full px-3 py-2.5 text-sm bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all resize-none placeholder:text-gray-400"
+                placeholder="Tell customers what items you rent, your location, and what makes your shop special..."></textarea>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== SERVICES / CATEGORIES CARD ===== -->
+<div class="bg-white rounded-2xl shadow-sm border border-purple-50/80 overflow-hidden">
+
+  <div class="bg-gradient-to-r from-purple-50/80 to-purple-100/30 px-5 py-3.5 border-b border-purple-100/50">
+    <h3 class="text-sm font-bold flex items-center gap-2" style="color: purple;">
+      <i class="fas fa-tags text-sm"></i>
+      Services &amp; Categories
+    </h3>
+    <p class="text-xs text-gray-400 mt-0.5">Tell customers what you rent out. Shown on your storefront and used for marketplace search/filters.</p>
+  </div>
+
+  <div class="p-5 space-y-4">
+
+    <!-- Current tags -->
+    <div id="categoryTagsList" class="flex flex-wrap gap-2 min-h-[2.25rem]">
+      <!-- Rendered by JS: each tag is a removable chip -->
+    </div>
+
+    <!-- Type-your-own input -->
+    <div class="flex items-stretch gap-2">
+      <input id="categoryInput" type="text" placeholder="Type a service, e.g. Bounce Castles"
+             maxlength="30"
+             class="flex-1 px-3 py-2.5 text-sm bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all min-w-0 placeholder:text-gray-400">
+      <button type="button" id="categoryAddBtn" style="background-color: purple;"
+              class="hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 whitespace-nowrap flex-shrink-0">
+        <i class="fas fa-plus text-xs sm:mr-1.5"></i><span class="hidden sm:inline">Add</span>
+      </button>
+    </div>
+
+    <!-- Quick-add suggestions -->
+    <div>
+      <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Quick add</p>
+      <div id="categorySuggestions" class="flex flex-wrap gap-2">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <p class="text-xs text-gray-400">Add as many as apply — tap a suggestion, type your own and hit Enter/Add, or tap the &times; on a tag to remove it.</p>
+  </div>
+</div>
+
+<!-- ===== CONTACT CARD ===== -->
+<div class="bg-white rounded-2xl shadow-sm border border-purple-50/80 overflow-hidden">
+  
+  <div class="bg-gradient-to-r from-purple-50/80 to-purple-100/30 px-5 py-3.5 border-b border-purple-100/50">
+    <h3 class="text-sm font-semibold flex items-center gap-2" style="color: purple;">
+      <i class="fas fa-phone text-sm"></i>
+      Contact Details
+    </h3>
+  </div>
+
+  <div class="p-5 space-y-4" style="border-radius: 20px;">
+
+    <!-- Phone -->
+    <div class="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-200 focus-within:ring-2 focus-within:ring-purple-400 focus-within:border-transparent transition-all">
+      <i class="fas fa-phone text-sm"  style="color: purple;"></i>
+      <input id="publicPhone" type="tel" placeholder="Phone number for calls (Required)" required
+             class="flex-1 bg-transparent text-sm focus:outline-none min-w-0 placeholder:text-gray-400">
+    </div>
+
+    <!-- WhatsApp -->
+    <div class="flex items-center gap-3 bg-[#25D366]/5 rounded-xl px-3 py-2.5 border border-[#25D366]/20 focus-within:ring-2 focus-within:ring-[#25D366]/40 focus-within:border-transparent transition-all">
+      <i class="fab fa-whatsapp text-[#25D366] text-sm"></i>
+      <input id="publicWhatsapp" type="tel" placeholder="WhatsApp number for messages (Required)" required 
+             class="flex-1 bg-transparent text-sm focus:outline-none min-w-0 placeholder:text-gray-400">
+    </div>
+
+    <!-- Instagram -->
+    <div class="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-200 focus-within:ring-2 focus-within:ring-purple-400 focus-within:border-transparent transition-all">
+      <i class="fab fa-instagram text-sm"   style="color: purple;"></i>
+      <input id="publicInstagram" type="text" placeholder="Instagram handle or link (optional)" 
+             class="flex-1 bg-transparent text-sm focus:outline-none min-w-0 placeholder:text-gray-400">
+    </div>
+
+    <!-- TikTok -->
+    <div class="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-200 focus-within:ring-2 focus-within:ring-purple-400 focus-within:border-transparent transition-all">
+      <i class="fab fa-tiktok text-sm"   style="color: rgb(19, 16, 16);"></i>
+      <input id="publicTiktok" type="text" placeholder="TikTok handle or link (optional)" 
+             class="flex-1 bg-transparent text-sm focus:outline-none min-w-0 placeholder:text-gray-400">
+    </div>
+
+    <!-- Facebook -->
+    <div class="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-200 focus-within:ring-2 focus-within:ring-purple-400 focus-within:border-transparent transition-all">
+      <i class="fab fa-facebook text-sm"  style="color: blue;"></i>
+      <input id="publicFacebook" type="text" placeholder="Facebook page name or link (optional)" 
+             class="flex-1 bg-transparent text-sm focus:outline-none min-w-0 placeholder:text-gray-400">
+    </div>
+
+    <!-- Address -->
+    <div class="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-200 focus-within:ring-2 focus-within:ring-purple-400 focus-within:border-transparent transition-all">
+      <i class="fas fa-map-pin text-sm" style="color: purple;"></i>
+      <input id="publicAddress" type="text" placeholder="Shop / warehouse address" 
+             class="flex-1 bg-transparent text-sm focus:outline-none min-w-0 placeholder:text-gray-400">
+    </div>
+
+    <!-- Location Picker -->
+    <div class="bg-purple-50/60 rounded-xl p-3.5 border border-purple-100/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div>
+        <p class="font-semibold text-sm flex items-center gap-1.5" style="color: purple;">
+          <i class="fas fa-location-dot text-sm"></i>
+          Pin your location
+        </p>
+        <p id="pinStatus" class="text-xs text-gray-500 mt-0.5">Tap the button to capture your current location</p>
+      </div>
+      <button type="button" id="btnUseMyLocation" style="color: purple; border-color: purple;"
+              class="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border bg-white font-semibold text-sm hover:bg-purple-50 transition-all w-full sm:w-auto">
+        <i class="fas fa-crosshairs text-sm"></i>
+        Use my location
+      </button>
+    </div>
+    <input id="publicLatitude" type="hidden">
+    <input id="publicLongitude" type="hidden">
+
+  </div>
+</div>
+
+<!-- ===== VISIBILITY CARD ===== -->
+<div class="bg-white rounded-2xl shadow-sm border border-purple-50/80 overflow-hidden">
+  
+  <div class="bg-gradient-to-r from-purple-50/80 to-purple-100/30 px-5 py-3.5 border-b border-purple-100/50">
+    <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2" style="color: purple;">
+      <i class="fas fa-eye text-sm"></i>
+      Visibility Settings
+    </h3>
+  </div>
+
+  <div class="p-5 space-y-4">
+
+    <!-- Public Toggle -->
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm font-semibold text-gray-800">Make store public</p>
+        <p class="text-xs text-gray-400">Show your storefront and marketplace listing</p>
+      </div>
+      <label class="relative inline-flex items-center cursor-pointer">
+        <input type="checkbox" id="publicProfileToggle" class="sr-only peer">
+        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:shadow-inner" style="background-color: purple;"></div>
+      </label>
+    </div>
+
+    <!-- Inventory Toggle -->
+    <div class="flex items-center justify-between pt-3 border-t border-gray-100/80">
+      <div>
+        <p class="text-sm font-semibold text-gray-800">Show inventory catalog</p>
+        <p class="text-xs text-gray-400">Display your equipment list to visitors</p>
+      </div>
+      <label class="relative inline-flex items-center cursor-pointer">
+        <input type="checkbox" id="showInventoryToggle" class="sr-only peer" checked>
+        <div style="background-color: purple;" class="w-11 h-6 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all shadow-inner"></div>
+      </label>
+    </div>
+
+    <!-- Availability Toggle -->
+    <div class="flex items-center justify-between pt-3 border-t border-gray-100/80">
+      <div>
+        <p class="text-sm font-semibold text-gray-800">Show live availability</p>
+        <p class="text-xs text-gray-400">Display stock counts next to each item</p>
+      </div>
+      <label class="relative inline-flex items-center cursor-pointer">
+        <input type="checkbox" id="showAvailabilityToggle" class="sr-only peer" checked>
+        <div style="background-color: purple;" class="w-11 h-6 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all shadow-inner"></div>
+      </label>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== DEPOSIT & CAUTION POLICY CARD ===== -->
+<div class="bg-white rounded-2xl shadow-sm border border-purple-50/80 overflow-hidden">
+
+  <div class="bg-gradient-to-r from-purple-50/80 to-purple-100/30 px-5 py-3.5 border-b border-purple-100/50">
+    <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2" style="color: purple;">
+      <i class="fas fa-shield-alt text-sm"></i>
+      Deposit &amp; Caution Policy
+    </h3>
+    <p class="text-xs text-gray-400 mt-0.5">Optional — shown to customers on your storefront. Leave blank if not applicable.</p>
+  </div>
+
+  <div class="p-5 space-y-4">
+
+    <!-- Caution deposit -->
+    <div>
+      <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5" style="color: purple;">
+        <i class="fas fa-coins text-xs mr-1"></i>
+        Caution deposit
+      </label>
+      <input id="depositCautionFee" type="text" placeholder="e.g. ₦10,000 refundable caution deposit"
+             class="w-full px-3 py-2.5 text-sm bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all placeholder:text-gray-400">
+    </div>
+
+    <!-- ID requirement -->
+    <div>
+      <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5" style="color: purple;">
+        <i class="fas fa-id-card text-xs mr-1"></i>
+        Identity requirement
+      </label>
+      <input id="depositIdRequirement" type="text" placeholder="e.g. Valid means of ID required"
+             class="w-full px-3 py-2.5 text-sm bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all placeholder:text-gray-400">
+    </div>
+
+    <!-- Additional notes -->
+    <div>
+      <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5" style="color: purple;">
+        <i class="fas fa-file-alt text-xs mr-1"></i>
+        Additional policy notes
+      </label>
+      <textarea id="depositNotes" rows="2"
+                class="w-full px-3 py-2.5 text-sm bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all resize-none placeholder:text-gray-400"
+                placeholder="Any other deposit, cancellation, or damage terms customers should know about..."></textarea>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== GALLERY CARD ===== -->
+<div class="bg-white rounded-2xl shadow-sm border border-purple-50/80 overflow-hidden">
+  
+  <div class="bg-gradient-to-r from-purple-50/80 to-purple-100/30 px-5 py-3.5 border-b border-purple-100/50">
+    <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2" style="color: purple;">
+      <i class="fas fa-images text-sm" style="color: purple;"></i>
+      Gallery
+    </h3>
+  </div>
+
+  <div class="p-5">
+
+    <!-- Team Member Notice -->
+    <div id="teamMemberNotice" class="hidden bg-amber-50/80 rounded-xl p-3.5 mb-4 flex items-start gap-3 border border-amber-200/60">
+      <i class="fas fa-lock text-sm mt-0.5" style="color: purple;"></i>
+      <p class="text-xs text-amber-800 leading-relaxed">
+        You're signed in as a <strong>team member</strong>. You can add photos &amp; videos, but store settings and the visibility toggle can only be changed by the business owner.
+      </p>
+    </div>
+
+    <!-- Upload Dropzone -->
+    <label for="galleryUploadInput" id="galleryDropzone"
+           class="flex flex-col sm:flex-row items-center justify-center gap-3 w-full py-5 px-4 bg-purple-50/60 hover:bg-purple-50 rounded-xl border-2 border-dashed border-purple-300/50 cursor-pointer transition-all hover:border-purple-400">
+      <i class="fas fa-cloud-upload-alt text-3xl" style="color: purple;"></i>
+      <div class="text-center sm:text-left">
+        <p class="text-sm font-semibold" style="color: purple;">Add photos or videos</p>
+        <p class="text-xs text-gray-400">JPG, PNG, MP4, MOV • Max 10MB each</p>
+      </div>
+    </label>
+    <input type="file" id="galleryUploadInput" accept="image/*,video/*" style="display:none;" multiple>
+
+    <p id="galleryUploadStatus" class="text-xs text-emerald-600 font-medium mt-2 hidden"></p>
+
+    <!-- Gallery Grid -->
+    <div id="imagePreviewGrid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 mt-4">
+      <!-- Rendered by JavaScript -->
+    </div>
+
+  </div>
+</div>
+
+    <button id="savePublicSettings" style="background-color: purple; float: right;" class="hover:bg-purple-700 text-white px-5 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95 shadow-lg shadow-purple-200/50 flex items-end gap-2.5">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      Save
+    </button>
 
 
   </div>
@@ -1531,3 +1676,5 @@
 </body>
 
 </html>
+
+

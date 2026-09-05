@@ -1,0 +1,10 @@
+now in public.html i should be able to have banner like banner and cover image . crud for them just add it and showcases it profile.html and  replace .card-image with it in maerketplace.page
+ then in public.html add services/ category section that is what creates ${business.category}. you can add as many as you want a real, functional tags editor (not just decorative): quick-add suggestion chips or type your own, remove with one tap, saved to Firestore under
+ then make things in profile page and public pge to match like this new added section/ category should display and other things even banner image.
+ make sure that referral count writes/ craete featured and verified true..
+ then understand filiter logic
+ then in setup the part of city and state should craete or write  ${business.city ? which will display in profile page and maerketplace
+ then Generate Sitemap
+
+ files working with
+1) public.html and public-profile.js    2) profile.html and profile-viewer.js   3) marketplace.html and marketplace.js    4) setup.html and setup.js 

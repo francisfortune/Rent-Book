@@ -936,6 +936,9 @@
     }
 }
         
+#notes::placeholder{
+font-weight: 900;
+}
 
     </style>
     <style>
@@ -1091,13 +1094,13 @@
                       <h3 style="margin-top:20px;">Payment</h3>
 <div class="form-group">
     <label>Total Amount (₦)</label>
-    <input type="text" id="totalAmount" inputmode="numeric" readonly 
-           style="background:#f7fafc; font-weight:700; color:purple; cursor:not-allowed; padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%;">
+    <input type="text" id="totalAmount" inputmode="numeric" 
+           style="background:#f7fafc; font-weight:700; color:purple; padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%;">
 </div>
 <div class="form-group">
     <label>Amount Paid (₦)</label>
     <input type="text" id="amountPaid" inputmode="numeric" placeholder="0"
-           style="padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%;">
+           style="background:#f7fafc; font-weight:700; color:purple; padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%;">
 </div>
 <div class="form-group">
     <label>Payment Method</label>
@@ -1118,10 +1121,10 @@
                             </div>
 
                         <div class="form-group">
-                            <label>Receipt Image (optional)</label>
+                            <label><h3>Receipt Image (optional)</h3></label>
                             <div class="receipt-upload-container"
                                 style="border: 2px dashed #e2e8f0; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s ease;"
-                                onclick="document.getElementById('receiptImage').click()">
+                                    onclick="document.getElementById('receiptImage').click()">
                                 <input type="file" id="receiptImage" accept="image/" capture="environment"
                                     style="display: none;">
                                 <div id="receiptPreview" style="display: none; margin-bottom: 10px;">
@@ -1135,8 +1138,8 @@
                         </div>
 
                         <div class="form-group">
-                            <label>Notes (Optional)</label>
-                            <textarea id="notes"></textarea>
+                            <label><h3>Notes (Optional)</h3></label>
+                            <textarea id="notes" placeholder="e.g Go to Vendor's House and collect items"></textarea>
                         </div>
 
                     </div>

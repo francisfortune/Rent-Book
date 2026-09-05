@@ -3,132 +3,719 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tracknrent Marketplace — Find Rental Businesses Near You</title>
+  <title>Tracknrent Marketplace — Find Rental Businesses</title>
   <meta name="description" content="Discover verified rental businesses for equipment, vehicles, events, photography, furniture and sound & lighting." />
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
-<link rel="icon" href="favicon.ico" sizes="any">
-<link rel="icon" type="image/png" href="favicon.png">
-<link rel="shortcut icon" href="favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="shortcut icon" href="favicon.ico">
+
+
+
+  <!-- Font Awesome 5 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<!-- Font Awesome 5 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 
 
 
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    .font-display { font-family: 'Manrope', sans-serif; }
-    .card-scroll::-webkit-scrollbar { height: 6px; }
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; }
+    .font-display { font-family: 'Inter', sans-serif; }
+    
+    /* Smooth card hover */
+    .business-card {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      background: white;
+      border-radius: 20px;
+      border: 1px solid #f1f5f9;
+      overflow: hidden;
+    }
+    .business-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.15);
+      border-color: #e9d5ff;
+    }
+    .business-card .card-image {
+      height: 140px;
+      background: purple;
+      position: relative;
+    }
+
+    .business-card .card-badge {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 4px 12px;
+      border-radius: 50px;
+      background: rgba(255,255,255,0.92);
+      color: #1e293b;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .business-card .card-badge.featured {
+      background: #fbbf24;
+      color: #78350f;
+    }
+    .business-card .card-badge.verified {
+      background: #34d399;
+      color: #064e3b;
+    }
+    .business-card .card-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 3px solid white;
+      margin-top: -36px;
+      margin-left: 20px;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.5rem;
+      color: #800080;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .business-card .card-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .card-scroll::-webkit-scrollbar { height: 4px; }
     .card-scroll::-webkit-scrollbar-thumb { background: #c4b5fd; border-radius: 999px; }
+
+    /* Filter chips */
+    .filter-chip {
+      padding: 8px 18px;
+      border-radius: 50px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1.5px solid #e2e8f0;
+      background: white;
+      color: #475569;
+    }
+    .filter-chip:hover {
+      border-color: #c4b5fd;
+      color: purple;
+    }
+      .verified-chip:hover {
+      border-color: whitesmoke;
+      color: #10b981;
+    }
+    .filter-chip.active {
+      background: purple;
+      color: white;
+      border-color: purple;
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+    }
+    .filter-chip.verified-chip.active {
+      background: #10b981;
+      border-color: #10b981;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+    }
+
+    /* Rating stars */
+    .star-filled { color: #f59e0b; fill: #f59e0b; }
+    .star-empty { color: #d1d5db; fill: #d1d5db; border: 1px solid #f59e0b ;}
+
+    /* Responsive grid */
+    @media (max-width: 640px) {
+      .business-grid { grid-template-columns: 1fr; }
+    }
+    @media (min-width: 641px) and (max-width: 1024px) {
+      .business-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (min-width: 1025px) {
+      .business-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    /* Smooth transitions */
+    .fade-enter {
+      animation: fadeIn 0.4s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+/* ============================================
+   BUSINESS CARD STYLES
+============================================ */
+/* ============================================
+   LINKEDIN-STYLE BUSINESS CARDS
+   Color: #800080 (Purple)
+============================================ */
+
+.card-link {
+  text-decoration: none;
+  display: block;
+  height: 100%;
+}
+
+.linkedin-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  position: relative;
+}
+
+.linkedin-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(128, 0, 128, 0.15);
+  border-color: rgba(128, 0, 128, 0.2);
+}
+
+/* ===== COVER SECTION - Layer 1 ===== */
+.cover-section {
+  height: 140px;
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: linear-gradient(135deg, #800080, #9b4d9b, #800080);
+}
+
+.cover-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, 
+    rgba(128, 0, 128, 0.1) 0%,
+    rgba(128, 0, 128, 0.3) 100%
+  );
+  z-index: 1;
+}
+
+/* ===== BADGES - Layer 2 ===== */
+.badge-section {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+
+.badge-featured,
+.badge-verified {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 3px 12px;
+  border-radius: 50px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  z-index: 10;
+}
+
+.badge-featured {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #78350f;
+  border-color: #fbbf24;
+}
+
+.badge-verified {
+  background: linear-gradient(135deg, #34d399, #10b981);
+  color: #064e3b;
+  border-color: #34d399;
+}
+
+/* ===== AVATAR - Layer 3 ===== */
+.avatar-section {
+  position: relative;
+  z-index: 15;
+  padding: 0 20px;
+  margin-top: -32px;
+}
+
+.avatar-circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.6rem;
+  color: #800080;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.linkedin-card:hover .avatar-circle {
+  transform: scale(1.05);
+  box-shadow: 0 6px 24px rgba(128, 0, 128, 0.2);
+}
+
+.avatar-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ===== CONTENT - Layer 4 ===== */
+.content-section {
+  padding: 16px 20px 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  z-index: 20;
+  background: #ffffff;
+}
+
+/* Business Name */
+.business-title {
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #1a1a1a;
+  line-height: 1.3;
+  margin: 0 0 2px 0;
+  transition: color 0.3s ease;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.linkedin-card:hover .business-title {
+  color: #800080;
+}
+
+/* Info Row */
+.info-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 0;
+}
+
+.category-tag {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #800080;
+  background: rgba(128, 0, 128, 0.08);
+  padding: 3px 12px;
+  border-radius: 50px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgba(128, 0, 128, 0.1);
+}
+
+.category-tag i {
+  font-size: 0.6rem;
+}
+
+.location-tag {
+  font-size: 0.75rem;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.location-tag i {
+  font-size: 0.65rem;
+  color: #94a3b8;
+}
+
+/* Tags Container */
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.tag-item {
+  font-size: 0.6rem;
+  font-weight: 500;
+  padding: 2px 10px;
+  border-radius: 50px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.tag-item:hover {
+  background: rgba(128, 0, 128, 0.08);
+  color: #800080;
+  border-color: rgba(128, 0, 128, 0.2);
+}
+
+/* Address */
+.address-line {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin: 10px 0 0 0;
+  padding-top: 10px;
+  border-top: 1px dashed #eef0f4;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.address-line i {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  margin-right: 6px;
+}
+
+/* Social Row */
+.social-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.social-link {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  transition: all 0.25s ease;
+  font-size: 0.75rem;
+  text-decoration: none;
+}
+
+.social-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.social-link:hover { color: #800080; background: rgba(128, 0, 128, 0.08); border-color: rgba(128, 0, 128, 0.2); }
+.social-link.whatsapp:hover { color: #25D366; background: rgba(37, 211, 102, 0.08); border-color: rgba(37, 211, 102, 0.2); }
+.social-link.phone:hover { color: #800080; background: rgba(128, 0, 128, 0.08); border-color: rgba(128, 0, 128, 0.2); }
+
+/* ===== CARD FOOTER ===== */
+.card-footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* Rating */
+.rating-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.star-rating {
+  color: #f59e0b;
+  font-size: 0.85rem;
+  letter-spacing: 0.3px;
+}
+
+.rating-number {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #1a1a1a;
+}
+
+.rating-total {
+  font-size: 0.7rem;
+  color: #94a3b8;
+}
+
+.no-reviews-text {
+  font-size: 0.7rem;
+  color: #94a3b8;
+}
+
+/* Connect Button - LinkedIn Style */
+.connect-btn {
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: #800080;
+  background: transparent;
+  padding: 6px 18px;
+  border-radius: 50px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s ease;
+  border: 1.5px solid #800080;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.connect-btn i {
+  transition: transform 0.3s ease;
+  font-size: 0.7rem;
+}
+
+.linkedin-card:hover .connect-btn {
+  background: #800080;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(128, 0, 128, 0.3);
+}
+
+.linkedin-card:hover .connect-btn i {
+  transform: translateX(4px);
+}
+
+/* ============================================
+   RESPONSIVE
+============================================ */
+
+@media (max-width: 640px) {
+  .business-grid { grid-template-columns: 1fr; }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .business-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (min-width: 1025px) {
+  .business-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 480px) {
+  .cover-section { height: 110px; }
+  
+  .avatar-circle {
+    width: 60px;
+    height: 60px;
+    font-size: 1.2rem;
+  }
+  
+  .avatar-section { margin-top: -28px; }
+  
+  .content-section { padding: 10px 16px 16px; }
+  
+  .business-title { font-size: 1rem; }
+  
+  .connect-btn {
+    font-size: 0.7rem;
+    padding: 4px 14px;
+  }
+  
+  .badge-featured,
+  .badge-verified {
+    font-size: 8px;
+    padding: 2px 10px;
+  }
+}
+
+/* ============================================
+   ANIMATIONS
+============================================ */
+
+@keyframes cardSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.linkedin-card {
+  animation: cardSlideUp 0.4s ease forwards;
+}
+
+.linkedin-card:nth-child(2) { animation-delay: 0.04s; }
+.linkedin-card:nth-child(3) { animation-delay: 0.08s; }
+.linkedin-card:nth-child(4) { animation-delay: 0.12s; }
+.linkedin-card:nth-child(5) { animation-delay: 0.16s; }
+.linkedin-card:nth-child(6) { animation-delay: 0.20s; }
+
+/* ============================================
+   SCROLLBAR STYLING
+============================================ */
+
+.card-scroll::-webkit-scrollbar { height: 4px; }
+.card-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 999px; }
+.card-scroll::-webkit-scrollbar-thumb { background: #800080; border-radius: 999px; }
+.card-scroll::-webkit-scrollbar-thumb:hover { background: #6a006a; }
+
+
+
+
+
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+<body>
 
-  <!-- Top Bar -->
-  <nav class="bg-white border-b border-slate-200 sticky top-0 z-30">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-      <a href="/" class="font-display font-extrabold text-lg text-purple-950 tracking-tight">Tracknrent</a>
-      <a href="signup.html" class="text-sm font-semibold text-purple-800 hover:text-purple-950 transition">List your business &rarr;</a>
+  <!-- Navbar -->
+  <nav class="bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="/" class="font-display font-extrabold text-xl text-purple-950 tracking-tight flex items-center gap-2">
+        <span class="w-8 h-8 rounded-xl overflow-hidden flex items-center justify-center bg-purple-600 flex-shrink-0">
+          <img src="assets/app.png" alt="Tracknrent logo" class="w-full h-full object-cover"
+               onerror="this.onerror=null;this.parentElement.innerHTML='<span class=&quot;text-white text-sm font-extrabold&quot;>T</span>';" />
+        </span>
+        Tracknrent
+      </a>
+      <div class="flex items-center gap-4">
+        <a href="index.html" class="text-sm font-semibold text-purple-700 hover:text-purple-900 transition">List your business  <i class="fas fa-link text-xs mr-1"></i> </a>
+      </div>
     </div>
   </nav>
 
-  <!-- Hero / Search -->
+  <!-- Hero -->
   <header class="relative bg-gradient-to-br from-purple-950 via-purple-900 to-indigo-950 text-white overflow-hidden">
-    <div class="absolute -top-32 -right-32 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl pointer-events-none"></div>
-    <div class="absolute -bottom-32 -left-32 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -top-32 -right-32 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-32 -left-32 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl"></div>
 
-    <div class="relative z-10 max-w-3xl mx-auto px-4 py-16 md:py-24 text-center space-y-6">
-      <h1 class="font-display text-3xl md:text-5xl font-extrabold tracking-tight">Find rental businesses near you</h1>
-      <p class="text-purple-100/90 text-sm md:text-base max-w-xl mx-auto">Event Rentals, Equipment Rentals, and Decorator — browse verified rental businesses and book directly on WhatsApp.</p>
-
-      <div class="flex items-center gap-2 bg-white rounded-2xl p-2 shadow-xl max-w-xl mx-auto">
-        <i data-lucide="search" class="w-5 h-5 text-slate-400 ml-2"></i>
-        <input id="search-input" type="text" placeholder="Try 'generator Lagos' or 'chairs'"
-          class="flex-1 text-slate-900 placeholder:text-slate-400 text-sm md:text-base py-2.5 px-1 outline-none" />
-        <button id="search-clear" class="hidden text-xs text-slate-400 hover:text-slate-600 px-2">Clear</button>
+    <div class="relative z-10 max-w-4xl mx-auto px-4 py-16 md:py-20 text-center space-y-6">
+      <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-1.5 rounded-full text-xs font-medium text-purple-200 border border-white/10">
+        <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
+        200+ rental businesses listed
       </div>
+      <h1 class="font-display text-3xl md:text-5xl font-extrabold tracking-tight leading-tight">
+        Find the perfect <span class="text-purple-300">rental business</span> near you
+      </h1>
+      <p class="text-purple-100/90 text-sm md:text-base max-w-xl mx-auto">
+        Browse verified rental businesses for events, equipment, vehicles, and more. Book directly on WhatsApp.
+      </p>
 
-      <!-- Category Chips -->
-      <div id="category-chips" class="flex flex-wrap items-center justify-center gap-2 pt-2">
-        <!-- injected -->
+      <!-- Search Bar -->
+      <div class="flex items-center gap-2 bg-white rounded-2xl p-1.5 shadow-xl max-w-xl mx-auto">
+        <i data-lucide="search" class="w-5 h-5 text-slate-400 ml-3"></i>
+        <input id="search-input" type="text" placeholder="Search by name, category, or location..."
+          class="flex-1 text-slate-900 placeholder:text-slate-400 text-sm md:text-base py-2.5 px-1 outline-none bg-transparent" />
+        <button id="search-clear" class="hidden text-xs text-slate-400 hover:text-slate-600 px-2">Clear</button>
+        <button id="search-btn" class="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-xl text-sm font-semibold transition">
+          Search
+        </button>
       </div>
     </div>
   </header>
 
-  <main class="max-w-6xl mx-auto w-full px-4 py-10 space-y-14 flex-1">
+  <main class="max-w-7xl mx-auto px-4 py-8 flex-1">
 
-    <!-- Active filter banner -->
-    <div id="active-filter-banner" class="hidden bg-purple-50 border border-purple-100 text-purple-900 text-sm rounded-xl px-4 py-3 flex items-center justify-between">
-      <span id="active-filter-text"></span>
-      <button id="clear-filter-btn" class="font-semibold text-purple-700 hover:text-purple-900">Clear</button>
-    </div>
-
-    <!-- Results (shown when searching/filtering) -->
-    <section id="results-section" class="hidden space-y-6">
-      <div class="border-b border-slate-200 pb-3">
-        <h2 class="font-display text-xl font-bold text-slate-900">Results</h2>
+    <!-- Filter Bar -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 p-4 mb-8 shadow-sm">
+      <div class="flex flex-col md:flex-row md:items-center gap-4">
+        <!-- Categories -->
+        <div class="flex-1">
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Categories</p>
+          <div id="category-chips" class="flex flex-wrap gap-2">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+        
+        <!-- Filters -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="verified-only-chip" class="filter-chip verified-chip flex items-center gap-1.5">
+            <i data-lucide="badge-check" class="w-4 h-4"></i> Verified
+          </button>
+          <button id="sort-rating-btn" class="filter-chip flex items-center gap-1.5">
+            <i data-lucide="star" class="w-4 h-4"></i> Top Rated
+          </button>
+          <button id="sort-newest-btn" class="filter-chip flex items-center gap-1.5 active">
+            <i data-lucide="clock" class="w-4 h-4"></i> Newest
+          </button>
+          <button id="clear-filters-btn" class="text-xs text-slate-400 hover:text-slate-600 font-medium px-3">Clear all</button>
+        </div>
       </div>
-      <div id="results-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-    </section>
 
-    <!-- Default homepage sections -->
-    <div id="homepage-sections" class="space-y-14">
-
-      <!-- Growth Partners (Featured) -->
-      <section id="featured-section" class="hidden space-y-5">
-        <div class="border-b border-slate-200 pb-3">
-          <h2 class="font-display text-xl font-bold text-slate-900 flex items-center gap-2">
-            <span>🏆</span> Growth Partners
-          </h2>
-          <p class="text-xs text-slate-500 mt-0.5">Businesses that helped grow the Tracknrent community</p>
-        </div>
-        <div id="featured-scroll" class="card-scroll flex gap-5 overflow-x-auto pb-3"></div>
-      </section>
-
-      <!-- Newest Businesses -->
-      <section class="space-y-5">
-        <div class="border-b border-slate-200 pb-3">
-          <h2 class="font-display text-xl font-bold text-slate-900">Newest Businesses</h2>
-          <p class="text-xs text-slate-500 mt-0.5">Recently joined the marketplace</p>
-        </div>
-        <div id="newest-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-      </section>
-
-      <!-- Browse by Location (built dynamically from real businesses across Nigeria) -->
-      <section class="space-y-5">
-        <div class="border-b border-slate-200 pb-3">
-          <h2 class="font-display text-xl font-bold text-slate-900">Browse by Location</h2>
-          <p class="text-xs text-slate-500 mt-0.5">Rental businesses from across Nigeria — tap a location to filter</p>
-        </div>
-        <div id="city-chips" class="flex flex-wrap gap-2"></div>
-      </section>
-
-    </div>
-
-    <div id="empty-state" class="hidden text-center py-16">
-      <div class="w-14 h-14 bg-purple-50 text-purple-700 rounded-full flex items-center justify-center mx-auto mb-4 border border-purple-100">
-        <i data-lucide="search-x" class="w-6 h-6"></i>
+      <!-- Active filters display -->
+      <div id="active-filters" class="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-100 hidden">
+        <span class="text-xs text-slate-500 font-medium">Active filters:</span>
+        <div id="active-filter-tags" class="flex flex-wrap gap-1.5"></div>
       </div>
-      <h3 class="font-display font-bold text-slate-900 mb-1">Nothing matches yet</h3>
-      <p class="text-sm text-slate-500">Try a different word, or browse by category above.</p>
     </div>
+
+    <!-- Results Count -->
+    <div id="results-header" class="flex items-center justify-between mb-6">
+      <div>
+        <h2 id="results-title" class="font-display text-xl font-bold text-slate-900">All Businesses</h2>
+        <p id="results-count" class="text-sm text-slate-500">Loading...</p>
+      </div>
+      <div class="flex items-center gap-2 text-sm text-slate-500">
+        <span>Sort by:</span>
+        <select id="sort-select" class="bg-transparent border-none font-semibold text-slate-700 outline-none cursor-pointer">
+          <option value="newest">Newest</option>
+          <option value="rating">Top Rated</option>
+          <option value="name">Name A-Z</option>
+          <option value="featured">Featured</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Results Grid -->
+    <div id="results-grid" class="business-grid gap-6">
+      <!-- Rendered by JS -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="hidden text-center py-20">
+      <div class="w-16 h-16 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-purple-100">
+        <i data-lucide="store" class="w-8 h-8"></i>
+      </div>
+      <h3 class="font-display font-bold text-slate-900 text-lg mb-1">No businesses found</h3>
+      <p class="text-sm text-slate-500 max-w-sm mx-auto">Try adjusting your filters or search terms. New businesses are added daily.</p>
+      <button id="reset-empty-btn" class="mt-4 text-sm font-semibold text-purple-600 hover:text-purple-800">Clear all filters</button>
+    </div>
+
+    <!-- Load more (optional) -->
+    <div id="load-more-container" class="text-center mt-8 hidden">
+      <button id="load-more-btn" class="px-6 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+        Load more
+      </button>
+    </div>
+
   </main>
 
-  <footer class="mt-auto py-8 bg-slate-900 text-slate-400 text-center text-xs border-t border-slate-800">
-    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+  <footer class="mt-auto py-8 text-slate-400 text-center text-xs border-t border-slate-800" style="background-color: purple; color: white;">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
       <p>&copy; 2026 Tracknrent. All rights reserved.</p>
-      <a href="https://tracknrent.vercel.app" class="text-purple-400 hover:text-purple-300 transition">tracknrent.vercel.app</a>
+      <a href="https://tracknrent.vercel.app" class="text-purple-400 hover:text-purple-300 transition" style="color: rgb(228, 217, 217);">Tracknrent</a>
     </div>
   </footer>
 
-
-
-
-      <script src="assets/js/pwa.js"></script>
- <script src="sw.js"></script>    
-      <script type="module" src="assets/js/firebase.js"></script>
+  <script src="assets/js/pwa.js"></script>
+  <script src="sw.js"></script>    
+  <script type="module" src="assets/js/firebase.js"></script>
   <script type="module" src="assets/js/marketplace.js"></script>
 </body>
 </html>

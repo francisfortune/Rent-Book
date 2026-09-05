@@ -1,6 +1,4 @@
 import { auth, db } from "./firebase.js";
-import { getBusinessIdByEmail } from "./shared.js";
-
 import {
   collection,
   addDoc,
@@ -17,26 +15,20 @@ import { onAuthStateChanged } from
   "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 /* =========================
-   NOTIFICATION HELPER
+   BUSINESS LOOKUP
 ========================= */
-async function sendInventoryNotification(businessId, message, type = "inventory") {
-  try {
-    const notifRef = collection(db, "businesses", businessId, "notifications");
-    await addDoc(notifRef, {
-      message: message,
-      type: type,
-      triggeredBy: auth.currentUser.email,
-      createdAt: serverTimestamp(),
-      readBy: [],
-      deletedFor: []
-    });
-  } catch (err) {
-    console.error("Notification failed:", err);
-  }
+async function getBusinessId(email) {
+  const q = query(
+    collection(db, "businessMembers"),
+    where("email", "==", email)
+  );
+  const snap = await getDocs(q);
+  if (snap.empty) throw new Error("No business");
+  return snap.docs[0].data().businessId;
 }
 
 /* =========================
-   DOM ELEMENTS
+   DOM
 ========================= */
 const totalItemsEl = document.getElementById("totalItems");
 const availableItemsEl = document.getElementById("availableItems");
@@ -48,9 +40,10 @@ const calcItem = document.getElementById("calcItem");
 const calcQty = document.getElementById("calcQty");
 const calcResult = document.getElementById("calcResult");
 
+// Overbooked panel
 const overbookedList = document.getElementById("overbookedList");
 
-// Edit modal elements
+// Edit modal
 const editModal = document.getElementById("editModal");
 const editItemForm = document.getElementById("editItemForm");
 const editItemId = document.getElementById("editItemId");
@@ -62,63 +55,38 @@ const closeEditModal = document.getElementById("closeEditModal");
 const deleteItemBtn = document.getElementById("deleteItemBtn");
 
 /* =========================
-   HELPER FUNCTIONS
-========================= */
-
-
-/* =========================
-   OPEN EDIT MODAL
-========================= */
-function openEditModal(item) {
-  editItemId.value = item.id;
-  editItemName.value = item.name;
-  editItemQty.value = item.totalQuantity;
-  editItemAvail.value = item.availableQuantity;
-  editItemPrice.value = item.price;
-  editModal.classList.remove("hidden");
-}
-
-/* =========================
    RENDER INVENTORY
-========================= */
-function renderInventory(filteredItems, allItems) {
+========================= */function renderInventory(filteredItems, allItems) {
   inventoryList.innerHTML = "";
   calcItem.innerHTML = "";
 
-  let totalAssetsValue = 0;
-let totalAvailableQty = 0;
-let totalOutQty = 0;
+  let totalAvailableQty = 0;
+  let totalOutQty = 0;
 
-// Totals & dropdown
-allItems.forEach(item => {
-  const totalQty = Number(item.totalQuantity || 0);
-  const availableQty = Number(item.availableQuantity || 0);
-  const price = Number(item.price || 0);
+  /* ===== CALCULATE TOTALS ===== */
+  allItems.forEach(item => {
+    totalAvailableQty += item.availableQuantity;
+    totalOutQty += (item.totalQuantity - item.availableQuantity);
 
-  totalAvailableQty += availableQty;
-  totalOutQty += (totalQty - availableQty);
+    // Calculator dropdown
+    calcItem.innerHTML += `
+      <option value="${item.availableQuantity}">
+        ${item.name} (${item.availableQuantity} avail)
+      </option>
+    `;
+  });
 
-  // Asset value calculation
-  totalAssetsValue += totalQty * price;
+  /* ===== DASHBOARD CARDS ===== */
+  totalItemsEl.textContent = allItems.length;       // item count
+  availableItemsEl.textContent = totalAvailableQty; // total available qty
+  outItemsEl.textContent = totalOutQty;              // total out qty
 
-  calcItem.innerHTML += `
-    <option value="${availableQty}">
-      ${item.name} (${availableQty} avail)
-    </option>
-  `;
-});
-
-// Dashboard stats
-totalItemsEl.textContent = `₦${totalAssetsValue.toLocaleString()}`;
-availableItemsEl.textContent = totalAvailableQty.toLocaleString();
-outItemsEl.textContent = totalOutQty.toLocaleString();
-
-
-
-  // Inventory list
+  /* ===== INVENTORY LIST ===== */
   filteredItems.forEach(item => {
     const div = document.createElement("div");
-    div.className = "inventory-item flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100 mb-3";
+    div.className =
+      "inventory-item flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100 mb-3";
+
     div.innerHTML = `
       <div>
         <strong class="text-lg">${item.name}</strong><br>
@@ -132,115 +100,61 @@ outItemsEl.textContent = totalOutQty.toLocaleString();
         <span class="text-purple-600">₦${item.price} / unit</span>
       </div>
       <button class="edit-btn text-purple-600">
-        <span class="material-symbols-outlined">edit</span>
+        <ion-icon name="create-outline"></ion-icon>
       </button>
     `;
+
     div.querySelector(".edit-btn").onclick = () => openEditModal(item);
     inventoryList.appendChild(div);
   });
 }
 
+
+
 /* =========================
-   OVERBOOKED PANEL (SYNCED WITH BOOKINGS.JS)
-========================= */function listenToOverbooked(businessId) {
-  const overbookedList =
-    document.getElementById("overbookedList") ||
-    document.getElementById("overbooked-list");
-
-  if (!overbookedList) return;
-
+   OVERBOOKED PANEL
+========================= */
+function listenToOverbooked(businessId) {
   const ref = collection(db, "businesses", businessId, "bookings");
 
-  onSnapshot(ref, (snap) => {
+  onSnapshot(ref, snap => {
+    if (!overbookedList) return;
+
     overbookedList.innerHTML = "";
 
-    const today = new Date().toISOString().split("T")[0];
-
     const overbooked = snap.docs
-      .map((d) => ({ id: d.id, ...d.data() }))
-      .filter((b) => {
-        const status =
-          b.status === "returned"
-            ? "returned"
-            : today > b.event?.returnDate
-            ? "overdue"
-            : "active";
-
-        return (
-          status !== "returned" &&
-          b.items?.some(
-            (i) =>
-              Number(i.shortage || 0) > 0 ||
-              i.supplier ||
-              i.vendor ||
-              i.vendorName
-          )
-        );
-      });
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(b =>
+        b.status === "active" &&
+        b.items?.some(i => i.shortage > 0)
+      );
 
     if (!overbooked.length) {
-      overbookedList.innerHTML = `
-        <p class="text-center text-gray-400 py-6 italic text-sm">
-          No overbooked items 🎉
-        </p>
-      `;
+      overbookedList.innerHTML =
+        `<p class="text-gray-500">No overbooked items 🎉</p>`;
       return;
     }
 
-    overbooked.forEach((b) => {
-      const borrowedItems = b.items
-        .filter(
-          (i) =>
-            Number(i.shortage || 0) > 0 ||
-            i.supplier ||
-            i.vendor ||
-            i.vendorName
-        )
-        .map((i) => {
-          const vendor =
-            i.supplier ||
-            i.vendorName ||
-            i.vendor ||
-            "Unknown Vendor";
-
-          const qty = Number(i.shortage || i.qty || 0);
-
-          return `• ${qty} × ${i.name}
-            <span class="text-purple-700 font-bold">[${vendor}]</span>`;
-        });
+    overbooked.forEach(b => {
+      const borrowed = b.items
+        .filter(i => i.shortage > 0)
+        .map(i => `${i.shortage} × ${i.name}`)
+        .join(", ");
 
       const div = document.createElement("div");
       div.className =
-        "p-4 mb-3 bg-white border border-gray-100 rounded-2xl shadow-sm border-l-4 border-l-orange-500 transition-all hover:shadow-md cursor-pointer";
+        "p-3 bg-orange-50 border border-orange-200 rounded-lg cursor-pointer hover:bg-orange-100";
 
       div.innerHTML = `
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="font-bold text-gray-900 text-sm">
-              ${b.client?.name || "Client"}
-            </p>
-            <p class="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
-              <span class="material-symbols-outlined" style="font-size: 14px;">calendar_today</span>
-              ${b.event?.date || "No Date"}
-            </p>
-          </div>
-          <span class="bg-orange-100 text-orange-600 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
-            Shortage
-          </span>
-        </div>
-
-        <div class="bg-purple-50 border border-purple-100 rounded-xl p-3 mt-3">
-          <p class="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-1">
-            Vendor / Borrowed Items
-          </p>
-          <div class="text-[11px] text-gray-700 leading-relaxed">
-            ${borrowedItems.join("<br>")}
-          </div>
-        </div>
+        <p class="font-semibold">${b.client?.name}</p>
+        <p class="text-xs text-gray-600">${b.event?.date}</p>
+        <p class="text-orange-700 text-sm">
+          Borrowed: ${borrowed}
+        </p>
       `;
 
       div.onclick = () => {
-        window.location.href = `bookings.html?highlight=${b.id}`;
+        window.location.href = `bookings.html#${b.id}`;
       };
 
       overbookedList.appendChild(div);
@@ -248,28 +162,9 @@ outItemsEl.textContent = totalOutQty.toLocaleString();
   });
 }
 
-
 /* =========================
-   AUTH & LIVE DATA
+   AUTH + LIVE DATA
 ========================= */
-function showOfflineBanner() {
-  if (document.getElementById("offlineBanner")) return;
-  const banner = document.createElement("div");
-  banner.id = "offlineBanner";
-  banner.style.cssText = "position: fixed; top: 0; left: 0; right: 0; background: rgba(128, 0, 128, 0.95); backdrop-filter: blur(10px); color: white; text-align: center; padding: 12px; z-index: 99999; font-weight: 500; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; gap: 8px;";
-  banner.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px; vertical-align: middle;">wifi_off</span> Offline Mode — Using cached local data`;
-  document.body.appendChild(banner);
-}
-
-function showErrorBanner(message) {
-  if (document.getElementById("errorBanner")) return;
-  const banner = document.createElement("div");
-  banner.id = "errorBanner";
-  banner.style.cssText = "position: fixed; top: 0; left: 0; right: 0; background: rgba(220, 38, 38, 0.95); backdrop-filter: blur(10px); color: white; text-align: center; padding: 12px; z-index: 99999; font-weight: 500; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; gap: 8px;";
-  banner.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px; vertical-align: middle;">error</span> Error: ${message}. Please refresh or try logging out.`;
-  document.body.appendChild(banner);
-}
-
 onAuthStateChanged(auth, async user => {
   if (!user) {
     window.location.href = "signup.html";
@@ -277,10 +172,7 @@ onAuthStateChanged(auth, async user => {
   }
 
   try {
-    const businessId = await getBusinessIdByEmail(user.email, user);
-    if (!navigator.onLine) {
-      showOfflineBanner();
-    }
+    const businessId = await getBusinessId(user.email);
     const invRef = collection(db, "businesses", businessId, "inventory");
 
     onSnapshot(invRef, snap => {
@@ -299,7 +191,19 @@ onAuthStateChanged(auth, async user => {
 
       function filterAndRender() {
         const q = inventorySearch.value.toLowerCase();
-        const filtered = allItems.filter(i => i.name.toLowerCase().includes(q));
+        const filtered = allItems.filter(i =>
+          i.name.toLowerCase().includes(q)
+        );
+
+        if (!allItems.length) {
+          inventoryList.innerHTML =
+            "<p class='text-center text-gray-500'>No inventory items yet</p>";
+          totalItemsEl.textContent = "0";
+          availableItemsEl.textContent = "0";
+          outItemsEl.textContent = "0";
+          return;
+        }
+
         renderInventory(filtered, allItems);
       }
 
@@ -309,84 +213,66 @@ onAuthStateChanged(auth, async user => {
 
     listenToOverbooked(businessId);
 
+    /* ADD ITEM */
+    document.getElementById("addItemForm")
+      .addEventListener("submit", async e => {
+        e.preventDefault();
 
- // Add new item
-document.getElementById("addItemForm").addEventListener("submit", async e => {
-  e.preventDefault();
-  const name = itemName.value.trim();
-  const qty = Number(itemQty.value);
+        await addDoc(invRef, {
+          name: itemName.value.trim(),
+          totalQuantity: Number(itemQty.value),
+          availableQuantity: Number(itemQty.value),
+          price: Number(itemPrice.value),
+          createdAt: serverTimestamp()
+        });
 
-  await addDoc(invRef, {
-    name: name,
-    totalQuantity: qty,
-    availableQuantity: qty,
-    price: Number(itemPrice.value),
-    createdAt: serverTimestamp()
-  });
+        e.target.reset();
+      });
 
-  // Notification
-  await sendInventoryNotification(businessId, `New item added: ${name} (${qty} units)`, "add");
-  
-  e.target.reset();
-});
-    // Close edit modal
-    closeEditModal.onclick = () => editModal.classList.add("hidden");
+    /* EDIT MODAL */
+    function openEditModal(item) {
+      editItemId.value = item.id;
+      editItemName.value = item.name;
+      editItemQty.value = item.totalQuantity;
+      editItemAvail.value = item.availableQuantity;
+      editItemPrice.value = item.price;
+      editModal.classList.remove("hidden");
+    }
 
-  // Save changes in edit modal
-editItemForm.onsubmit = async e => {
-  e.preventDefault();
-  const name = editItemName.value.trim();
-  const avail = Number(editItemAvail.value);
-  const ref = doc(db, "businesses", businessId, "inventory", editItemId.value);
+    closeEditModal.onclick = () =>
+      editModal.classList.add("hidden");
 
-  await updateDoc(ref, {
-    name: name,
-    totalQuantity: Number(editItemQty.value),
-    availableQuantity: avail,
-    price: Number(editItemPrice.value),
-    updatedAt: serverTimestamp()
-  });
+    editItemForm.onsubmit = async e => {
+      e.preventDefault();
+      const ref = doc(db, "businesses", businessId, "inventory", editItemId.value);
 
-  // 🔔 Trigger Low Stock Notification
-  if (avail <= 5) {
-    await sendInventoryNotification(businessId, `⚠️ Low Stock Alert: ${name} only has ${avail} left!`, "inventory");
-  } else {
-    await sendInventoryNotification(businessId, `Updated item: ${name}`, "inventory");
-  }
+      await updateDoc(ref, {
+        name: editItemName.value.trim(),
+        totalQuantity: Number(editItemQty.value),
+        availableQuantity: Number(editItemAvail.value),
+        price: Number(editItemPrice.value),
+        updatedAt: serverTimestamp()
+      });
 
-  editModal.classList.add("hidden");
-};
-// Delete item
-deleteItemBtn.onclick = async () => {
-  const name = editItemName.value; // Get name before deleting
-  if (!confirm(`Are you sure you want to delete ${name}?`)) return;
-  
-  await deleteDoc(doc(db, "businesses", businessId, "inventory", editItemId.value));
-  
-  await sendInventoryNotification(businessId, `Permanent Delete: ${name} was removed from inventory`, "inventory");
-  
-  editModal.classList.add("hidden");
-};
+      editModal.classList.add("hidden");
+    };
+
+    deleteItemBtn.onclick = async () => {
+      if (!confirm("Delete this item?")) return;
+      await deleteDoc(
+        doc(db, "businesses", businessId, "inventory", editItemId.value)
+      );
+      editModal.classList.add("hidden");
+    };
+
   } catch (err) {
     console.error(err);
-    if (!navigator.onLine || err.message === "OFFLINE_NO_CACHE") {
-      showOfflineBanner();
-    } else if (err.message === "NO_BUSINESS" || err.message === "Business not found") {
-      if (user && user.uid) {
-        localStorage.removeItem(`businessId_${user.uid}`);
-      }
-      window.location.href = "setup.html";
-    } else {
-      if (user && user.uid) {
-        localStorage.removeItem(`businessId_${user.uid}`);
-      }
-      showErrorBanner(err.message || err);
-    }
+    window.location.href = "setup.html";
   }
 });
 
 /* =========================
-   AVAILABILITY CHECK
+   AVAILABILITY CHECK (IMPROVED)
 ========================= */
 document.getElementById("checkBtn").onclick = () => {
   const available = Number(calcItem.value);
@@ -400,143 +286,13 @@ document.getElementById("checkBtn").onclick = () => {
 
   if (needed <= available) {
     const remaining = available - needed;
-    calcResult.textContent = `Available ✅ (${remaining} will remain)`;
+    calcResult.textContent =
+      `Available ✅ (${remaining} will remain)`;
     calcResult.style.color = "green";
   } else {
     const shortage = needed - available;
-    calcResult.textContent = `Not enough ❌ (short by ${shortage})`;
+    calcResult.textContent =
+      `Not enough ❌ (short by ${shortage})`;
     calcResult.style.color = "red";
   }
 };
-// // ===== DYNAMIC BUY ME A COFFEE BUTTON WITH FLOATING ANIMATION =====
-// (function() {
-//   const bmcLink = "https://www.buymeacoffee.com/francisfortune"; // your profile link
-
-//   // Create Buy Me a Coffee button
-//   const coffeeBtn = document.createElement("button");
-//   coffeeBtn.id = "buyCoffeeBtn";
-//   coffeeBtn.innerHTML = "☕ Support Me";
-//   coffeeBtn.style.position = "fixed";
-//   coffeeBtn.style.bottom = "80px"; // leave space for bottom nav
-//   coffeeBtn.style.right = "20px";
-//   coffeeBtn.style.background = "Purple";
-//   coffeeBtn.style.color = "#ffffff";
-//   coffeeBtn.style.padding = "0.7rem 1.5rem";
-//   coffeeBtn.style.fontWeight = "700";
-//   coffeeBtn.style.borderRadius = "50px";
-//   coffeeBtn.style.border = "none";
-//   coffeeBtn.style.cursor = "pointer";
-//   coffeeBtn.style.boxShadow = "0 8px 16px rgba(0,0,0,0.3)";
-//   coffeeBtn.style.zIndex = "9999";
-//   coffeeBtn.style.display = "flex";
-//   coffeeBtn.style.alignItems = "center";
-//   coffeeBtn.style.justifyContent = "center";
-//   coffeeBtn.style.transition = "transform 0.3s, box-shadow 0.3s";
-//   coffeeBtn.style.fontSize = "1.3rem";
-
-//   // Hover effect
-//   coffeeBtn.onmouseover = () => {
-//     coffeeBtn.style.transform = "translateY(-6px)";
-//     coffeeBtn.style.boxShadow = "0 12px 24px rgba(0,0,0,0.35)";
-//   };
-//   coffeeBtn.onmouseout = () => {
-//     coffeeBtn.style.transform = "translateY(0)";
-//     coffeeBtn.style.boxShadow = "0 8px 16px rgba(0,0,0,0.3)";
-//   };
-
-//   // Floating animation CSS
-//   const style = document.createElement("style");
-//   style.innerHTML = `
-//     @keyframes floatButton {
-//       0% { transform: translateY(0px); }
-//       50% { transform: translateY(-8px); }
-//       100% { transform: translateY(0px); }
-//     }
-//     #buyCoffeeBtn {
-//       animation: floatButton 3s ease-in-out infinite;
-//     }
-//     /* Optional: Product Hunt button styles if used */
-//     #productHuntBtn {
-//       animation: floatButton 3s ease-in-out infinite;
-//       background: linear-gradient(135deg, #DA552F, #FF6F4C);
-//       color: #fff;
-//       font-weight: 700;
-//       border-radius: 50px;
-//       border: none;
-//       cursor: pointer;
-//       box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-//       padding: 0.7rem 1.5rem;
-//       display: flex;
-//       align-items: center;
-//       justify-content: center;
-//       transition: transform 0.3s, box-shadow 0.3s;
-//       z-index: 9999;
-//       position: fixed;
-//       bottom: 20px; /* will adjust dynamically */
-//       right: 20px;
-//     }
-//     #productHuntBtn:hover {
-//       transform: translateY(-6px);
-//       box-shadow: 0 12px 24px rgba(0,0,0,0.35);
-//     }
-//   `;
-//   document.head.appendChild(style);
-
-//   // Responsive function
-//   function updateBtnSize() {
-//     const bottomMargin = 20; // default bottom spacing
-//     if (window.innerWidth < 768) {
-//       coffeeBtn.style.padding = "0.5rem 1.3rem";
-//       coffeeBtn.style.fontSize = "1.4rem";
-//       coffeeBtn.style.bottom = "130px"; // extra space for bottom nav
-//       coffeeBtn.style.right = "15px";
-//       // If Product Hunt button is used
-//       const phBtn = document.getElementById("productHuntBtn");
-//       if (phBtn) phBtn.style.bottom = "40px"; // below coffee button
-//     } else {
-//       coffeeBtn.style.padding = "0.7rem 1.5rem";
-//       coffeeBtn.style.fontSize = "1rem";
-//       coffeeBtn.style.bottom = "80px";
-//       coffeeBtn.style.right = "20px";
-//       const phBtn = document.getElementById("productHuntBtn");
-//       if (phBtn) phBtn.style.bottom = "20px";
-//     }
-//   }
-//   window.addEventListener("resize", updateBtnSize);
-//   updateBtnSize();
-
-//   // Append Buy Me a Coffee button
-//   document.body.appendChild(coffeeBtn);
-
-//   // Popup portal
-//   coffeeBtn.addEventListener("click", () => {
-//     const popupWidth = 500;
-//     const popupHeight = 700;
-//     const left = (window.innerWidth / 2) - (popupWidth / 2);
-//     const top = (window.innerHeight / 2) - (popupHeight / 2);
-
-//     window.open(
-//       bmcLink,
-//       "BuyMeACoffee",
-//       `width=${popupWidth},height=${popupHeight},top=${top},left=${left},resizable=yes,scrollbars=yes`
-//     );
-//   });
-
-//   // Tooltip/Bio
-//   coffeeBtn.title = `
-// Hi! I'm Francis Fortune.
-// I’m passionate about motivating young teens to explore technology, learn new skills, and create innovative solutions.
-// .
-// `;
-
-  // ===== PRODUCT HUNT BUTTON (COMMENTED OUT FOR NOW) =====
-  /*
-  const phLink = "https://www.producthunt.com/posts/your-product";
-  const phBtn = document.createElement("button");
-  phBtn.id = "productHuntBtn";
-  phBtn.innerHTML = "🚀 Product Hunt";
-  phBtn.onclick = () => window.open(phLink, "_blank");
-  document.body.appendChild(phBtn);
-  updateBtnSize();
-  */
-// })();
