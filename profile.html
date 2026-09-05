@@ -6,170 +6,461 @@
   <title>Public Storefront | Tracknrent</title>
   <meta name="description" content="Browse rental equipment, photos and reviews — book directly on WhatsApp." />
 
+  <!-- Preconnect for faster loading -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
-    :root{
-      --ink:#221030;
-      --purple-950:#2E1140;
-      --purple-800:#4C1D7A;
-      --purple-600:#7C3AED;
-      --amber:#F5A524;
-      --amber-dark:#C97B0E;
-      --emerald:#10B981;
-      --slate-bg:#FBF9F6;
+    /* ============================================
+       CUSTOM PROPERTIES
+    ============================================ */
+    :root {
+      --ink: #221030;
+      --purple-950: #2E1140;
+      --purple-800: #4C1D7A;
+      --purple-600: #7C3AED;
+      --amber: #F5A524;
+      --amber-dark: #C97B0E;
+      --emerald: #10B981;
+      --slate-bg: #FBF9F6;
     }
-    body{ font-family:'Inter',sans-serif; background:var(--slate-bg); }
-    .font-display{ font-family:'Fraunces',serif; }
 
-    .status-pill{ font-size:.7rem; font-weight:600; padding:.28rem .6rem; border-radius:999px; white-space:nowrap; }
-    .status-available{ background:#ECFDF5; color:var(--emerald); }
-    .status-booked{ background:#FEF2F2; color:#DC2626; }
+    /* ============================================
+       BASE STYLES
+    ============================================ */
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--slate-bg);
+    }
+    .font-display {
+      font-family: 'Fraunces', serif;
+    }
 
-    .equipment-card{
-      background:#fff; border-radius:1.1rem; border:1px solid #EEE9E2;
-      display:flex; flex-direction:column; justify-content:space-between;
-      border-left:4px solid #E5E1DA; transition:border-color .2s, transform .2s;
+    /* ============================================
+       STORE LOGO - FIXED
+    ============================================ */
+    .store-logo {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.12);
+      border: 2px solid rgba(255,255,255,.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: #fff;
+      overflow: hidden;
+      flex-shrink: 0;
     }
-    .equipment-card.is-available{ border-left-color:var(--emerald); }
-    .equipment-card.is-booked{ border-left-color:#F3B4B4; }
-    .equipment-card:hover{ transform:translateY(-2px); }
-    .equipment-card-body{ padding:1.25rem 1.25rem .75rem; }
-    .equipment-card-footer{ padding:1rem 1.25rem; border-top:1px solid #F4F1EA; display:flex; align-items:center; justify-content:space-between; }
-    .equipment-inquire-btn{
-      font-size:.75rem; font-weight:700; background:var(--ink); color:#fff;
-      padding:.5rem .9rem; border-radius:.6rem; transition:background .15s;
-    }
-    .equipment-inquire-btn:hover{ background:var(--purple-800); }
 
-    /* Gallery */
-    .gallery-tile{
-      position:relative; aspect-ratio:1/1; border-radius:.9rem; overflow:hidden;
-      background:#EEE9E2; cursor:pointer; border:none; padding:0;
+    @media (min-width: 640px) {
+      .store-logo {
+        width: 72px;
+        height: 72px;
+        font-size: 1.4rem;
+      }
     }
-    .gallery-tile img, .gallery-tile video{ width:100%; height:100%; object-fit:cover; display:block; transition:transform .3s; }
-    .gallery-tile:hover img, .gallery-tile:hover video{ transform:scale(1.05); }
-    .gallery-play{
-      position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-      background:rgba(34,16,48,.28);
-    }
-    .gallery-play i{ background:#fff; color:var(--ink); border-radius:999px; padding:.5rem; }
 
-    .lightbox-overlay{
-      display:none; position:fixed; inset:0; background:rgba(20,10,28,.92); z-index:200;
-      align-items:center; justify-content:center; padding:1.5rem;
+    /* ============================================
+       STATUS PILLS
+    ============================================ */
+    .status-pill {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.28rem 0.6rem;
+      border-radius: 999px;
+      white-space: nowrap;
     }
-    .lightbox-overlay.open{ display:flex; }
-    .lightbox-inner{ max-width:900px; width:100%; }
-    .lightbox-media{ width:100%; max-height:82vh; object-fit:contain; border-radius:.75rem; }
-
-    /* Ratings */
-    .star-filled{ color:var(--amber); fill:var(--amber); }
-    .star-empty{ color:#D8D2C6; fill:#D8D2C6; }
-    .category-chip{
-      font-size:.7rem; font-weight:600; padding:.3rem .7rem; border-radius:999px;
-      background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22); color:#EDE4F9;
-      white-space:nowrap;
+    .status-available {
+      background: #ECFDF5;
+      color: var(--emerald);
     }
-    .dist-row{ display:flex; align-items:center; gap:.6rem; font-size:.75rem; color:#6B7280; margin-bottom:.4rem; }
-    .dist-label{ width:1.8rem; text-align:right; font-weight:600; }
-    .dist-track{ flex:1; height:6px; border-radius:999px; background:#EFEAE1; overflow:hidden; }
-    .dist-fill{ height:100%; background:var(--amber); border-radius:999px; }
-    .dist-count{ width:1.4rem; text-align:right; }
-    .review-row{ padding:1rem 0; border-bottom:1px solid #F4F1EA; }
-    .review-row:last-child{ border-bottom:none; }
-    .rating-input-star{ cursor:pointer; width:1.6rem; height:1.6rem; }
+    .status-booked {
+      background: #FEF2F2;
+      color: #DC2626;
+    }
 
-    ::-webkit-scrollbar{ height:6px; }
+    /* ============================================
+       EQUIPMENT CARDS
+    ============================================ */
+    .equipment-card {
+      background: #fff;
+      border-radius: 1.1rem;
+      border: 1px solid #EEE9E2;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-left: 4px solid #E5E1DA;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .equipment-card.is-available {
+      border-left-color: var(--emerald);
+    }
+    .equipment-card.is-booked {
+      border-left-color: #F3B4B4;
+    }
+    .equipment-card:hover {
+      transform: translateY(-2px);
+    }
+    .equipment-card-body {
+      padding: 1.25rem 1.25rem 0.75rem;
+    }
+    .equipment-card-footer {
+      padding: 1rem 1.25rem;
+      border-top: 1px solid #F4F1EA;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .equipment-inquire-btn {
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: var(--ink);
+      color: #fff;
+      padding: 0.5rem 0.9rem;
+      border-radius: 0.6rem;
+      transition: background 0.15s;
+    }
+    .equipment-inquire-btn:hover {
+      background: var(--purple-800);
+    }
+
+    /* ============================================
+       GALLERY
+    ============================================ */
+    .gallery-tile {
+      position: relative;
+      aspect-ratio: 1/1;
+      border-radius: 0.9rem;
+      overflow: hidden;
+      background: #EEE9E2;
+      cursor: pointer;
+      border: none;
+      padding: 0;
+    }
+    .gallery-tile img,
+    .gallery-tile video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.3s;
+    }
+    .gallery-tile:hover img,
+    .gallery-tile:hover video {
+      transform: scale(1.05);
+    }
+    .gallery-play {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(34, 16, 48, 0.28);
+    }
+    .gallery-play i {
+      background: #fff;
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 0.5rem;
+    }
+
+    /* ============================================
+       LIGHTBOX
+    ============================================ */
+    .lightbox-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(20, 10, 28, 0.92);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .lightbox-overlay.open {
+      display: flex;
+    }
+    .lightbox-inner {
+      max-width: 900px;
+      width: 100%;
+    }
+    .lightbox-media {
+      width: 100%;
+      max-height: 82vh;
+      object-fit: contain;
+      border-radius: 0.75rem;
+    }
+
+    /* ============================================
+       RATINGS
+    ============================================ */
+    .star-filled {
+      color: var(--amber);
+      fill: var(--amber);
+    }
+    .star-empty {
+      color: #D8D2C6;
+      fill: #D8D2C6;
+    }
+    .category-chip {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.3rem 0.7rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: #EDE4F9;
+      white-space: nowrap;
+    }
+    .dist-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.75rem;
+      color: #6B7280;
+      margin-bottom: 0.4rem;
+    }
+    .dist-label {
+      width: 1.8rem;
+      text-align: right;
+      font-weight: 600;
+    }
+    .dist-track {
+      flex: 1;
+      height: 6px;
+      border-radius: 999px;
+      background: #EFEAE1;
+      overflow: hidden;
+    }
+    .dist-fill {
+      height: 100%;
+      background: var(--amber);
+      border-radius: 999px;
+    }
+    .dist-count {
+      width: 1.4rem;
+      text-align: right;
+    }
+    .review-row {
+      padding: 1rem 0;
+      border-bottom: 1px solid #F4F1EA;
+    }
+    .review-row:last-child {
+      border-bottom: none;
+    }
+    .rating-input-star {
+      cursor: pointer;
+      width: 1.6rem;
+      height: 1.6rem;
+    }
+
+    /* ============================================
+       SCROLLBAR
+    ============================================ */
+    ::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    /* ============================================
+       RESPONSIVE MOBILE CONTACT BAR
+    ============================================ */
+    .mobile-contact-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 40;
+      background: white;
+      border-top: 1px solid #EEE9E2;
+      padding: 12px 16px;
+      display: none;
+      gap: 10px;
+    }
+
+    @media (max-width: 768px) {
+      .mobile-contact-bar {
+        display: flex;
+      }
+    }
+
+    .mobile-contact-bar a {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .mobile-contact-bar a:active {
+      opacity: 0.8;
+    }
+    .mobile-contact-bar .whatsapp {
+      background: var(--emerald);
+      color: white;
+    }
+    .mobile-contact-bar .call {
+      background: var(--ink);
+      color: white;
+    }
+
+    /* ============================================
+       RESPONSIVE ADJUSTMENTS
+    ============================================ */
+    @media (max-width: 640px) {
+      .equipment-card {
+        border-radius: 0.8rem;
+      }
+      .equipment-card-body {
+        padding: 0.9rem 0.9rem 0.5rem;
+      }
+      .equipment-card-footer {
+        padding: 0.7rem 0.9rem;
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+      .gallery-tile {
+        border-radius: 0.6rem;
+      }
+      .category-chip {
+        font-size: 0.6rem;
+        padding: 0.2rem 0.5rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .hero-padding {
+        padding: 1.5rem !important;
+      }
+      .store-name {
+        font-size: 1.8rem !important;
+      }
+      .inventory-grid {
+        grid-template-columns: 1fr !important;
+      }
+      .gallery-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+      }
+      .reviews-grid {
+        grid-template-columns: 1fr !important;
+      }
+    }
   </style>
 </head>
+
 <body class="text-slate-800 antialiased min-h-screen flex flex-col">
 
+  <!-- ===== TOP NAV ===== -->
   <nav class="text-white text-xs py-2 px-4 text-center border-b" style="background:var(--purple-950); border-color:rgba(255,255,255,.08);">
-    <div class="max-w-5xl mx-auto flex items-center justify-between">
+    <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
       <span class="flex items-center gap-1.5 text-purple-200">
         <span class="w-2 h-2 rounded-full" style="background:var(--emerald);"></span>
         Verified Tracknrent Vendor
       </span>
-      <a href="https://tracknrent.vercel.app/marketplace.html" class="hover:text-white transition font-medium text-purple-300">Powered by Tracknrent Marketplace &rarr;</a>
+      <a href="https://tracknrent.vercel.app/marketplace.html" class="hover:text-white transition font-medium text-purple-300 text-center">
+        Powered by Tracknrent Marketplace &rarr;
+      </a>
     </div>
   </nav>
 
-  <!-- Skeleton Loader -->
-  <div id="loader" class="max-w-5xl mx-auto w-full p-6 space-y-6 animate-pulse">
-    <div class="h-64 rounded-3xl w-full" style="background:#EEE7F5;"></div>
-    <div class="h-8 rounded w-1/4" style="background:#EEE7F5;"></div>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  <!-- ===== SKELETON LOADER ===== -->
+  <div id="loader" class="max-w-5xl mx-auto w-full p-4 md:p-6 space-y-6 animate-pulse">
+    <div class="h-48 sm:h-56 md:h-64 rounded-3xl w-full" style="background:#EEE7F5;"></div>
+    <div class="h-8 rounded w-1/3" style="background:#EEE7F5;"></div>
+    <div class="h-4 rounded w-2/3" style="background:#EEE7F5;"></div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
       <div class="h-40 rounded-2xl" style="background:#EEE7F5;"></div>
       <div class="h-40 rounded-2xl" style="background:#EEE7F5;"></div>
       <div class="h-40 rounded-2xl" style="background:#EEE7F5;"></div>
     </div>
   </div>
 
-  <main id="storefront" class="hidden max-w-5xl mx-auto w-full p-4 md:p-6 space-y-12 flex-1 pb-24 md:pb-6">
+  <!-- ===== STOREFRONT CONTENT ===== -->
+  <main id="storefront" class="hidden max-w-5xl mx-auto w-full p-3 sm:p-4 md:p-6 space-y-8 md:space-y-12 flex-1 pb-20 md:pb-6">
 
-    <!-- Hero -->
-    <header class="relative text-white rounded-3xl p-6 md:p-10 shadow-xl overflow-hidden border"
+    <!-- ===== HERO SECTION ===== -->
+    <header class="relative text-white rounded-2xl md:rounded-3xl p-5 sm:p-6 md:p-10 shadow-xl overflow-hidden border hero-padding"
             style="background:linear-gradient(135deg,var(--purple-950),var(--purple-800) 65%,#2A0E45); border-color:rgba(255,255,255,.08);">
-      <!-- Owner's cover/banner image, if uploaded. Sits behind everything
-           with a gradient wash so text stays readable over any photo. -->
-      <div id="store-cover" class="absolute inset-0 bg-cover bg-center opacity-0 transition-opacity duration-300" style="z-index:0;"></div>
+      
+      <!-- Cover Image Background -->
+      <div id="store-cover" class="absolute inset-0 bg-cover bg-center opacity-0 transition-opacity duration-500" style="z-index:0;"></div>
       <div class="absolute inset-0 pointer-events-none" style="z-index:1; background:linear-gradient(135deg, rgba(46,17,64,.88), rgba(76,29,122,.80) 65%, rgba(42,14,69,.9));"></div>
 
-      <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full blur-3xl pointer-events-none" style="background:rgba(124,58,237,.22); z-index:1;"></div>
+      <!-- Decorative Blob -->
+      <div class="absolute -top-24 -right-24 w-48 sm:w-64 md:w-96 h-48 sm:h-64 md:h-96 rounded-full blur-3xl pointer-events-none" style="background:rgba(124,58,237,.22); z-index:1;"></div>
 
-      <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div class="space-y-3 max-w-2xl">
-          <div class="flex items-center gap-4">
-            <div id="store-logo" style="width:72px; height:72px; border-radius:50%; background:rgba(255,255,255,.12); border:2px solid rgba(255,255,255,.25); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.4rem; color:#fff; overflow:hidden; flex-shrink:0;">?</div>
-            <div id="profile-badges" class="flex flex-wrap items-center gap-2"></div>
+      <!-- Content -->
+      <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
+        
+        <!-- Left: Logo + Name + Bio -->
+        <div class="space-y-2 sm:space-y-3 max-w-2xl w-full">
+          <div class="flex items-center gap-3 sm:gap-4">
+            <!-- ✅ FIXED: Store Logo using CSS class -->
+            <div id="store-logo" class="store-logo">?</div>
+            <div id="profile-badges" class="flex flex-wrap items-center gap-1.5 sm:gap-2"></div>
           </div>
-          <h1 id="store-name" class="font-display text-4xl md:text-5xl font-semibold tracking-tight text-white">Loading store…</h1>
-          <p id="store-bio" class="text-purple-100/90 text-sm md:text-base leading-relaxed"></p>
+          
+          <h1 id="store-name" class="store-name font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight text-white break-words">Loading store…</h1>
+          
+          <p id="store-bio" class="text-purple-100/90 text-sm sm:text-base leading-relaxed"></p>
 
-          <!-- Services / categories -->
+          <!-- Categories -->
           <div id="store-categories" class="hidden flex-wrap items-center gap-1.5 pt-0.5"></div>
 
-          <!-- Rating summary -->
-          <div class="flex items-center gap-2 pt-1">
+          <!-- Rating -->
+          <div class="flex items-center gap-2 pt-1 flex-wrap">
             <span id="rating-average-stars" class="flex items-center gap-0.5"></span>
             <span id="rating-average" class="text-sm font-bold text-white">—</span>
             <span id="rating-count" class="text-xs text-purple-200">No reviews yet</span>
           </div>
 
-          <!-- Social handles -->
+          <!-- Social Links -->
           <div id="social-links" class="hidden items-center gap-3 pt-1"></div>
         </div>
 
-        <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+        <!-- Right: Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
           <a id="btn-whatsapp" target="_blank" rel="noopener noreferrer"
-             class="inline-flex items-center justify-center gap-2.5 text-white px-6 py-3 rounded-xl font-semibold transition active:scale-95"
+             class="inline-flex items-center justify-center gap-2.5 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold transition active:scale-95 text-sm sm:text-base"
              style="background:var(--emerald);">
-            <i data-lucide="message-square" class="w-5 h-5"></i> WhatsApp
+            <i data-lucide="message-square" class="w-4 h-4 sm:w-5 sm:h-5"></i> WhatsApp
           </a>
           <a id="btn-phone"
-             class="inline-flex items-center justify-center gap-2.5 backdrop-blur-md text-white border px-6 py-3 rounded-xl font-semibold transition active:scale-95"
+             class="inline-flex items-center justify-center gap-2.5 backdrop-blur-md text-white border px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold transition active:scale-95 text-sm sm:text-base"
              style="background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.18);">
-            <i data-lucide="phone" class="w-5 h-5"></i> Call direct
+            <i data-lucide="phone" class="w-4 h-4 sm:w-5 sm:h-5"></i> Call
           </a>
         </div>
       </div>
 
-      <div id="address-container" class="relative z-10 mt-8 pt-6 border-t flex items-center gap-2 text-xs md:text-sm text-purple-200" style="border-color:rgba(255,255,255,.14);">
+      <!-- Address -->
+      <div id="address-container" class="relative z-10 mt-4 sm:mt-6 md:mt-8 pt-4 sm:pt-6 border-t flex items-center gap-2 text-xs sm:text-sm text-purple-200" style="border-color:rgba(255,255,255,.14);">
         <i data-lucide="map-pin" class="w-4 h-4 text-purple-300"></i>
         <span id="store-address">Location not specified</span>
       </div>
     </header>
 
-    <!-- Deposit & Caution Policy Banner (only shown if the owner set one) -->
-    <section id="deposit-banner" class="hidden bg-white rounded-2xl border p-5 flex items-start gap-3" style="border-color:#F0D9A8; background:#FFFBF0;">
-      <div class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style="background:#FDF1D6; color:#C97B0E;">
-        <i data-lucide="shield-check" class="w-5 h-5"></i>
+    <!-- ===== DEPOSIT BANNER ===== -->
+    <section id="deposit-banner" class="hidden bg-white rounded-2xl border p-4 sm:p-5 flex items-start gap-3" style="border-color:#F0D9A8; background:#FFFBF0;">
+      <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center flex-shrink-0" style="background:#FDF1D6; color:#C97B0E;">
+        <i data-lucide="shield-check" class="w-4 h-4 sm:w-5 sm:h-5"></i>
       </div>
       <div class="min-w-0">
         <h3 class="font-semibold text-sm text-slate-900 mb-1">Deposit &amp; rental requirements</h3>
@@ -177,42 +468,43 @@
       </div>
     </section>
 
-    <!-- Equipment Catalog -->
-    <section class="space-y-6">
-      <div class="flex items-center justify-between border-b pb-4" style="border-color:#EEE9E2;">
+    <!-- ===== EQUIPMENT CATALOG ===== -->
+    <section class="space-y-4 sm:space-y-6">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b pb-3 sm:pb-4" style="border-color:#EEE9E2;">
         <div>
-          <h2 class="font-display text-2xl font-semibold text-slate-900">Available equipment</h2>
+          <h2 class="font-display text-xl sm:text-2xl font-semibold text-slate-900">Available equipment</h2>
           <p class="text-xs text-slate-500 mt-0.5">Updates live as the owner adjusts stock</p>
         </div>
-        <span id="inventory-count" class="text-xs font-semibold px-3 py-1 rounded-full" style="background:#F1E9FB; color:var(--purple-800);">0 items</span>
+        <span id="inventory-count" class="text-xs font-semibold px-3 py-1 rounded-full mt-2 sm:mt-0" style="background:#F1E9FB; color:var(--purple-800);">0 items</span>
       </div>
 
-      <div id="inventory-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+      <div id="inventory-grid" class="inventory-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5"></div>
     </section>
 
-    <!-- Gallery -->
-    <section id="gallery-section" class="hidden space-y-6">
-      <div class="border-b pb-4" style="border-color:#EEE9E2;">
-        <h2 class="font-display text-2xl font-semibold text-slate-900">Gallery &amp; past setups</h2>
+    <!-- ===== GALLERY ===== -->
+    <section id="gallery-section" class="hidden space-y-4 sm:space-y-6">
+      <div class="border-b pb-3 sm:pb-4" style="border-color:#EEE9E2;">
+        <h2 class="font-display text-xl sm:text-2xl font-semibold text-slate-900">Gallery &amp; past setups</h2>
         <p class="text-xs text-slate-500 mt-0.5">Photos and video from previous events</p>
       </div>
-      <div id="gallery-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+      <div id="gallery-grid" class="gallery-grid grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4"></div>
     </section>
 
-    <!-- Ratings & Reviews -->
-    <section class="space-y-6">
-      <div class="border-b pb-4" style="border-color:#EEE9E2;">
-        <h2 class="font-display text-2xl font-semibold text-slate-900">Ratings &amp; reviews</h2>
+    <!-- ===== RATINGS & REVIEWS ===== -->
+    <section class="space-y-4 sm:space-y-6">
+      <div class="border-b pb-3 sm:pb-4" style="border-color:#EEE9E2;">
+        <h2 class="font-display text-xl sm:text-2xl font-semibold text-slate-900">Ratings &amp; reviews</h2>
         <p class="text-xs text-slate-500 mt-0.5">From customers who've booked with this store</p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-8">
-        <div class="md:col-span-2 space-y-6">
-          <div class="bg-white rounded-2xl border p-5" style="border-color:#EEE9E2;">
+      <div class="reviews-grid grid grid-cols-1 md:grid-cols-5 gap-6 md:gap-8">
+        <!-- Left: Rating Distribution + Review Form -->
+        <div class="md:col-span-2 space-y-4 sm:space-y-6">
+          <div class="bg-white rounded-2xl border p-4 sm:p-5" style="border-color:#EEE9E2;">
             <div id="rating-distribution"></div>
           </div>
 
-          <form id="review-form" class="bg-white rounded-2xl border p-5 space-y-3" style="border-color:#EEE9E2;">
+          <form id="review-form" class="bg-white rounded-2xl border p-4 sm:p-5 space-y-3" style="border-color:#EEE9E2;">
             <h3 class="font-semibold text-sm text-slate-900">Leave a review</h3>
             <div class="flex gap-1" id="rating-input-stars">
               <i data-lucide="star" class="rating-input-star star-empty" data-value="1"></i>
@@ -231,41 +523,43 @@
           </form>
         </div>
 
-        <div id="reviews-list" class="md:col-span-3 bg-white rounded-2xl border p-5" style="border-color:#EEE9E2;"></div>
+        <!-- Right: Reviews List -->
+        <div id="reviews-list" class="md:col-span-3 bg-white rounded-2xl border p-4 sm:p-5" style="border-color:#EEE9E2;"></div>
       </div>
     </section>
   </main>
 
-  <!-- Mobile sticky contact bar -->
-  <div id="mobile-contact-bar" class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t p-3 flex gap-2 z-40 hidden" style="border-color:#EEE9E2;">
-    <a id="mobile-btn-whatsapp" href="#" target="_blank" rel="noopener noreferrer"
-       class="flex-1 flex items-center justify-center gap-2 text-white py-3 rounded-xl font-semibold text-sm" style="background:var(--emerald);">
+  <!-- ===== MOBILE CONTACT BAR ===== -->
+  <div class="mobile-contact-bar" id="mobile-contact-bar">
+    <a id="mobile-btn-whatsapp" href="#" target="_blank" rel="noopener noreferrer" class="whatsapp">
       <i data-lucide="message-square" class="w-4 h-4"></i> WhatsApp
     </a>
-    <a id="mobile-btn-phone" href="#" class="flex-1 flex items-center justify-center gap-2 text-white py-3 rounded-xl font-semibold text-sm" style="background:var(--ink);">
+    <a id="mobile-btn-phone" href="#" class="call">
       <i data-lucide="phone" class="w-4 h-4"></i> Call
     </a>
   </div>
 
-  <!-- Error / 404 State -->
-  <div id="error-state" class="hidden max-w-md mx-auto my-auto text-center p-8 bg-white rounded-3xl shadow-xl border border-slate-100 text-slate-800">
-    <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border" style="background:#F1E9FB; color:var(--purple-800); border-color:#E4D6F7;">
-      <i data-lucide="store" class="w-8 h-8"></i>
+  <!-- ===== ERROR STATE ===== -->
+  <div id="error-state" class="hidden max-w-md mx-auto my-auto text-center p-6 sm:p-8 bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-slate-100 text-slate-800">
+    <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto mb-4 border" style="background:#F1E9FB; color:var(--purple-800); border-color:#E4D6F7;">
+      <i data-lucide="store" class="w-6 h-6 sm:w-8 sm:h-8"></i>
     </div>
-    <h2 id="error-title" class="text-2xl font-bold text-slate-900 mb-2">Store unavailable</h2>
+    <h2 id="error-title" class="text-xl sm:text-2xl font-bold text-slate-900 mb-2">Store unavailable</h2>
     <p id="error-message" class="text-slate-600 text-sm mb-6">This storefront link may be incorrect, inactive, or removed by the owner.</p>
     <a href="https://tracknrent.vercel.app/marketplace.html" class="inline-block text-white px-6 py-3 rounded-xl font-medium text-sm transition" style="background:var(--purple-950);">Return to Tracknrent</a>
   </div>
 
-  <footer class="mt-auto py-8 text-center text-xs border-t" style="background:var(--ink); color:#B9AEC7; border-color:rgba(255,255,255,.06);">
-    <div class="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+  <!-- ===== FOOTER ===== -->
+  <footer class="mt-auto py-6 sm:py-8 text-center text-xs border-t" style="background:var(--ink); color:#B9AEC7; border-color:rgba(255,255,255,.06);">
+    <div class="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
       <p>&copy; 2026 Tracknrent. All rights reserved.</p>
       <a href="https://tracknrent.vercel.app/marketplace.html" class="hover:text-white transition" style="color:#C9A6F0;">tracknrent.vercel.app</a>
     </div>
   </footer>
 
+  <!-- ===== SCRIPTS ===== -->
   <script>
-    // Mirror the hero contact buttons into the mobile sticky bar once they resolve.
+    // Mirror the hero contact buttons into the mobile sticky bar
     const mo = new MutationObserver(() => {
       const wa = document.getElementById("btn-whatsapp");
       const ph = document.getElementById("btn-phone");
@@ -273,13 +567,25 @@
       const mPh = document.getElementById("mobile-btn-phone");
       const bar = document.getElementById("mobile-contact-bar");
       if (!wa || !ph) return;
-      if (wa.href && wa.href !== "#") { mWa.href = wa.href; mWa.classList.remove("hidden"); }
-      if (ph.href && !ph.classList.contains("hidden")) { mPh.href = ph.href; mPh.classList.remove("hidden"); }
-      if (bar && (mWa.href !== "#" || !mPh.classList.contains("hidden"))) bar.classList.remove("hidden");
+      if (wa.href && wa.href !== "#") { 
+        mWa.href = wa.href; 
+        mWa.style.display = "flex";
+      }
+      if (ph.href && !ph.classList.contains("hidden")) { 
+        mPh.href = ph.href; 
+        mPh.style.display = "flex";
+      }
+      if (bar) bar.style.display = "flex";
     });
     mo.observe(document.body, { attributes: true, subtree: true, attributeFilter: ["href", "class"] });
+
+    // Lucide Icons refresh
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
   </script>
 
+  <!-- Main Storefront Logic -->
   <script type="module" src="/assets/js/profile-viewer.js"></script>
 </body>
 </html>

@@ -1,19 +1,28 @@
 {
-"rewrites": [
-{
-"source": "/p/:slug",
-"destination": "/profile.html?slug=:slug"
-}
-],
-"headers": [
-{
-"source": "/public.html",
-"headers": [
-{
-"key": "Cache-Control",
-"value": "no-cache, no-store, must-revalidate"
-}
-]
-}
-]
+  "rewrites": [
+    {
+      "source": "/p/:slug",
+      "destination": "/profile.html?slug=:slug"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/public.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/profile.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    }
+  ]
 }
