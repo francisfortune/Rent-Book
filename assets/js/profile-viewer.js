@@ -34,11 +34,11 @@ let showInventoryGlobal = true;
 let showAvailabilityGlobal = true;
 let lastInventorySnapshot = null; // re-rendered if the toggles change
 
-function refreshIcons() {
-  if (window.lucide && typeof window.lucide.createIcons === "function") {
-    window.lucide.createIcons();
-  }
-}
+// Font Awesome icons are CSS glyphs rendered directly on the <i> tag,
+// so there's nothing to "activate" after innerHTML changes the way
+// Lucide required. Kept as a no-op so existing call sites don't need
+// to be touched one by one.
+function refreshIcons() {}
 
 /* =========================
    PARSE SLUG FROM PATH / QUERY
@@ -156,7 +156,7 @@ function renderProfile(name, profile, businessData) {
   const nameEl = document.getElementById("store-name");
   if (nameEl) nameEl.textContent = name;
 
-  // Logo / profile picture
+  // Logo / profile picture (WhatsApp-Business style avatar)
   const logoEl = document.getElementById("store-logo");
   if (logoEl) {
     logoEl.innerHTML = businessData.logoUrl
@@ -164,7 +164,9 @@ function renderProfile(name, profile, businessData) {
       : name.slice(0, 2).toUpperCase();
   }
 
-  // Badges
+  // Verification / Growth Partner / dynamic achievement badges — the
+  // Featured & Verified badges mirror the marketplace card; the rest are
+  // computed automatically from the business's own stats, not set by hand.
   const badgesEl = document.getElementById("profile-badges");
   if (badgesEl) {
     const marketplace = businessData.marketplace || {};
@@ -178,21 +180,22 @@ function renderProfile(name, profile, businessData) {
     if (marketplace.featured) {
       badges += `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:rgba(245,165,36,.18); color:#FBBF24; border:1px solid rgba(245,165,36,.35);">🏆 Growth Partner</span>`;
     } else if (marketplace.verified) {
-      badges += `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:rgba(16,185,129,.15); color:#34D399; border:1px solid rgba(16,185,129,.3);"><i data-lucide="badge-check" class="w-3 h-3"></i> Verified</span>`;
+      badges += `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:rgba(16,185,129,.15); color:#34D399; border:1px solid rgba(16,185,129,.3);"><i class="fas fa-check-circle text-xs"></i> Verified</span>`;
     }
     if (verification.idUploaded === true) {
-      badges += `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:rgba(124,58,237,.15); color:#C4B5FD; border:1px solid rgba(124,58,237,.3);"><i data-lucide="shield-check" class="w-3 h-3"></i> Identity Verified</span>`;
+      badges += `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:rgba(124,58,237,.15); color:#C4B5FD; border:1px solid rgba(124,58,237,.3);"><i class="fas fa-shield-alt text-xs"></i> Identity Verified</span>`;
     }
     if (avgRating >= 4.5 && ratingCount >= 10) {
-      badges += `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:rgba(245,165,36,.15); color:#FCD34D; border:1px solid rgba(245,165,36,.3);"><i data-lucide="star" class="w-3 h-3"></i> Top Rated</span>`;
+      badges += `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:rgba(245,165,36,.15); color:#FCD34D; border:1px solid rgba(245,165,36,.3);"><i class="fas fa-star text-xs"></i> Top Rated</span>`;
     }
     if (completedRentals >= 50) {
-      badges += `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:rgba(59,130,246,.15); color:#93C5FD; border:1px solid rgba(59,130,246,.3);"><i data-lucide="trending-up" class="w-3 h-3"></i> High Volume</span>`;
+      badges += `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:rgba(59,130,246,.15); color:#93C5FD; border:1px solid rgba(59,130,246,.3);"><i class="fas fa-chart-line text-xs"></i> High Volume</span>`;
     }
     badgesEl.innerHTML = badges;
   }
 
-  // Cover image
+  // Cover / banner image — behind the whole hero, faded in once loaded so
+  // there's no flash of a broken image on slow connections.
   const coverEl = document.getElementById("store-cover");
   if (coverEl) {
     if (businessData.coverImageUrl) {
@@ -209,7 +212,8 @@ function renderProfile(name, profile, businessData) {
     bioEl.textContent = profile.bio || "Welcome to our rental catalog. Browse available items and reach out to place an order.";
   }
 
-  // Categories
+  // Services / categories tags — from the owner's tag editor. Hidden
+  // entirely when nothing has been set, same pattern as social links.
   const categoriesEl = document.getElementById("store-categories");
   if (categoriesEl) {
     const cats = Array.isArray(profile.categories) && profile.categories.length
@@ -228,7 +232,8 @@ function renderProfile(name, profile, businessData) {
     }
   }
 
-  // Address
+  // Address, falling back to City, State (from the setup wizard) when the
+  // owner hasn't filled in a full street address on the storefront.
   const addrEl = document.getElementById("store-address");
   const addrContainer = document.getElementById("address-container");
   const cityState = [businessData.city, businessData.state].filter(Boolean).join(", ");
@@ -270,12 +275,14 @@ function renderProfile(name, profile, businessData) {
 
   const prevShowInventory = showInventoryGlobal;
   const prevShowAvailability = showAvailabilityGlobal;
-  showInventoryGlobal = profile.showInventory !== false;
-  showAvailabilityGlobal = profile.showAvailability !== false;
+  showInventoryGlobal = profile.showInventory !== false; // default true
+  showAvailabilityGlobal = profile.showAvailability !== false; // default true
 
   const catalogSection = document.getElementById("inventory-grid")?.closest("section");
   if (catalogSection) catalogSection.classList.toggle("hidden", !showInventoryGlobal);
 
+  // If either toggle flipped since the last inventory snapshot, re-render
+  // the grid immediately rather than waiting on the next inventory write.
   if (lastInventorySnapshot && (prevShowInventory !== showInventoryGlobal || prevShowAvailability !== showAvailabilityGlobal)) {
     renderInventoryGrid(lastInventorySnapshot);
   }
@@ -288,6 +295,7 @@ function renderProfile(name, profile, businessData) {
 
 /* =========================
    DEPOSIT & CAUTION POLICY BANNER
+   Owner-configured, optional — hidden entirely when nothing is set.
 ========================= */
 function renderDepositBanner(depositPolicy) {
   const section = document.getElementById("deposit-banner");
@@ -316,6 +324,8 @@ function renderDepositBanner(depositPolicy) {
 
 /* =========================
    SOCIAL HANDLES
+   Only rendered when the owner has filled at least one in. Accepts either
+   a bare handle ("@shopname") or a full URL.
 ========================= */
 function toSocialUrl(platform, value) {
   const trimmed = (value || "").trim();
@@ -333,9 +343,9 @@ function renderSocialLinks(profile) {
   if (!container) return;
 
   const links = [
-    { platform: "instagram", url: toSocialUrl("instagram", profile.instagram), icon: "instagram" },
-    { platform: "tiktok", url: toSocialUrl("tiktok", profile.tiktok), icon: "music" },
-    { platform: "facebook", url: toSocialUrl("facebook", profile.facebook), icon: "facebook" }
+    { platform: "instagram", url: toSocialUrl("instagram", profile.instagram), icon: "fab fa-instagram" },
+    { platform: "tiktok", url: toSocialUrl("tiktok", profile.tiktok), icon: "fab fa-tiktok" },
+    { platform: "facebook", url: toSocialUrl("facebook", profile.facebook), icon: "fab fa-facebook-f" }
   ].filter((l) => l.url);
 
   if (links.length === 0) {
@@ -352,7 +362,7 @@ function renderSocialLinks(profile) {
          class="w-8 h-8 rounded-full flex items-center justify-center transition"
          style="background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); color:#fff;"
          aria-label="${l.platform}">
-        <i data-lucide="${l.icon}" class="w-4 h-4"></i>
+        <i class="${l.icon} text-sm"></i>
       </a>`
     )
     .join("");
@@ -362,7 +372,7 @@ function renderSocialLinks(profile) {
 }
 
 /* =========================
-   GALLERY
+   GALLERY — IMAGES + VIDEO (Cloudinary-aware)
 ========================= */
 function renderGallery(gallery) {
   const gallerySection = document.getElementById("gallery-section");
@@ -381,7 +391,7 @@ function renderGallery(gallery) {
         return `
           <button type="button" class="gallery-tile" data-index="${i}" data-type="video" data-url="${item.url}" aria-label="Play video">
             <video src="${item.url}#t=0.1" muted playsinline preload="metadata"></video>
-            <span class="gallery-play"><i data-lucide="play" class="w-5 h-5"></i></span>
+            <span class="gallery-play"><i class="fas fa-play"></i></span>
           </button>`;
       }
       return `
@@ -400,6 +410,7 @@ function renderGallery(gallery) {
 }
 
 function normalizeGalleryEntry(entry) {
+  // Backward compatible: old data may just be a plain URL string.
   if (typeof entry === "string") {
     const isVideo = /\.(mp4|webm|mov|m4v)(\?|$)/i.test(entry) || entry.includes("/video/upload/");
     return { url: entry, type: isVideo ? "video" : "image" };
@@ -467,12 +478,15 @@ function listenToCatalog(businessId) {
   );
 }
 
+// Renders the equipment grid from the latest inventory snapshot, honoring
+// the owner's "Show Inventory Catalog" / "Show Live Availability" toggles.
 function renderInventoryGrid(snap) {
   const grid = document.getElementById("inventory-grid");
   const countEl = document.getElementById("inventory-count");
   if (!grid) return;
 
   if (!showInventoryGlobal) {
+    // Section itself is hidden (see renderProfile), nothing to build.
     grid.innerHTML = "";
     return;
   }
@@ -493,6 +507,8 @@ function renderInventoryGrid(snap) {
     const totalQty = Number(item.totalQuantity ?? item.quantity ?? availableQty);
     const isAvailable = availableQty > 0;
 
+    // Without "Show Live Availability", visitors see only name & price —
+    // no stock counts, no booked/available status pill.
     const statusHtml = showAvailabilityGlobal
       ? `<span class="status-pill ${isAvailable ? "status-available" : "status-booked"}">
            ${isAvailable ? `${availableQty} left` : "Booked out"}
@@ -533,7 +549,7 @@ function renderInventoryGrid(snap) {
 }
 
 /* =========================
-   RATINGS & REVIEWS
+   RATINGS & REVIEWS (built from scratch)
 ========================= */
 function renderRatingSummary(businessData) {
   const ratingCount = Number(businessData.ratingCount || 0);
@@ -611,71 +627,66 @@ function listenToReviews(businessId) {
   );
 }
 
-/* =========================
-   STAR ICONS HTML - Uses Font Awesome
-========================= */
 function starIconsHtml(value) {
   const rounded = Math.round(value);
   let html = "";
   for (let i = 1; i <= 5; i++) {
     const filled = i <= rounded;
-    html += `<i class="fas fa-star ${filled ? 'star-filled' : 'star-empty'}"></i>`;
+    html += `<i class="${filled ? "fas" : "far"} fa-star text-sm inline-block ${filled ? "star-filled" : "star-empty"}"></i>`;
   }
   return html;
 }
 
-/* =========================
-   WIRE REVIEW FORM - Interactive Stars
-========================= */
 function wireReviewForm(businessId) {
   const form = document.getElementById("review-form");
   if (!form) return;
 
   const nameInput = document.getElementById("review-name");
   const commentInput = document.getElementById("review-comment");
+  const starsContainer = document.getElementById("rating-input-stars");
   const stars = Array.from(document.querySelectorAll(".rating-input-star"));
   const submitBtn = document.getElementById("review-submit");
   let selectedRating = 0;
 
-  // Setup star click handlers
-  stars.forEach((star) => {
-    star.removeEventListener('click', star._clickHandler);
-    
-    star._clickHandler = function() {
-      selectedRating = Number(this.dataset.value);
-      stars.forEach((s) => {
-        const val = Number(s.dataset.value);
-        if (val <= selectedRating) {
-          s.classList.remove('star-empty');
-          s.classList.add('star-filled');
-        } else {
-          s.classList.remove('star-filled');
-          s.classList.add('star-empty');
-        }
-      });
-    };
-    
-    star.addEventListener('click', star._clickHandler);
-  });
-
-  // Reset stars on form reset
-  form.addEventListener('reset', function() {
-    selectedRating = 0;
+  function paintStars(uptoValue) {
     stars.forEach((s) => {
-      s.classList.remove('star-filled');
-      s.classList.add('star-empty');
+      const isFilled = Number(s.dataset.value) <= uptoValue;
+      s.classList.toggle("star-filled", isFilled);
+      s.classList.toggle("star-empty", !isFilled);
+      s.classList.toggle("fas", isFilled);
+      s.classList.toggle("far", !isFilled);
     });
-  });
+  }
 
-  // Handle form submit
+  // Delegated on the container (not each <i> individually) so the
+  // handler keeps working even if the stars are ever re-rendered — and
+  // because Font Awesome never replaces these elements, a single click
+  // handler attached once at page load stays attached, unlike the old
+  // Lucide icons which got destroyed and recreated on every Firestore
+  // update, silently dropping their listeners.
+  if (starsContainer) {
+    starsContainer.addEventListener("click", (e) => {
+      const star = e.target.closest(".rating-input-star");
+      if (!star) return;
+      selectedRating = Number(star.dataset.value);
+      paintStars(selectedRating);
+    });
+
+    starsContainer.addEventListener("mouseover", (e) => {
+      const star = e.target.closest(".rating-input-star");
+      if (!star) return;
+      paintStars(Number(star.dataset.value));
+    });
+
+    starsContainer.addEventListener("mouseleave", () => paintStars(selectedRating));
+  }
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    
     if (selectedRating < 1) {
       alert("Please select a star rating before submitting.");
       return;
     }
-    
     const name = (nameInput?.value || "").trim() || "Anonymous";
     const comment = (commentInput?.value || "").trim();
 
@@ -690,6 +701,11 @@ function wireReviewForm(businessId) {
         createdAt: serverTimestamp()
       });
 
+      // Atomically keep the aggregate rating on the business doc in sync.
+      // (A Cloud Function trigger on review create/delete is the more
+      // robust long-term approach — same pattern you're using for the
+      // sitemap on googleIndexed — but this transaction keeps things
+      // correct in the meantime.)
       const businessRef = doc(db, "businesses", businessId);
       await runTransaction(db, async (tx) => {
         const snap = await tx.get(businessRef);
@@ -701,11 +717,7 @@ function wireReviewForm(businessId) {
 
       form.reset();
       selectedRating = 0;
-      stars.forEach((s) => {
-        s.classList.remove('star-filled');
-        s.classList.add('star-empty');
-      });
-      
+      paintStars(0);
       submitBtn.textContent = "Review submitted ✓";
       setTimeout(() => {
         submitBtn.textContent = "Submit review";
@@ -747,7 +759,6 @@ function showError(title, message) {
   refreshIcons();
 }
 
-// Initialize
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initViewer);
 } else {

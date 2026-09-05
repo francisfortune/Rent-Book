@@ -46,7 +46,12 @@ const steps = [
 
 
 export function startOnboardingTour() {
-  if (localStorage.getItem("tracknrent_onboarding_completed") === "true") return;
+  if (localStorage.getItem("tracknrent_onboarding_completed") === "true") {
+    // Tour already seen, but still offer the notification prompt
+    // if the user hasn't granted (or previously dismissed) permission.
+    requestNotificationPermission();
+    return;
+  }
 
   currentStep = 0;
   createOverlayAndTooltip();
@@ -218,6 +223,10 @@ function endTour() {
   if (tooltipEl) tooltipEl.remove();
   window.removeEventListener("resize", resizeHandler);
   window.removeEventListener("scroll", resizeHandler);
+
+  // Once the tour is done, ask for notification access if it
+  // hasn't already been granted.
+  requestNotificationPermission();
 }
 
 async function requestNotificationPermission() {
@@ -226,7 +235,14 @@ async function requestNotificationPermission() {
       console.log('[Onboarding] OneSignal not available');
       return false;
     }
-    
+
+    // Skip the prompt entirely if the user has already granted access.
+    const currentPermission = await window.OneSignal.Notifications.permission;
+    if (currentPermission === 'granted') {
+      console.log('[Onboarding] Permission already granted, skipping prompt');
+      return true;
+    }
+
     // Use OneSignal's built-in slidedown
     await window.OneSignal.Notifications.requestPermission({
       modalOptions: {
