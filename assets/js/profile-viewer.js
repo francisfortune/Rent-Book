@@ -627,123 +627,22 @@ function listenToReviews(businessId) {
   );
 }
 
+/* =========================
+   STAR ICONS HTML - FIXED to use Font Awesome
+========================= */
 function starIconsHtml(value) {
   const rounded = Math.round(value);
   let html = "";
   for (let i = 1; i <= 5; i++) {
-    html += `<i data-lucide="star" class="w-4 h-4 inline-block ${i <= rounded ? "star-filled" : "star-empty"}"></i>`;
+    const filled = i <= rounded;
+    html += `<i class="fas fa-star ${filled ? 'star-filled' : 'star-empty'}"></i>`;
   }
   return html;
 }
 
-function wireReviewForm(businessId) {
-  const form = document.getElementById("review-form");
-  if (!form) return;
-
-  const nameInput = document.getElementById("review-name");
-  const commentInput = document.getElementById("review-comment");
-  const stars = Array.from(document.querySelectorAll(".rating-input-star"));
-  const submitBtn = document.getElementById("review-submit");
-  let selectedRating = 0;
-
-  stars.forEach((star) => {
-    star.addEventListener("click", () => {
-      selectedRating = Number(star.dataset.value);
-      stars.forEach((s) => s.classList.toggle("star-filled", Number(s.dataset.value) <= selectedRating));
-      stars.forEach((s) => s.classList.toggle("star-empty", Number(s.dataset.value) > selectedRating));
-    });
-  });
-
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (selectedRating < 1) {
-      alert("Please select a star rating before submitting.");
-      return;
-    }
-    const name = (nameInput?.value || "").trim() || "Anonymous";
-    const comment = (commentInput?.value || "").trim();
-
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Submitting...";
-
-    try {
-      await addDoc(collection(db, "businesses", businessId, "reviews"), {
-        name,
-        rating: selectedRating,
-        comment,
-        createdAt: serverTimestamp()
-      });
-
-      // Atomically keep the aggregate rating on the business doc in sync.
-      // (A Cloud Function trigger on review create/delete is the more
-      // robust long-term approach — same pattern you're using for the
-      // sitemap on googleIndexed — but this transaction keeps things
-      // correct in the meantime.)
-      const businessRef = doc(db, "businesses", businessId);
-      await runTransaction(db, async (tx) => {
-        const snap = await tx.get(businessRef);
-        const data = snap.data() || {};
-        const newSum = Number(data.ratingSum || 0) + selectedRating;
-        const newCount = Number(data.ratingCount || 0) + 1;
-        tx.update(businessRef, { ratingSum: newSum, ratingCount: newCount });
-      });
-
-      form.reset();
-      selectedRating = 0;
-      stars.forEach((s) => {
-        s.classList.remove("star-filled");
-        s.classList.add("star-empty");
-      });
-      submitBtn.textContent = "Review submitted ✓";
-      setTimeout(() => {
-        submitBtn.textContent = "Submit review";
-        submitBtn.disabled = false;
-      }, 1800);
-    } catch (err) {
-      console.error("Review submit error:", err);
-      alert("Failed to submit review: " + err.message);
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Submit review";
-    }
-  });
-}
-
-function escapeHtml(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
-}
-
 /* =========================
-   ERROR DISPLAY CONTROLLER
+   WIRE REVIEW FORM - FIXED INTERACTIVE STARS
 ========================= */
-function showError(title, message) {
-  if (loader) loader.classList.add("hidden");
-  if (storefrontContent) storefrontContent.classList.add("hidden");
-
-  if (unsubBusiness) unsubBusiness();
-  if (unsubInventory) unsubInventory();
-  if (unsubReviews) unsubReviews();
-
-  if (errorView) {
-    errorView.classList.remove("hidden");
-    const titleEl = errorView.querySelector("h2");
-    const msgEl = errorView.querySelector("p");
-    if (titleEl) titleEl.textContent = title;
-    if (msgEl) msgEl.textContent = message;
-  }
-  refreshIcons();
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initViewer);
-} else {
-  initViewer();
-}
-
-
-
-// ===== WIRE REVIEW FORM - FIXED INTERACTIVE STARS =====
 function wireReviewForm(businessId) {
   const form = document.getElementById("review-form");
   if (!form) return;
@@ -834,28 +733,35 @@ function wireReviewForm(businessId) {
   });
 }
 
-// ===== STAR ICONS HTML - FIXED to use Font Awesome =====
-function starIconsHtml(value) {
-  const rounded = Math.round(value);
-  let html = "";
-  for (let i = 1; i <= 5; i++) {
-    const filled = i <= rounded;
-    html += `<i class="fas fa-star ${filled ? 'star-filled' : 'star-empty'}"></i>`;
-  }
-  return html;
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
 }
 
-// ===== RENDER RATING SUMMARY - FIXED =====
-function renderRatingSummary(businessData) {
-  const ratingCount = Number(businessData.ratingCount || 0);
-  const ratingSum = Number(businessData.ratingSum || 0);
-  const avg = ratingCount > 0 ? ratingSum / ratingCount : 0;
+/* =========================
+   ERROR DISPLAY CONTROLLER
+========================= */
+function showError(title, message) {
+  if (loader) loader.classList.add("hidden");
+  if (storefrontContent) storefrontContent.classList.add("hidden");
 
-  const avgEl = document.getElementById("rating-average");
-  const countEl = document.getElementById("rating-count");
-  const starsEl = document.getElementById("rating-average-stars");
+  if (unsubBusiness) unsubBusiness();
+  if (unsubInventory) unsubInventory();
+  if (unsubReviews) unsubReviews();
 
-  if (avgEl) avgEl.textContent = ratingCount > 0 ? avg.toFixed(1) : "—";
-  if (countEl) countEl.textContent = ratingCount === 0 ? "No reviews yet" : `${ratingCount} review${ratingCount === 1 ? "" : "s"}`;
-  if (starsEl) starsEl.innerHTML = starIconsHtml(avg);
+  if (errorView) {
+    errorView.classList.remove("hidden");
+    const titleEl = errorView.querySelector("h2");
+    const msgEl = errorView.querySelector("p");
+    if (titleEl) titleEl.textContent = title;
+    if (msgEl) msgEl.textContent = message;
+  }
+  refreshIcons();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initViewer);
+} else {
+  initViewer();
 }
