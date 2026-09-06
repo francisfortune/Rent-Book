@@ -10,9 +10,6 @@ import {
 // CONFIG
 // ============================================
 
-// Kept in sync with the quick-add suggestions in public.html's Services &
-// Categories tag editor, so a tag a vendor picks there always has a
-// matching filter chip here.
 const CATEGORIES = [
   "All", "Equipment", "Vehicles", "Event Rentals", "Photography", "Furniture",
   "Sound & Lighting", "Decor", "Catering", "Bounce Castles", "Tents & Canopies",
@@ -74,22 +71,23 @@ function loadBusinesses() {
 }
 
 // ============================================
-// NORMALIZE BUSINESS DATA
+// NORMALIZE BUSINESS DATA - FIXED
 // ============================================
 
 function normalizeBusiness(id, data) {
   const marketplace = data.marketplace || {};
   const profile = data.publicProfile || {};
 
-  // Categories can be a tag array (new "Services & Categories" editor in
-  // public.html) or just the legacy single `category` string. `category`
-  // (singular) is kept as the primary/first tag for anything that still
-  // expects one string (card display, sort-by-category, etc).
   const categories = Array.isArray(profile.categories) && profile.categories.length
     ? profile.categories
     : (Array.isArray(data.categories) && data.categories.length
         ? data.categories
         : (data.category ? [data.category] : ["Equipment"]));
+
+  // ✅ FIX: Calculate rating from ratingSum and ratingCount
+  const ratingCount = Number(data.ratingCount || 0);
+  const ratingSum = Number(data.ratingSum || 0);
+  const rating = ratingCount > 0 ? ratingSum / ratingCount : 0;
 
   return {
     id,
@@ -98,8 +96,9 @@ function normalizeBusiness(id, data) {
     categories,
     city: data.city || "",
     address: profile.address || "",
-    rating: Number(data.rating || 0),
-    ratingCount: Number(data.ratingCount || 0),
+    rating: rating,
+    ratingCount: ratingCount,
+    ratingSum: ratingSum,
     logoUrl: data.logoUrl || "",
     coverImageUrl: data.coverImageUrl || "",
     slug: profile.slug || "",
@@ -118,19 +117,19 @@ function normalizeBusiness(id, data) {
 }
 
 // ============================================
-// RENDER BUSINESS CARD (MODERN)
+// RENDER BUSINESS CARD - FIXED
 // ============================================
-// ============================================
-// RENDER BUSINESS CARD (MODERN WITH SOCIAL HANDLES)
-// ============================================
+
 function renderBusinessCard(business) {
   const initials = business.name.slice(0, 2).toUpperCase();
-  const starCount = Math.round(business.rating);
+  
+  // ✅ FIX: Calculate stars from business.rating
+  const starCount = Math.round(business.rating || 0);
   const stars = Array.from({ length: 5 }, (_, i) => 
     i < starCount ? '★' : '☆'
   ).join('');
 
-  // Badges with LinkedIn-style pill design
+  // Badges
   let badges = '';
   if (business.featured) {
     badges += `<span class="badge-featured">⭐ Featured</span>`;
@@ -139,7 +138,7 @@ function renderBusinessCard(business) {
     badges += `<span class="badge-verified">✓ Verified</span>`;
   }
 
-  // Social Handles - LinkedIn style icons
+  // Social Handles
   const socials = [];
   if (business.instagram) {
     socials.push(`<a href="${business.instagram}" target="_blank" rel="noopener" class="social-link" title="Instagram">
@@ -171,7 +170,7 @@ function renderBusinessCard(business) {
     ? `<div class="social-row">${socials.join('')}</div>`
     : '';
 
-  // Rating display - LinkedIn style
+  // ✅ FIX: Rating display - shows stars and count
   const ratingDisplay = business.rating > 0 
     ? `<div class="rating-wrapper">
          <span class="star-rating">${stars}</span>
@@ -180,13 +179,13 @@ function renderBusinessCard(business) {
        </div>`
     : `<span class="no-reviews-text">Be the first to review</span>`;
 
-  // Cover image with proper z-index layering
+  // Cover image
   const coverImage = business.coverImage || business.coverImageUrl || '';
   const cardImageStyle = coverImage
     ? `style="background-image: url('${coverImage}'); background-size: cover; background-position: center;"`
     : `style="background: linear-gradient(135deg, #800080, #9b4d9b, #800080);"`;
 
-  // Categories with tags
+  // Categories
   const allCategories = business.categories || business.serviceTags || [];
   const primaryCategory = business.category || allCategories[0] || 'Equipment';
   const extraTags = allCategories.slice(1, 5);
@@ -205,15 +204,13 @@ function renderBusinessCard(business) {
   return `
     <a href="/p/${business.slug || '#'}" class="card-link">
       <div class="linkedin-card">
-        <!-- Cover Image - Layer 1 (bottom) -->
+        <!-- Cover Image -->
         <div class="cover-section" ${cardImageStyle}>
           <div class="cover-overlay"></div>
-          
-          <!-- Badges - Layer 2 -->
           <div class="badge-section">${badges}</div>
         </div>
         
-        <!-- Avatar - Layer 3 (floats above cover) -->
+        <!-- Avatar -->
         <div class="avatar-section">
           <div class="avatar-circle">
             ${business.logoUrl 
@@ -222,12 +219,10 @@ function renderBusinessCard(business) {
           </div>
         </div>
         
-        <!-- Content - Layer 4 (top) -->
+        <!-- Content -->
         <div class="content-section">
-          <!-- Business Name -->
           <h3 class="business-title">${business.name}</h3>
           
-          <!-- Category & Location Row -->
           <div class="info-row">
             <span class="category-tag">
               <i class="fas fa-briefcase"></i> ${primaryCategory}
@@ -235,16 +230,12 @@ function renderBusinessCard(business) {
             ${locationText ? `<span class="location-tag"><i class="fas fa-map-marker-alt"></i> ${locationText}</span>` : ''}
           </div>
           
-          <!-- Extra Tags -->
           ${extraTagsHtml}
           
-          <!-- Address -->
           ${business.address ? `<p class="address-line"><i class="fas fa-location-dot"></i> ${business.address}</p>` : ''}
           
-          <!-- Social Handles -->
           ${socialHtml}
           
-          <!-- Footer: Rating + Connect Button -->
           <div class="card-footer-actions">
             ${ratingDisplay}
             <button class="connect-btn" onclick="event.preventDefault(); window.location.href='/p/${business.slug || '#'}'">
@@ -264,9 +255,7 @@ function renderBusinessCard(business) {
 function applyFiltersAndSort() {
   let result = [...allBusinesses];
 
-  // 1. Category filter — a business matches if ANY of its tags (not just
-  // the primary/first one) equals the active chip, so a vendor tagged
-  // ["Equipment", "Tents & Canopies"] still shows up under "Tents & Canopies".
+  // 1. Category filter
   if (activeCategory !== "All") {
     const wanted = activeCategory.toLowerCase();
     result = result.filter(b =>
@@ -274,7 +263,7 @@ function applyFiltersAndSort() {
     );
   }
 
-  // 2. Search filter (name, all category tags, location, address)
+  // 2. Search filter
   if (searchQuery.trim()) {
     const query = searchQuery.toLowerCase().trim();
     const tokens = query.split(/\s+/).filter(Boolean);
@@ -321,22 +310,18 @@ function renderResults() {
   const displayItems = filteredBusinesses.slice(0, currentPage * PAGE_SIZE);
   const hasMore = filteredBusinesses.length > displayItems.length;
 
-  // Update title & count
   const count = filteredBusinesses.length;
   resultsTitle.textContent = activeCategory !== "All" ? `${activeCategory}` : "All Businesses";
   resultsCount.textContent = `${count} business${count !== 1 ? 'es' : ''} found`;
 
-  // Render cards
   resultsGrid.innerHTML = displayItems.map(b => renderBusinessCard(b)).join("");
 
-  // Empty state
   if (!hasResults) {
     showEmptyState("No businesses found", "Try adjusting your filters or search terms.");
   } else {
     emptyState.classList.add("hidden");
   }
 
-  // Load more
   const loadMoreContainer = document.getElementById("load-more-container");
   if (loadMoreContainer) {
     if (hasMore) {
@@ -384,7 +369,6 @@ function updateActiveFilters() {
     </span>
   `).join("");
 
-  // Add remove handlers
   document.querySelectorAll(".remove-filter").forEach(btn => {
     btn.addEventListener("click", (e) => {
       const type = btn.dataset.type;
@@ -452,7 +436,6 @@ function updateCategoryChips() {
 // EVENT LISTENERS
 // ============================================
 
-// Search
 searchInput.addEventListener("input", () => {
   searchQuery = searchInput.value;
   searchClear.classList.toggle("hidden", !searchQuery);
@@ -478,14 +461,12 @@ searchInput.addEventListener("keypress", (e) => {
   }
 });
 
-// Verified filter
 verifiedOnlyChip.addEventListener("click", () => {
   verifiedOnly = !verifiedOnly;
   verifiedOnlyChip.classList.toggle("active");
   applyFiltersAndSort();
 });
 
-// Sort buttons
 sortRatingBtn.addEventListener("click", () => {
   currentSort = "rating";
   sortSelect.value = "rating";
@@ -498,13 +479,11 @@ sortNewestBtn.addEventListener("click", () => {
   applyFiltersAndSort();
 });
 
-// Sort select
 sortSelect.addEventListener("change", () => {
   currentSort = sortSelect.value;
   applyFiltersAndSort();
 });
 
-// Clear all filters
 clearFiltersBtn.addEventListener("click", resetAllFilters);
 resetEmptyBtn?.addEventListener("click", resetAllFilters);
 
@@ -521,7 +500,6 @@ function resetAllFilters() {
   applyFiltersAndSort();
 }
 
-// Load more
 document.getElementById("load-more-btn")?.addEventListener("click", () => {
   currentPage++;
   renderResults();
