@@ -8,7 +8,7 @@ let notificationModalEl = null;
 
 const steps = [
   {
-    selector: ".brand",
+    selector: ".brand, #brand",
     title: "Welcome to Tracknrent! 🚀",
     desc: "Easily manage your rental items, inventory, and event bookings all in one place. Let's show you around!"
   },
@@ -284,7 +284,7 @@ function createNotificationModal() {
 
   notificationModalEl.innerHTML = `
     <div style="display: flex; align-items: flex-start; gap: 14px;">
-      <div style="flex-shrink: 0; width: 44px; height: 44px; background: linear-gradient(135deg, #7c3aed, #6d28d9); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);">
+      <div style="flex-shrink: 0; width: 44px; height: 44px; background: linear-gradient(135deg, #800080, #780578); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);">
         🔔
       </div>
       <div style="flex: 1; min-width: 0;">
@@ -296,7 +296,7 @@ function createNotificationModal() {
           Get real-time notifications for bookings, returns, and inventory alerts.
         </p>
         <div style="display: flex; gap: 8px;">
-          <button id="notification-allow-btn" style="flex: 1; background: #7c3aed; color: white; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: background 0.2s, transform 0.15s;" onmouseover="this.style.backgroundColor='#6d28d9'" onmouseout="this.style.backgroundColor='#7c3aed'" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
+          <button id="notification-allow-btn" style="flex: 1; background: #800080; color: white; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: background 0.2s, transform 0.15s;" onmouseover="this.style.backgroundColor='#6d28d9'" onmouseout="this.style.backgroundColor='#7c3aed'" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
             Enable Notifications
           </button>
           <button id="notification-later-btn" style="background: #f3f4f6; color: #4b5563; border: none; padding: 10px 14px; border-radius: 10px; font-weight: 500; font-size: 0.85rem; cursor: pointer; transition: background 0.2s; white-space: nowrap;" onmouseover="this.style.backgroundColor='#e5e7eb'" onmouseout="this.style.backgroundColor='#f3f4f6'">
@@ -448,7 +448,7 @@ function showDeniedNotificationModal() {
           You've previously blocked notifications. To enable them, please update your browser settings or click the bell icon in your browser's address bar.
         </p>
         <div style="display: flex; gap: 8px;">
-          <button id="notification-retry-btn" style="flex: 1; background: #7c3aed; color: white; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#6d28d9'" onmouseout="this.style.backgroundColor='#7c3aed'">
+          <button id="notification-retry-btn" style="flex: 1; background: #800080; color: white; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#6d28d9'" onmouseout="this.style.backgroundColor='#7c3aed'">
             Try Again
           </button>
           <button id="notification-denied-ok" style="background: #f3f4f6; color: #4b5563; border: none; padding: 10px 14px; border-radius: 10px; font-weight: 500; font-size: 0.85rem; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#e5e7eb'" onmouseout="this.style.backgroundColor='#f3f4f6'">

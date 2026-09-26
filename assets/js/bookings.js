@@ -19,8 +19,9 @@ import {
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { editBookingTransaction } from "./services/bookingService.js";
 import { uploadReceiptImage } from "./utils/upload.js";
-import { deductInventory, restoreInventory } from "./services/inventoryService.js";
 import { generateReceiptImage } from "./pdf.js";
+import { checkDateAvailability, getAvailabilityMap, fetchActiveBookings } from "./services/availabilityService.js";
+import { getBookingLifecycle, renderLifecycleBadge, renderOverbookedBadge, isBookingOverbooked, LIFECYCLE_BADGE_COLORS } from "./services/bookingStatus.js";
 
 import { runAutomatedChecks } from "./services/reminderService.js";
 
@@ -57,21 +58,98 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 /* =========================
+   BADGE PRESENTATION
+   One consistent visual language for every status pill in the app:
+   - Fixed-height, rounded-full pill
+   - Uppercase, letter-spaced micro-label
+   - Small leading dot so the eye reads it as "live state"
+   - Same font weight and padding everywhere
+
+   The colors themselves come from LIFECYCLE_BADGE_COLORS in
+   bookingStatus.js so this file and every other page agree on them.
+========================= */
+const LIFECYCLE_LABELS = {
+  returned: "Returned",
+  active: "Active",
+  upcoming: "Upcoming",
+  overdue: "Overdue"
+};
+
+// Fallback palette if bookingStatus.js doesn't export LIFECYCLE_BADGE_COLORS
+const LIFECYCLE_FALLBACK = {
+  returned:  { bg: "bg-green-100",  text: "text-green-800",  dot: "bg-green-500",  border: "border-green-200"  },
+  active:    { bg: "bg-purple-100", text: "text-purple-800", dot: "bg-purple-500", border: "border-purple-200" },
+  upcoming:  { bg: "bg-blue-100",   text: "text-blue-800",   dot: "bg-blue-500",   border: "border-blue-200"   },
+  overdue:   { bg: "bg-red-100",    text: "text-red-800",    dot: "bg-red-500",    border: "border-red-200"    }
+};
+
+function getBadgePalette(key) {
+  const fromShared = LIFECYCLE_BADGE_COLORS?.[key];
+  if (fromShared && typeof fromShared === "object" && fromShared.bg) return fromShared;
+  return LIFECYCLE_FALLBACK[key] || LIFECYCLE_FALLBACK.upcoming;
+}
+
+/**
+ * Renders the lifecycle badge used across the whole bookings page.
+ * Same class shape everywhere, only the palette changes per status.
+ * @param {object} booking   the booking document
+ * @param {string} sizeClass optional sizing override (e.g. "text-[10px]")
+ */
+function renderBadge(booking, sizeClass = "text-[10px]") {
+  const life = getBookingLifecycle(booking);
+  const key = life.key;
+  const label = LIFECYCLE_LABELS[key] || key;
+  const c = getBadgePalette(key);
+
+  const days = life.daysText
+    ? `<span class="ml-1.5 opacity-75 font-medium normal-case tracking-normal">· ${life.daysText}</span>`
+    : "";
+
+  return `
+    <span class="inline-flex items-center gap-1.5 ${c.bg} ${c.text} ${c.border || ""} border
+                 rounded-full px-2.5 py-1 font-black uppercase tracking-wider
+                 whitespace-nowrap leading-none ${sizeClass}">
+      <span class="inline-block w-1.5 h-1.5 rounded-full ${c.dot}"></span>
+      <span>${label}</span>${days}
+    </span>`;
+}
+
+/**
+ * Small "vendor stock used" badge, used in the table rows and the modal header.
+ */
+function renderOverbookedPill() {
+  return `
+    <span class="inline-flex items-center gap-1.5 bg-orange-100 text-orange-800 border border-orange-200
+                 rounded-full px-2.5 py-1 font-black uppercase tracking-wider
+                 whitespace-nowrap leading-none text-[10px]">
+      <span class="inline-block w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+      <span>Overbooked</span>
+    </span>`;
+}
+
+/* =========================
    RECEIPT TEXT GENERATOR
 ========================= */
 function generateReceiptText(booking) {
   const total = booking.payment?.total || 0;
   const paid = booking.payment?.paid || 0;
   const balance = total - paid;
+  const cautionFee = Number(booking.payment?.cautionFee || 0);
+  const transportationFee = Number(booking.payment?.transportationFee || 0);
+  const otherFees = Number(booking.payment?.otherFees || 0);
 
-  let itemsSummary = booking.items?.map(i =>
-    `• ${i.name} (x${i.qty})\n${i.summary ? `   - ${i.summary}` : ""} - ₦${(i.total || 0).toLocaleString()}`
-  ).join("\n") || "No items";
+  let itemsSummary = booking.items?.map(i => {
+    return `• ${i.name} (x${i.qty})\n${i.summary ? `   - ${i.summary}` : ""} - ₦${(i.total || 0).toLocaleString()}`;
+  }).join("\n") || "No items";
 
   const deliveryDate = booking.event?.deliveryDate || booking.event?.date || "Not set";
   const returnDate  = booking.event?.returnDate || "Not set";
 
-  // Build the core receipt body
+  let feesLines = "";
+  if (cautionFee) feesLines += `Caution Fee: ₦${cautionFee.toLocaleString()}\n`;
+  if (transportationFee) feesLines += `Transportation: ₦${transportationFee.toLocaleString()}\n`;
+  if (otherFees) feesLines += `Other Fees: ₦${otherFees.toLocaleString()}\n`;
+
   let receiptText = `*${currentBusinessName} Booking Receipt*\n\n` +
     `Hi ${booking.client.name}, your booking details are below:\n\n` +
     `Event Date: ${formatDateTime(booking.event.date)}\n` +
@@ -79,19 +157,18 @@ function generateReceiptText(booking) {
     `Return Date: ${formatDateTime(returnDate)}\n` +
     `Location: ${booking.event.location || "Not specified"}\n\n` +
     `Items Ordered:\n${itemsSummary}\n\n` +
+    (feesLines ? `${feesLines}\n` : "") +
     `Total: ₦${total.toLocaleString()}\n` +
     `Paid: ₦${paid.toLocaleString()}\n` +
     `Balance: ₦${balance.toLocaleString()}\n\n` +
     `Thank you for choosing ${currentBusinessName}!\n\n` +
     `---`;
 
-  // Conditionally append store URL only if "Go Online" toggle is enabled AND a valid slug exists
   if (publicProfileSettings.enabled && publicProfileSettings.slug) {
     const storeUrl = `${window.location.origin}/p/${publicProfileSettings.slug}`;
-    receiptText += `\n🌐 _View our store catalog: ${storeUrl}_`;
+    receiptText += `\n🌐 _View our Online Store: ${storeUrl}_`;
   }
 
-  // App Footer
   receiptText += `\n_Powered by Tracknrent_\n👉 https://tracknrent.vercel.app`;
 
   return receiptText;
@@ -115,12 +192,7 @@ window.shareToWhatsApp = function(phone, message) {
    DYNAMIC STATUS CALCULATOR
 ========================= */
 function getCalculatedStatus(booking) {
-  if (booking.status === "returned") return "returned";
-  const returnDate = booking.event?.returnDate;
-  if (!returnDate) return "active";
-  const now = new Date();
-  const returnTime = new Date(returnDate);
-  return now > returnTime ? "overdue" : "active";
+  return getBookingLifecycle(booking).key;
 }
 
 let inventoryItems = [];
@@ -130,7 +202,6 @@ async function loadInventory(businessId) {
   const snap = await getDocs(collection(db, "businesses", businessId, "inventory"));
   inventoryItems = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
-
 
 /* =========================
    GENERATE RECEIPT IMAGE HTML
@@ -144,7 +215,7 @@ function getReceiptImageHTML(booking) {
       </div>
     `;
   }
-  
+
   return `
     <div class="relative group">
       <img src="${booking.receiptImage}" 
@@ -158,7 +229,6 @@ function getReceiptImageHTML(booking) {
     </div>
   `;
 }
-
 
 /* =========================
    BUSINESS LOOKUP
@@ -264,7 +334,6 @@ window.returnBooking = async function(bookingId, businessId, items) {
     if (!snap.exists()) { document.body.removeChild(loader); alert("Booking not found"); return; }
 
     const booking = snap.data();
-    await restoreInventory(businessId, items);
     await updateDoc(bookingRef, { status: "returned" });
 
     document.body.removeChild(loader);
@@ -300,9 +369,8 @@ window.deleteBooking = async function(bookingId, businessId) {
 
     const booking = snap.data();
     if (booking.status !== "returned") {
-      const confirmDelete = confirm("⚠️ This booking has NOT been marked as returned.\n\nDeleting it will restore items back into inventory.\n\nDo you want to proceed?");
+      const confirmDelete = confirm("⚠️ This booking has NOT been marked as returned.\n\nDeleting it will free up its reserved stock immediately.\n\nDo you want to proceed?");
       if (!confirmDelete) return;
-      await restoreInventory(businessId, booking.items || []);
     } else {
       if (!confirm(`Delete ${booking.client.name} booking permanently?`)) return;
     }
@@ -331,7 +399,6 @@ const urlParams = new URLSearchParams(window.location.search);
 const highlightId = urlParams.get("highlight");
 const presetStatus = urlParams.get("status");
 
-// Pre-select status filter from URL param (dashboard card links)
 if (presetStatus) {
   const filterEl = document.getElementById("filterStatus");
   if (filterEl) filterEl.value = presetStatus;
@@ -346,24 +413,90 @@ function getInventoryMap() {
 /* ========================================================
    REAL-TIME CALCULATION ENGINE FOR EDIT WORKSPACE
 ======================================================== */
+let editAvailabilityMap = new Map();
+let editingBookingId = null;
+
+function getEditRowItemName(row) {
+  const select = row.querySelector(".item-name");
+  const isCustom = select?.value === "__custom__";
+  const customInput = row.querySelector(".item-custom-name");
+  const name = isCustom ? (customInput?.value.trim() || "") : (select?.value || "");
+  return { name, isCustom };
+}
+
+function getEditDateWindow() {
+  const deliveryEl = document.getElementById("editDelivery");
+  const dateEl = document.getElementById("editDate");
+  const returnEl = document.getElementById("editReturn");
+  const start = (deliveryEl?.value || dateEl?.value || "").trim();
+  const end = (returnEl?.value || start).trim();
+  return { start: start || null, end: end || null };
+}
+
+async function refreshEditAvailability(businessId) {
+  const { start, end } = getEditDateWindow();
+  if (!start) { editAvailabilityMap = new Map(); return; }
+  try {
+    const bookings = await fetchActiveBookings(businessId, editingBookingId);
+    editAvailabilityMap = getAvailabilityMap(inventoryItems, bookings, new Date(start), new Date(end), editingBookingId);
+  } catch (err) {
+    console.error("Error refreshing edit-modal availability:", err);
+  }
+  document.querySelectorAll("#editItemsContainer .item-name").forEach(select => {
+    const currentValue = select.value;
+    Array.from(select.options).forEach(opt => {
+      if (!opt.value || opt.value === "__custom__") return;
+      const key = opt.value.trim().toLowerCase();
+      const free = editAvailabilityMap.has(key) ? editAvailabilityMap.get(key) : Number(opt.dataset.stock || 0);
+      opt.dataset.freeForDates = free;
+      opt.textContent = `${opt.value} (${free} free for these dates)`;
+    });
+    select.value = currentValue;
+  });
+  recalculateEditWorkspace();
+}
+
+/* ========================================================
+   THE PRICING RULES
+======================================================== */
+function markEditTotalUserEdited() {
+  const totalEl = document.getElementById("editTotal");
+  if (totalEl) totalEl.dataset.userEdited = "true";
+}
+
+function clearEditTotalOverride() {
+  const totalEl = document.getElementById("editTotal");
+  if (totalEl) delete totalEl.dataset.userEdited;
+}
+
 function recalculateEditWorkspace() {
   const rows = document.querySelectorAll("#editItemsContainer .item-row");
-  let calculatedGrandTotal = 0;
+  let itemsSubtotal = 0;
   let workspaceOverbooked = false;
 
   rows.forEach(row => {
-    const select = row.querySelector(".item-name");
     const qtyInput = row.querySelector(".item-qty");
     const priceInput = row.querySelector(".item-price");
+    const vendorWrap = row.querySelector(".edit-vendor-wrap");
+    const { name, isCustom } = getEditRowItemName(row);
 
-    const selectedOption = select?.selectedOptions[0];
-    const availableStock = selectedOption ? Number(selectedOption.dataset.stock || 0) : 0;
     const qty = Number(qtyInput?.value || 0);
     const price = Number(priceInput?.value || 0);
     const rowTotal = qty * price;
-    calculatedGrandTotal += rowTotal;
+    itemsSubtotal += rowTotal;
 
-    if (qty > availableStock && select?.value !== "") {
+    let short = false;
+    if (isCustom) {
+      short = qty > 0;
+      if (vendorWrap) vendorWrap.style.display = "block";
+    } else if (name) {
+      const key = name.trim().toLowerCase();
+      const freeForDates = editAvailabilityMap.has(key) ? editAvailabilityMap.get(key) : 0;
+      short = qty > freeForDates;
+      if (vendorWrap) vendorWrap.style.display = short ? "block" : "none";
+    }
+
+    if (short) {
       workspaceOverbooked = true;
       row.classList.add("border-l-4", "border-red-500", "bg-red-50");
     } else {
@@ -371,39 +504,123 @@ function recalculateEditWorkspace() {
     }
   });
 
-  const totalInput = document.getElementById("editTotal");
-  if (totalInput) totalInput.value = calculatedGrandTotal;
+  const cautionFee = Number(document.getElementById("editCautionFee")?.value || 0);
+  const transportationFee = Number(document.getElementById("editTransportationFee")?.value || 0);
+  const otherFees = Number(document.getElementById("editOtherFees")?.value || 0);
+  const feesTotal = cautionFee + transportationFee + otherFees;
+  const computedTotal = itemsSubtotal + feesTotal;
+
+  const totalEl = document.getElementById("editTotal");
+  const wasManuallyEdited = totalEl?.dataset.userEdited === "true";
+
+  if (totalEl && !wasManuallyEdited) {
+    totalEl.value = computedTotal;
+  }
+
+  const subtotalDisplay = document.getElementById("editItemsSubtotalDisplay");
+  if (subtotalDisplay) {
+    const manualValue = Number(totalEl?.value || 0);
+    const delta = manualValue - computedTotal;
+
+    if (!wasManuallyEdited) {
+      subtotalDisplay.innerHTML =
+        `Items + fees subtotal: <strong>₦${computedTotal.toLocaleString()}</strong>`;
+    } else {
+      const deltaLabel = delta < 0
+        ? `₦${Math.abs(delta).toLocaleString()} discount`
+        : delta > 0
+          ? `₦${delta.toLocaleString()} surcharge`
+          : "matches subtotal";
+      subtotalDisplay.innerHTML =
+        `Items + fees would be <strong>₦${computedTotal.toLocaleString()}</strong> · ` +
+        `you set <strong>₦${manualValue.toLocaleString()}</strong> (${deltaLabel})`;
+    }
+  }
 
   const warningBadge = document.getElementById("editOverbookWarning");
   if (warningBadge) warningBadge.style.display = workspaceOverbooked ? "inline-block" : "none";
 }
 
+window.useEditSubtotal = function () {
+  clearEditTotalOverride();
+  recalculateEditWorkspace();
+};
+
 function attachRowCalculationListeners(row) {
   const select = row.querySelector(".item-name");
   const qtyInput = row.querySelector(".item-qty");
   const priceInput = row.querySelector(".item-price");
+  const customNameInput = row.querySelector(".item-custom-name");
 
   select?.addEventListener("change", (e) => {
     const opt = e.target.selectedOptions[0];
-    if (opt && priceInput) priceInput.value = opt.dataset.price || 0;
+    if (e.target.value === "__custom__") {
+      customNameInput?.classList.remove("hidden");
+      customNameInput?.focus();
+    } else {
+      customNameInput?.classList.add("hidden");
+      if (opt && priceInput) priceInput.value = opt.dataset.price || 0;
+    }
     recalculateEditWorkspace();
   });
   qtyInput?.addEventListener("input", recalculateEditWorkspace);
   priceInput?.addEventListener("input", recalculateEditWorkspace);
+  customNameInput?.addEventListener("input", recalculateEditWorkspace);
+
+  let dateDebounce;
+  ["editDate", "editDelivery", "editReturn"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.dataset.availabilityWired) {
+      el.dataset.availabilityWired = "true";
+      el.addEventListener("input", () => {
+        clearTimeout(dateDebounce);
+        dateDebounce = setTimeout(() => refreshEditAvailability(el.closest("[data-business-id]")?.dataset.businessId || window._editBusinessId), 250);
+      });
+    }
+  });
+}
+
+function wireEditTotalAndFeeListeners() {
+  const editTotalEl = document.getElementById("editTotal");
+  if (editTotalEl && !editTotalEl.dataset.wiredUserEdit) {
+    editTotalEl.dataset.wiredUserEdit = "true";
+    editTotalEl.addEventListener("input", () => {
+      markEditTotalUserEdited();
+      recalculateEditWorkspace();
+    });
+  }
+
+  ["editCautionFee", "editTransportationFee", "editOtherFees"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el && !el.dataset.wiredCalc) {
+      el.dataset.wiredCalc = "true";
+      el.addEventListener("input", () => {
+        clearEditTotalOverride();
+        recalculateEditWorkspace();
+      });
+    }
+  });
 }
 
 /* =========================
    OPEN BOOKING MODAL
 ========================= */
 window.openBooking = function(booking, id, businessId) {
-  const status = getCalculatedStatus(booking);
-  const isOverbooked = booking.items?.some(i => (i.shortage || 0) > 0);
+  const life = getBookingLifecycle(booking);
+  const status = life.key;
+  const isOverbooked = isBookingOverbooked(booking);
   const totalAmount = booking.payment?.total || 0;
   const amountPaid = booking.payment?.paid || 0;
   const balanceRemaining = totalAmount - amountPaid;
+  const fees = booking.payment || {};
+  const feeLines = [
+    fees.cautionFee ? `Caution Fee: ₦${Number(fees.cautionFee).toLocaleString()}` : null,
+    fees.transportationFee ? `Transportation: ₦${Number(fees.transportationFee).toLocaleString()}` : null,
+    fees.otherFees ? `Other Fees: ₦${Number(fees.otherFees).toLocaleString()}` : null
+  ].filter(Boolean);
 
   const borrowedItems = booking.items?.filter(i => (i.shortage > 0 || i.supplier) && i.supplier !== "")?.map(i =>
-    `• ${i.name} ${i.shortage > 0 ? `(Borrowed: ${i.shortage})` : ''} from ${i.supplier}`
+    `• ${i.name}${i.isCustom ? " (not in inventory)" : ""} ${i.shortage > 0 ? `(Borrowed: ${i.shortage})` : ''} from ${i.supplier || "Unknown vendor"}`
   ) || [];
 
   const vendorBlock = borrowedItems.length
@@ -412,13 +629,19 @@ window.openBooking = function(booking, id, businessId) {
 
   const receiptText = generateReceiptText(booking);
 
-  const statusColors = { returned: "from-green-600 to-green-800", active: "from-purple-700 to-purple-900", overdue: "from-red-600 to-red-800" };
-  const badgeColors  = { returned: "bg-green-400 text-green-900", active: "bg-purple-400 text-purple-900", overdue: "bg-red-400 text-red-900" };
+  // The header keeps a distinct gradient per status — the pill itself
+  // is now the shared renderBadge() so it looks identical to the table rows.
+  const statusGradients = {
+    returned: "from-green-600 to-green-800",
+    active: "from-purple-700 to-purple-900",
+    upcoming: "from-blue-600 to-blue-800",
+    overdue: "from-red-600 to-red-800"
+  };
 
   modalContent.innerHTML = `
 <div class="space-y-6 animate__animated animate__fadeIn w-full max-w-5xl mx-auto px-3 sm:px-4">
-  <div class="relative overflow-hidden bg-gradient-to-r ${statusColors[status]} p-4 sm:p-6 rounded-2xl text-white shadow-xl">
-    <div class="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+  <div class="relative overflow-hidden bg-gradient-to-r ${statusGradients[status]} p-4 sm:p-6 rounded-2xl text-white shadow-xl">
+    <div class="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-start gap-4">
       <div class="min-w-0 flex-1">
         <p class="text-[10px] sm:text-xs uppercase tracking-widest opacity-80">Client Profile</p>
         <h3 class="text-lg sm:text-2xl font-black break-words leading-tight">${booking.client.name}</h3>
@@ -427,10 +650,10 @@ window.openBooking = function(booking, id, businessId) {
           <span class="material-symbols-outlined text-sm">call</span>
           <a href="tel:+${booking.client.phone}" class="break-all">${booking.client.phone}</a>
         </p>
-        ${isOverbooked ? `<div class="mt-2 bg-purple-500 text-[10px] font-black px-2 py-1 rounded shadow-sm inline-block uppercase">⚠️ Overbooked: Vendor Stock Used</div>` : ''}
       </div>
-      <div class="w-full sm:w-auto text-left sm:text-right">
-        <span class="px-4 py-2 rounded-full text-xs font-black uppercase shadow-lg inline-block ${badgeColors[status]}">${status}</span>
+      <div class="flex flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
+        ${renderBadge(booking, "text-[11px]")}
+        ${isOverbooked ? renderOverbookedPill() : ""}
       </div>
     </div>
   </div>
@@ -480,7 +703,7 @@ window.openBooking = function(booking, id, businessId) {
       ${(booking.items || []).map(i => `
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-white border border-gray-100 p-3 rounded-xl shadow-sm">
           <div>
-            <p class="font-bold text-gray-800">${i.name}${i.shortage > 0 ? `<span class="text-red-500 text-[10px] ml-1">(Shortage: ${i.shortage})</span>` : ''}</p>
+            <p class="font-bold text-gray-800">${i.name}${i.isCustom ? `<span class="text-[9px] ml-1 px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase font-black tracking-wide">Not in inventory</span>` : ''}${i.shortage > 0 ? `<span class="text-[9px] ml-1 px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 uppercase font-black tracking-wide">Short ${i.shortage}</span>` : ''}</p>
             <p class="text-[10px] text-purple-600 font-bold">Qty: ${i.qty} @ ₦${(i.price || 0).toLocaleString()}</p>
           </div>
           <span class="font-black text-gray-700">₦${(i.total || 0).toLocaleString()}</span>
@@ -488,6 +711,12 @@ window.openBooking = function(booking, id, businessId) {
       `).join("")}
     </div>
   </div>
+
+  ${feeLines.length ? `
+  <div class="bg-purple-50 border border-purple-100 rounded-xl p-4">
+    <p class="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-1">Additional Fees</p>
+    <p class="text-sm text-gray-700">${feeLines.join("<br>")}</p>
+  </div>` : ""}
 
   <div class="bg-white border-2 border-purple-100 rounded-2xl p-4 shadow-inner">
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
@@ -502,15 +731,16 @@ window.openBooking = function(booking, id, businessId) {
     </div>
   </div>
 
-  
-
 ${booking.receiptImage ? `
   <div class="mt-4">
     <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
       <p class="text-[10px] font-black text-purple-700 uppercase flex items-center gap-2">
         <span class="material-symbols-outlined text-sm">receipt_long</span> Receipt Image
       </p>
-      <span class="text-[10px] bg-purple-100 text-purple-700 px-2 py-1 rounded-full font-bold">Uploaded</span>
+      <span class="inline-flex items-center gap-1.5 bg-purple-100 text-purple-800 border border-purple-200 rounded-full px-2.5 py-1 font-black uppercase tracking-wider text-[10px] leading-none">
+        <span class="inline-block w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+        Uploaded
+      </span>
     </div>
     <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
       <img src="${booking.receiptImage}" 
@@ -525,7 +755,10 @@ ${booking.receiptImage ? `
       <p class="text-[10px] font-black text-gray-400 uppercase flex items-center gap-2">
         <span class="material-symbols-outlined text-sm">receipt_long</span> Receipt Image
       </p>
-      <span class="text-[10px] bg-gray-100 text-gray-400 px-2 py-1 rounded-full font-bold">Not uploaded</span>
+      <span class="inline-flex items-center gap-1.5 bg-gray-100 text-gray-500 border border-gray-200 rounded-full px-2.5 py-1 font-black uppercase tracking-wider text-[10px] leading-none">
+        <span class="inline-block w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+        Not uploaded
+      </span>
     </div>
     <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
       <span class="material-symbols-outlined text-4xl text-gray-300">image</span>
@@ -539,7 +772,10 @@ ${booking.receiptImage ? `
   <div class="mt-6">
     <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
       <p class="text-[10px] font-black text-purple-700 uppercase">Live Receipt Preview</p>
-      <span class="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold">WhatsApp Ready</span>
+      <span class="inline-flex items-center gap-1.5 bg-green-100 text-green-800 border border-green-200 rounded-full px-2.5 py-1 font-black uppercase tracking-wider text-[10px] leading-none">
+        <span class="inline-block w-1.5 h-1.5 rounded-full bg-green-500"></span>
+        WhatsApp Ready
+      </span>
     </div>
     <div class="bg-gray-900 text-green-400 p-4 rounded-2xl font-mono text-xs whitespace-pre-wrap border-2 border-gray-800 shadow-inner overflow-auto max-h-72">${receiptText}</div>
     <div class="flex flex-col sm:flex-row gap-3 mt-4">
@@ -669,29 +905,65 @@ window.openEditModal = async function(booking, id, businessId) {
           <div style="flex:2;min-width:120px;">
             <select class="item-name" style="width:100%;padding:6px 8px;font-size:13px;border-radius:6px;border:0.5px solid #d8b4fe;background:#f9fafb;color:#374151;outline:none;">
               <option value="">Select item</option>
-              ${inventoryItems.map(inv => `<option value="${inv.name}" data-price="${inv.price}" data-stock="${inv.availableQuantity}" ${inv.name.toLowerCase() === item.name.toLowerCase() ? "selected" : ""}>${inv.name} (Stock: ${inv.availableQuantity})</option>`).join("")}
+              ${inventoryItems.map(inv => `<option value="${inv.name}" data-price="${inv.price}" data-stock="${inv.availableQuantity}" ${!item.isCustom && inv.name.toLowerCase() === item.name.toLowerCase() ? "selected" : ""}>${inv.name} (Stock: ${inv.availableQuantity})</option>`).join("")}
+              <option value="__custom__" ${item.isCustom ? "selected" : ""}>✏️ Not in inventory (type item name)</option>
             </select>
           </div>
           <div style="width:70px;"><input class="item-qty" type="number" placeholder="Qty" value="${item.qty || 0}" style="width:100%;padding:6px 8px;font-size:13px;text-align:center;border-radius:6px;border:0.5px solid #d8b4fe;background:#f9fafb;outline:none;box-sizing:border-box;"></div>
           <div style="width:90px;"><input class="item-price" type="number" placeholder="₦" value="${item.price || 0}" style="width:100%;padding:6px 8px;font-size:13px;text-align:center;border-radius:6px;border:0.5px solid #d8b4fe;background:#f9fafb;outline:none;box-sizing:border-box;"></div>
-          <div style="flex:1;min-width:80px;"><input class="item-supplier" type="text" value="${item.supplier || ""}" placeholder="Vendor" style="width:100%;padding:6px 8px;font-size:13px;border-radius:6px;border:0.5px solid #d8b4fe;background:#f9fafb;outline:none;box-sizing:border-box;"></div>
+          <input class="item-custom-name ${item.isCustom ? "" : "hidden"}" type="text" value="${item.isCustom ? item.name : ""}" placeholder="Type the item name" style="width:100%;padding:6px 8px;font-size:13px;border-radius:6px;border:0.5px solid #d8b4fe;background:#f9fafb;outline:none;box-sizing:border-box;">
+          <div class="edit-vendor-wrap" style="display:${(item.isCustom || item.shortage > 0) ? "block" : "none"};width:100%;background:#f5f0ff;border:0.5px solid #d8b4fe;border-radius:6px;padding:6px 8px;">
+            <label style="font-size:10px;font-weight:700;color:purple;text-transform:uppercase;display:block;margin-bottom:2px;">Vendor (borrow from)</label>
+            <input class="item-supplier" type="text" value="${item.supplier || ""}" placeholder="Vendor" style="width:100%;padding:6px 8px;font-size:13px;border-radius:6px;border:0.5px solid #d8b4fe;background:#fff;outline:none;box-sizing:border-box;">
+          </div>
           <button type="button" onclick="this.parentElement.remove(); recalculateEditWorkspace();" style="width:30px;height:30px;border:0.5px solid #fca5a5;border-radius:6px;background:#fef2f2;color:#b91c1c;cursor:pointer;font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">✕</button>
         </div>
       `).join("")}
     </div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-    <div style="background:#f5f0ff;border-radius:12px;border:0.5px solid #d8b4fe;padding:1rem 1.25rem;">
-      <label style="font-size:12px;color:purple;display:block;margin-bottom:6px;font-weight:600;">Total valuation (₦)</label>
-      <input id="editTotal" type="number" value="${booking.payment?.total || 0}" readonly style="width:100%;padding:4px 0;font-size:20px;font-weight:500;border:none;background:transparent;color:purple;outline:none;cursor:not-allowed;box-sizing:border-box;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
+    <div style="background:#f9fafb;border-radius:12px;border:0.5px solid #e5e5e5;padding:0.75rem 1rem;">
+      <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;">Caution Fee (₦)</label>
+      <input id="editCautionFee" type="number" value="${booking.payment?.cautionFee || 0}" style="width:100%;padding:4px 0;font-size:15px;font-weight:500;border:none;background:transparent;color:#374151;outline:none;box-sizing:border-box;">
     </div>
-    <div style="background:#f9fafb;border-radius:12px;border:0.5px solid #e5e5e5;padding:1rem 1.25rem;">
-      <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:6px;">Amount paid (₦)</label>
-      <input id="editPaid" type="number" value="${booking.payment?.paid || 0}" style="width:100%;padding:4px 0;font-size:20px;font-weight:500;border:none;background:transparent;color:#374151;outline:none;box-sizing:border-box;">
+    <div style="background:#f9fafb;border-radius:12px;border:0.5px solid #e5e5e5;padding:0.75rem 1rem;">
+      <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;">Transportation (₦)</label>
+      <input id="editTransportationFee" type="number" value="${booking.payment?.transportationFee || 0}" style="width:100%;padding:4px 0;font-size:15px;font-weight:500;border:none;background:transparent;color:#374151;outline:none;box-sizing:border-box;">
+    </div>
+    <div style="background:#f9fafb;border-radius:12px;border:0.5px solid #e5e5e5;padding:0.75rem 1rem;">
+      <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;">Other Fees (₦)</label>
+      <input id="editOtherFees" type="number" value="${booking.payment?.otherFees || 0}" style="width:100%;padding:4px 0;font-size:15px;font-weight:500;border:none;background:transparent;color:#374151;outline:none;box-sizing:border-box;">
     </div>
   </div>
 
+  <div style="background:#f9fafb;border-radius:12px;border:0.5px solid #e5e5e5;padding:1rem 1.25rem;">
+    <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:6px;">Amount paid (₦)</label>
+    <input id="editPaid" type="number" value="${booking.payment?.paid || 0}" style="width:100%;padding:4px 0;font-size:20px;font-weight:500;border:none;background:transparent;color:#374151;outline:none;box-sizing:border-box;">
+  </div>
+
+  <div style="background:#f5f0ff;border-radius:12px;border:1px solid #d8b4fe;padding:1rem 1.25rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+      <label for="editTotal" style="font-size:12px;color:purple;font-weight:600;">Total valuation (₦)</label>
+      <span style="display:inline-flex;align-items:center;gap:1.5px;background:#fff;color:purple;border:1px solid #d8b4fe;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;">Editable</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #d8b4fe;border-radius:8px;padding:6px 10px;">
+      <span style="font-size:18px;font-weight:700;color:purple;">₦</span>
+      <input id="editTotal" type="number" min="0" inputmode="numeric"
+        value="${booking.payment?.total || 0}"
+        style="width:100%;padding:6px 0;font-size:20px;font-weight:700;border:none;background:transparent;color:purple;outline:none;box-sizing:border-box;">
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px;flex-wrap:wrap;">
+      <p id="editItemsSubtotalDisplay" style="font-size:11px;color:#6b7280;margin:0;">Items + fees subtotal: ₦0</p>
+      <button type="button" onclick="useEditSubtotal()"
+        style="font-size:11px;font-weight:700;color:purple;background:#fff;border:1px solid #d8b4fe;border-radius:6px;cursor:pointer;padding:4px 10px;">
+        Use subtotal
+      </button>
+    </div>
+    <p style="font-size:10px;color:#9ca3af;margin-top:6px;line-height:1.4;">
+      Type any amount here — that's what the customer pays. Fees added below will update it automatically until you type your own number.
+    </p>
+  </div>
 
 <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;border-top:1px solid #e5e5e5;padding-top:12px;">
   <label style="font-size:12px;color:purple;font-weight:600;">Receipt Image</label>
@@ -730,45 +1002,46 @@ window.openEditModal = async function(booking, id, businessId) {
 </div>`;
 
   document.querySelectorAll("#editItemsContainer .item-row").forEach(attachRowCalculationListeners);
-  recalculateEditWorkspace();
+  editingBookingId = id;
+  window._editBusinessId = businessId;
 
-  // Add receipt image upload handler for edit modal
-const editReceiptInput = document.getElementById('editReceiptInput');
-if (editReceiptInput) {
-  editReceiptInput.addEventListener('change', async function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    const statusEl = document.getElementById('editReceiptStatus');
-    statusEl.textContent = 'Uploading...';
-    statusEl.style.display = 'block';
-    statusEl.style.color = '#6b7280';
-    
-    try {
-      const imageUrl = await uploadReceiptImage(businessId, file);
-      // Store the new image URL to be saved with the booking
-      window._editReceiptImageUrl = imageUrl;
-      statusEl.textContent = '✅ Image uploaded!';
-      statusEl.style.color = '#059669';
-      
-      // Update preview
-      const container = this.parentElement;
-      const preview = container.querySelector('img') || container.querySelector('div[style*="dashed"]');
-      if (preview) {
-        if (preview.tagName === 'IMG') {
-          preview.src = imageUrl;
-        } else {
-          preview.outerHTML = `<img src="${imageUrl}" alt="Receipt" style="max-height:120px;max-width:100%;border-radius:8px;border:1px solid #e5e5e5;object-fit:contain;">`;
+  wireEditTotalAndFeeListeners();
+
+  await refreshEditAvailability(businessId);
+
+  const editReceiptInput = document.getElementById('editReceiptInput');
+  if (editReceiptInput) {
+    editReceiptInput.addEventListener('change', async function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const statusEl = document.getElementById('editReceiptStatus');
+      statusEl.textContent = 'Uploading...';
+      statusEl.style.display = 'block';
+      statusEl.style.color = '#6b7280';
+
+      try {
+        const imageUrl = await uploadReceiptImage(businessId, file);
+        window._editReceiptImageUrl = imageUrl;
+        statusEl.textContent = '✅ Image uploaded!';
+        statusEl.style.color = '#059669';
+
+        const container = this.parentElement;
+        const preview = container.querySelector('img') || container.querySelector('div[style*="dashed"]');
+        if (preview) {
+          if (preview.tagName === 'IMG') {
+            preview.src = imageUrl;
+          } else {
+            preview.outerHTML = `<img src="${imageUrl}" alt="Receipt" style="max-height:120px;max-width:100%;border-radius:8px;border:1px solid #e5e5e5;object-fit:contain;">`;
+          }
         }
+      } catch (error) {
+        console.error('Upload failed:', error);
+        statusEl.textContent = '❌ Upload failed';
+        statusEl.style.color = '#dc2626';
       }
-    } catch (error) {
-      console.error('Upload failed:', error);
-      statusEl.textContent = '❌ Upload failed';
-      statusEl.style.color = '#dc2626';
-    }
-  });
-}
-
+    });
+  }
 };
 
 function formatDateTime(value) {
@@ -786,11 +1059,16 @@ window.addEditItem = function() {
         <select class="item-name" style="width:100%;padding:6px 8px;font-size:13px;border-radius:6px;border:0.5px solid #d8b4fe;background:#f9fafb;color:#374151;outline:none;">
           <option value="">-- Choose Inventory --</option>
           ${inventoryItems.map(inv => `<option value="${inv.name}" data-price="${inv.price}" data-stock="${inv.availableQuantity}">${inv.name} (Available: ${inv.availableQuantity})</option>`).join("")}
+          <option value="__custom__">✏️ Not in inventory (type item name)</option>
         </select>
       </div>
       <div style="width:70px;"><input class="item-qty" type="number" value="1" style="width:100%;padding:6px 8px;font-size:13px;text-align:center;border-radius:6px;border:0.5px solid #d8b4fe;background:#f9fafb;outline:none;box-sizing:border-box;"></div>
       <div style="width:90px;"><input class="item-price" type="number" value="0" style="width:100%;padding:6px 8px;font-size:13px;text-align:center;border-radius:6px;border:0.5px solid #d8b4fe;background:#f9fafb;outline:none;box-sizing:border-box;"></div>
-      <div style="flex:1;min-width:80px;"><input class="item-supplier" type="text" placeholder="Vendor" style="width:100%;padding:6px 8px;font-size:13px;border-radius:6px;border:0.5px solid #d8b4fe;background:#f9fafb;outline:none;box-sizing:border-box;"></div>
+      <input class="item-custom-name hidden" type="text" placeholder="Type the item name" style="width:100%;padding:6px 8px;font-size:13px;border-radius:6px;border:0.5px solid #d8b4fe;background:#f9fafb;outline:none;box-sizing:border-box;">
+      <div class="edit-vendor-wrap" style="display:none;width:100%;background:#f5f0ff;border:0.5px solid #d8b4fe;border-radius:6px;padding:6px 8px;">
+        <label style="font-size:10px;font-weight:700;color:purple;text-transform:uppercase;display:block;margin-bottom:2px;">Vendor (borrow from)</label>
+        <input class="item-supplier" type="text" placeholder="Vendor" style="width:100%;padding:6px 8px;font-size:13px;border-radius:6px;border:0.5px solid #d8b4fe;background:#fff;outline:none;box-sizing:border-box;">
+      </div>
       <button type="button" onclick="this.parentElement.remove(); recalculateEditWorkspace();" style="width:30px;height:30px;border:0.5px solid #fca5a5;border-radius:6px;background:#fef2f2;color:#b91c1c;cursor:pointer;font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">✕</button>
     </div>`;
   container.insertAdjacentHTML("beforeend", elementString);
@@ -809,18 +1087,17 @@ window.saveEdit = async function(id, businessId, originalItems) {
     let hasError = false;
 
     rows.forEach(row => {
-      const select = row.querySelector(".item-name");
+      const { name, isCustom } = getEditRowItemName(row);
       const qtyInput = row.querySelector(".item-qty");
       const priceInput = row.querySelector(".item-price");
       const supplierInput = row.querySelector(".item-supplier");
 
-      const name = select?.value?.trim();
       const qty = Number(qtyInput?.value || 0);
       const price = Number(priceInput?.value || 0);
       const supplier = supplierInput?.value?.trim() || "";
 
       if (!name || qty <= 0) { hasError = true; return; }
-      updatedItems.push({ name, qty, price, total: qty * price, supplier, shortage: 0 });
+      updatedItems.push({ name, qty, price, total: qty * price, supplier, isCustom, shortage: 0 });
     });
 
     if (hasError || updatedItems.length === 0) {
@@ -829,10 +1106,8 @@ window.saveEdit = async function(id, businessId, originalItems) {
       return;
     }
 
-    // ✅ Get receipt image URL from edit modal (if uploaded)
     const receiptImageUrl = window._editReceiptImageUrl || null;
     if (receiptImageUrl) {
-      // Clear the temporary stored URL
       window._editReceiptImageUrl = null;
     }
 
@@ -847,16 +1122,24 @@ window.saveEdit = async function(id, businessId, originalItems) {
       "event.location": document.getElementById("editLocation").value.trim(),
       "payment.total": Number(document.getElementById("editTotal").value || 0),
       "payment.paid": Number(document.getElementById("editPaid").value || 0),
+      "payment.cautionFee": Number(document.getElementById("editCautionFee")?.value || 0),
+      "payment.transportationFee": Number(document.getElementById("editTransportationFee")?.value || 0),
+      "payment.otherFees": Number(document.getElementById("editOtherFees")?.value || 0),
       notes: document.getElementById("editNotes").value.trim()
     };
 
-    // ✅ Add receipt image if uploaded
     if (receiptImageUrl) {
       updatedBookingData.receiptImage = receiptImageUrl;
     }
 
-    await editBookingTransaction(businessId, id, updatedBookingData, originalItems, updatedItems);
-    alert("Booking updated successfully! ✅");
+    const { shortages } = await editBookingTransaction(businessId, id, updatedBookingData, originalItems, updatedItems);
+
+    if (shortages && shortages.length) {
+      const msg = shortages.map(s => `${s.name}: borrow ${s.shortage} (only ${s.available} free for these dates)`).join("\n");
+      alert(`⚠ Saved, but not enough stock for these dates — vendor borrow recorded automatically:\n${msg}`);
+    } else {
+      alert("Booking updated successfully! ✅");
+    }
     closeModal();
 
     await sendNotification(
@@ -895,36 +1178,23 @@ function enableButton(button) {
   button.style.cursor = "";
 }
 
-function recalculateEditTotal() {
-  let total = 0;
-  document.querySelectorAll("#editItemsContainer .item-row").forEach(row => {
-    const qty = Number(row.querySelector(".item-qty")?.value || 0);
-    const price = Number(row.querySelector(".item-price")?.value || 0);
-    total += qty * price;
-  });
-  document.getElementById("editTotal").value = total;
-}
-
 /* =========================
    RENDER ROW (TABLE)
+   Uses the same renderBadge() and renderOverbookedPill() as the modal,
+   so badges are visually identical across the table and the detail view.
 ========================= */
 function renderRow(b, id, businessId) {
-  const status = getCalculatedStatus(b);
-  const isOverbooked = b.items?.some(i => (i.shortage || 0) > 0);
-
-  const colors = {
-    active: "bg-blue-100 text-blue-700",
-    returned: "bg-green-100 text-green-700",
-    overdue: "bg-red-100 text-red-700"
-  };
+  const isOverbooked = isBookingOverbooked(b);
 
   return `
     <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
       <td class="p-4 font-medium text-gray-800 cursor-pointer" data-id="${id}" data-business="${businessId}" onclick="handleViewClick(this)">${b.client.name}</td>
       <td class="p-4 text-gray-600 text-sm cursor-pointer" data-id="${id}" data-business="${businessId}" onclick="handleViewClick(this)">${formatDateTime(b.event.deliveryDate || b.event.date)}</td>
       <td class="p-4 cursor-pointer" data-id="${id}" data-business="${businessId}" onclick="handleViewClick(this)">
-        <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${colors[status]}">${status}</span>
-        ${isOverbooked ? `<span class="ml-2 px-2 py-1 rounded-full text-[9px] font-black uppercase bg-orange-100 text-orange-600">Overbooked</span>` : ""}
+        <div class="flex items-center gap-2 flex-wrap">
+          ${renderBadge(b, "text-[10px]")}
+          ${isOverbooked ? renderOverbookedPill() : ""}
+        </div>
       </td>
       <td class="p-4">
         <button type="button" data-id="${id}" data-business="${businessId}" onclick="handleViewClick(this)"
@@ -992,11 +1262,10 @@ function showErrorBanner(message) {
 }
 
 /* =========================
-   NOTIFICATION HELPER — saves to Firestore AND fires OneSignal push
+   NOTIFICATION HELPER
 ========================= */
 async function sendNotification(businessId, message, userEmail, type, bookingId = "") {
     try {
-        // 1. Save in-app notification to Firestore (always works)
         const notifRef = collection(db, "businesses", businessId, "notifications");
         await addDoc(notifRef, {
             message,
@@ -1008,36 +1277,28 @@ async function sendNotification(businessId, message, userEmail, type, bookingId 
             deletedFor: []
         });
 
-        // 2. Fire OneSignal push notification (optional, non-blocking)
         const deepLink = bookingId
             ? `/bookings.html?highlight=${bookingId}`
             : `/dashboard.html`;
-        
-        // ✅ Use the imported sendPush or fallback to window.sendPush
+
         try {
             if (typeof sendPush === 'function') {
                 await sendPush(message, deepLink);
             } else if (window.sendPush) {
                 await window.sendPush(message, deepLink);
             } else {
-                // Try dynamic import
                 const { sendPush: importedSendPush } = await import('./onesignal.js');
                 await importedSendPush(message, deepLink);
             }
         } catch (pushError) {
             console.warn('[Notification] Push failed but in-app saved:', pushError.message);
-            // ✅ Don't throw - push failure shouldn't break the UI
         }
 
         console.log("✅ Notification saved:", message);
     } catch (err) {
         console.error("[Notification] Error:", err);
-        // ✅ Don't throw - notification failure shouldn't break the UI
     }
 }
-
-
-
 
 /* =========================
    AUTH & MAIN LOAD
@@ -1059,7 +1320,6 @@ onAuthStateChanged(auth, async (user) => {
       }
     });
 
-    // Load inventory first so edit modal works immediately
     await loadInventory(businessId);
 
     const tbody = document.getElementById("bookingsTable");
@@ -1083,10 +1343,7 @@ onAuthStateChanged(auth, async (user) => {
 
         const filtered = allBookingsGlobal.filter(({ data }) => {
           const currentStatus = getCalculatedStatus(data);
-          const isOverbooked = data.items?.some(i => {
-            const s = Number(i.shortage);
-            return !isNaN(s) && s > 0;
-          }) || false;
+          const isOverbooked = isBookingOverbooked(data);
 
           let matchesStatus = !sFilter || (sFilter === "overbooked" ? isOverbooked : currentStatus === sFilter);
           const matchesDate   = !dFilter || data.event?.date === dFilter;
@@ -1106,7 +1363,6 @@ onAuthStateChanged(auth, async (user) => {
         });
       }
 
-      // Wire up filter controls
       const sF = document.getElementById("filterStatus");
       const dF = document.getElementById("filterDate");
       const sI = document.getElementById("searchInput");
@@ -1116,7 +1372,6 @@ onAuthStateChanged(auth, async (user) => {
 
       filterAndRender();
 
-      // Handle highlight from URL after data loads
       if (highlightId) {
         const match = allBookingsGlobal.find(b => b.id === highlightId);
         if (match) openBooking(match.data, match.id, businessId);
@@ -1139,4 +1394,3 @@ onAuthStateChanged(auth, async (user) => {
     } 
   }
 });
-

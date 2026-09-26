@@ -20,7 +20,8 @@ import {
     runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-import { deductInventory, restoreInventory, checkAvailability, updateInventoryDiff } from "./inventoryService.js";
+import { getInventory } from "./inventoryService.js";
+import { checkDateAvailability, getBookingWindow } from "./availabilityService.js";
 
 /**
  * Create a new booking
@@ -36,13 +37,28 @@ export async function createBooking(businessId, userId, bookingData) {
             throw new Error("Missing required booking information");
         }
 
-        // 2. Check inventory availability
-        const availability = await checkAvailability(businessId, bookingData.items);
+        // 2. Check inventory availability for this booking's specific date window
+        //    (nothing is reserved outside that window, so other bookings on
+        //    other dates never block this one).
+        const inventoryItems = await getInventory(businessId);
+        const { start, end } = getBookingWindow({
+            event: {
+                deliveryDate: bookingData.eventDate,
+                returnDate: bookingData.returnDate || bookingData.eventDate
+            }
+        });
+        const availability = await checkDateAvailability(
+            businessId,
+            inventoryItems,
+            bookingData.items.map(i => ({ name: i.itemName || i.name, qty: i.quantity || i.qty, isCustom: i.isCustom })),
+            start,
+            end
+        );
         if (!availability.available) {
             const shortageMessages = availability.shortages.map(s =>
-                `${s.itemName}: Need ${s.requested}, only ${s.available} available (short by ${s.shortage})`
+                `${s.name}: Need ${s.requested}, only ${s.available} available for these dates (short by ${s.shortage})`
             ).join("\n");
-            throw new Error(`Insufficient inventory:\n${shortageMessages}`);
+            throw new Error(`Insufficient inventory for the selected dates:\n${shortageMessages}`);
         }
 
         // 3. Create booking document
@@ -68,8 +84,10 @@ export async function createBooking(businessId, userId, bookingData) {
             updatedAt: serverTimestamp()
         });
 
-        // 4. Deduct inventory
-        await deductInventory(businessId, bookingData.items);
+        // Note: inventory is no longer permanently deducted here. Availability
+        // for any date window is computed live from active bookings instead
+        // (see availabilityService.js), so nothing needs to be reserved
+        // up front beyond the check we already did above.
 
         return bookingId;
     } catch (error) {
@@ -164,11 +182,9 @@ export async function updateBooking(businessId, bookingId, updates) {
  */
 export async function completeBooking(businessId, bookingId) {
     try {
-        // Get booking data
-        const booking = await getBooking(businessId, bookingId);
-
-        // Restore inventory
-        await restoreInventory(businessId, booking.items);
+        // Get booking data (kept for symmetry / future hooks — inventory no
+        // longer needs restoring since it was never permanently deducted).
+        await getBooking(businessId, bookingId);
 
         // Update booking status
         await updateDoc(doc(db, "businesses", businessId, "bookings", bookingId), {
@@ -190,15 +206,10 @@ export async function completeBooking(businessId, bookingId) {
  */
 export async function cancelBooking(businessId, bookingId, reason = "") {
     try {
-        // Get booking data
-        const booking = await getBooking(businessId, bookingId);
-
-        // Only restore inventory if booking was active
-        if (booking.status === "active") {
-            await restoreInventory(businessId, booking.items);
-        }
-
-        // Update booking status
+        // Inventory is computed live from active bookings, so cancelling
+        // simply needs to flip the status — the item's stock frees up
+        // automatically because cancelled bookings are excluded from the
+        // date-overlap calculation (see availabilityService.fetchActiveBookings).
         await updateDoc(doc(db, "businesses", businessId, "bookings", bookingId), {
             status: "cancelled",
             cancellationReason: reason,
@@ -373,37 +384,87 @@ export async function searchBookings(businessId, searchTerm) {
 }
 
 /**
- * Atomically updates a booking document and adjusts inventory levels using a transaction.
+ * Updates a booking document, re-checking date-based inventory availability
+ * for the (possibly changed) event window and recalculating each item's
+ * shortage/borrowed amount accordingly.
+ *
+ * IMPORTANT: This no longer touches inventory.availableQuantity at all.
+ * Availability is computed live from other bookings' date windows
+ * (see availabilityService.js), so editing a booking never needs to
+ * "give back" or "take" shared stock — it just needs to re-verify that,
+ * for whatever dates/quantities the booking now has, enough stock is free.
+ *
  * @param {string} businessId
  * @param {string} bookingId
- * @param {Object} updatedBookingData - Full/partial updates to the booking doc
- * @param {Array} originalItems - The items array from the booking prior to edit
- * @param {Array} updatedItems - The new items array to write
- * @returns {Promise<Array>} The updatedItems with calculated shortage properties
+ * @param {Object} updatedBookingData - Full/partial dot-path updates to the booking doc
+ *   (may include "event.deliveryDate" / "event.date" / "event.returnDate" if dates changed)
+ * @param {Array} originalItems - The items array from the booking prior to edit (unused for
+ *   inventory math now, kept in the signature for backward compatibility)
+ * @param {Array} updatedItems - The new items array: [{name, qty, price, total, supplier, isCustom}]
+ * @returns {Promise<Array>} The updatedItems with recalculated shortage/borrowed properties
  */
 export async function editBookingTransaction(businessId, bookingId, updatedBookingData, originalItems, updatedItems) {
     try {
-        let finalItems = [];
-        await runTransaction(db, async (transaction) => {
-            const bookingRef = doc(db, "businesses", businessId, "bookings", bookingId);
-            
-            // 1. Lock the booking document by reading it within the transaction
-            const bookingSnap = await transaction.get(bookingRef);
-            if (!bookingSnap.exists()) {
-                throw new Error("Booking not found");
+        const bookingRef = doc(db, "businesses", businessId, "bookings", bookingId);
+        const bookingSnap = await getDoc(bookingRef);
+        if (!bookingSnap.exists()) {
+            throw new Error("Booking not found");
+        }
+        const existingBooking = bookingSnap.data();
+
+        // Work out the date window this edit will leave the booking with,
+        // falling back to whatever dates it already had if this edit didn't
+        // touch them.
+        const deliveryDate =
+            updatedBookingData["event.deliveryDate"] ??
+            updatedBookingData["event.date"] ??
+            existingBooking.event?.deliveryDate ??
+            existingBooking.event?.date;
+        const returnDate =
+            updatedBookingData["event.returnDate"] ??
+            existingBooking.event?.returnDate ??
+            deliveryDate;
+
+        const inventoryItems = await getInventory(businessId);
+
+        const { available, shortages } = await checkDateAvailability(
+            businessId,
+            inventoryItems,
+            updatedItems.map(i => ({ name: i.name, qty: i.qty, isCustom: i.isCustom })),
+            deliveryDate,
+            returnDate,
+            bookingId // exclude this booking's own current reservation from the check
+        );
+
+        const shortageMap = new Map(shortages.map(s => [s.name.trim().toLowerCase(), s]));
+
+        const finalItems = updatedItems.map(item => {
+            if (item.isCustom) {
+                // Custom / not-in-catalog items are always fully sourced
+                // from the named vendor — there's no "your stock" to check.
+                return {
+                    ...item,
+                    shortage: item.qty,
+                    borrowed: item.qty
+                };
             }
-
-            // 2. Perform the transactional inventory calculations and updates
-            finalItems = await updateInventoryDiff(transaction, businessId, originalItems, updatedItems);
-
-            // 3. Write updates to the booking doc
-            transaction.update(bookingRef, {
-                ...updatedBookingData,
-                items: finalItems,
-                updatedAt: serverTimestamp()
-            });
+            const key = (item.name || "").trim().toLowerCase();
+            const s = shortageMap.get(key);
+            const shortage = s ? s.shortage : 0;
+            return {
+                ...item,
+                shortage,
+                borrowed: shortage
+            };
         });
-        return finalItems;
+
+        await updateDoc(bookingRef, {
+            ...updatedBookingData,
+            items: finalItems,
+            updatedAt: serverTimestamp()
+        });
+
+        return { finalItems, available, shortages };
     } catch (error) {
         console.error("Error executing editBookingTransaction:", error);
         throw error;

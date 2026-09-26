@@ -1,5 +1,5 @@
 import { auth, db, storage } from "./firebase.js";
-import { deductInventory } from "./services/inventoryService.js";
+import { checkDateAvailability, getAvailabilityMap, fetchActiveBookings } from "./services/availabilityService.js";
 import { getBusinessIdByEmail } from "./shared.js";
 import { sendPush } from "./onesignal.js";
 import { uploadReceiptImage } from "./utils/upload.js";
@@ -23,6 +23,165 @@ import { onAuthStateChanged } from
 
 let currentBusinessName = "Our Business"; 
 let inventoryItems = [];
+let activeBookingsCache = []; // other bookings, refreshed whenever the event/delivery/return dates change
+let availabilityMap = new Map(); // itemNameLower -> units free for the currently selected date window
+
+function getFormDateWindow() {
+  const deliveryEl = document.getElementById("deliveryDate");
+  const eventEl = document.getElementById("eventDate");
+  const returnEl = document.getElementById("returnDate");
+  const start = (deliveryEl?.value || eventEl?.value || "").trim();
+  const end = (returnEl?.value || start).trim();
+  return { start: start || null, end: end || null };
+}
+
+/**
+ * Refetch other active bookings and rebuild the per-item availability map for
+ * whatever dates are currently in the form, then refresh every item-row
+ * dropdown so the "(X avail)" labels reflect THOSE dates, not just raw stock.
+ */
+async function refreshAvailabilityForFormDates() {
+  const { start, end } = getFormDateWindow();
+  if (!start) {
+    availabilityMap = new Map();
+    return;
+  }
+  try {
+    activeBookingsCache = await fetchActiveBookings(businessId);
+    availabilityMap = getAvailabilityMap(inventoryItems, activeBookingsCache, new Date(start), new Date(end));
+  } catch (err) {
+    console.error("Error refreshing date-based availability:", err);
+  }
+  refreshAllItemRowOptions();
+  document.querySelectorAll(".item-row").forEach(row => checkRowShortage(row));
+}
+
+function refreshAllItemRowOptions() {
+  document.querySelectorAll(".item-row .item-name").forEach(select => {
+    const currentValue = select.value;
+    Array.from(select.options).forEach(opt => {
+      if (!opt.value || opt.value === "__custom__") return;
+      const key = opt.value.trim().toLowerCase();
+      const free = availabilityMap.has(key) ? availabilityMap.get(key) : Number(opt.dataset.avail || 0);
+      opt.dataset.freeForDates = free;
+      opt.textContent = `${opt.value} (${free} avail for these dates)`;
+    });
+    select.value = currentValue;
+  });
+}
+
+/* ========================================================
+   DRAFT AUTOSAVE — like a WhatsApp draft: everything typed is kept in this
+   browser (localStorage) as you go, is restored if you navigate away and
+   come back — even days later — but is never written to your bookings
+   until you actually tap "Save"/"Create Booking".
+======================================================== */
+const DRAFT_FIELD_IDS = [
+  "clientName", "clientPhone", "clientEmail", "eventType", "eventDate",
+  "deliveryDate", "returnDate", "eventLocation", "paymentMethod", "notes",
+  "totalAmount", "amountPaid", "cautionFee", "transportationFee", "otherFees"
+];
+
+function getDraftKey() {
+  return businessId ? `addBookingDraft_${businessId}` : null;
+}
+
+function collectDraftState() {
+  const fields = {};
+  DRAFT_FIELD_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) fields[id] = el.value;
+  });
+
+  const items = Array.from(document.querySelectorAll(".item-row")).map(row => ({
+    itemName: row.querySelector(".item-name")?.value || "",
+    customName: row.querySelector(".item-custom-name")?.value || "",
+    qty: row.querySelector(".item-qty")?.value || "",
+    price: row.querySelector(".item-price")?.value || "",
+    vendor: row.querySelector(".vendor-name")?.value || ""
+  }));
+
+  return { fields, items, savedAt: Date.now() };
+}
+
+let draftSaveTimer;
+function scheduleDraftSave() {
+  clearTimeout(draftSaveTimer);
+  draftSaveTimer = setTimeout(() => {
+    const key = getDraftKey();
+    if (!key) return;
+    try {
+      localStorage.setItem(key, JSON.stringify(collectDraftState()));
+    } catch (err) {
+      console.warn("[Draft] Could not save draft:", err);
+    }
+  }, 400);
+}
+
+function clearDraft() {
+  const key = getDraftKey();
+  if (key) localStorage.removeItem(key);
+}
+
+function draftHasContent(draft) {
+  if (!draft) return false;
+  const fieldsHaveContent = Object.values(draft.fields || {}).some(v => (v || "").toString().trim().length > 0);
+  const itemsHaveContent = (draft.items || []).some(i => (i.itemName || i.customName || "").trim().length > 0);
+  return fieldsHaveContent || itemsHaveContent;
+}
+
+/** Restores a saved draft (with confirmation) if one exists. Returns true if it restored a draft's item rows. */
+async function restoreDraftIfAny() {
+  const key = getDraftKey();
+  if (!key) return false;
+
+  let draft = null;
+  try {
+    draft = JSON.parse(localStorage.getItem(key) || "null");
+  } catch {
+    draft = null;
+  }
+
+  if (!draftHasContent(draft)) return false;
+
+  if (!confirm("You have an unsaved booking draft from before. Restore it?")) {
+    clearDraft();
+    return false;
+  }
+
+  Object.entries(draft.fields || {}).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  });
+  // A restored total/paid value should behave exactly like one the user just
+  // typed — recalcTotal must not silently overwrite it.
+  if (draft.fields?.totalAmount) document.getElementById("totalAmount")?.setAttribute("data-user-edited", "true");
+  if (draft.fields?.amountPaid) document.getElementById("amountPaid")?.setAttribute("data-user-edited", "true");
+
+  const container = document.getElementById("itemsContainer");
+  container.innerHTML = "";
+  const draftItems = draft.items && draft.items.length ? draft.items : [{}];
+  draftItems.forEach(itemDraft => {
+    addItemRow();
+    const row = container.lastElementChild;
+    const select = row.querySelector(".item-name");
+    const customInput = row.querySelector(".item-custom-name");
+
+    if (itemDraft.itemName) select.value = itemDraft.itemName;
+    if (itemDraft.itemName === "__custom__" || itemDraft.customName) {
+      select.value = "__custom__";
+      customInput.classList.remove("hidden");
+      customInput.value = itemDraft.customName || "";
+    }
+    if (itemDraft.qty) row.querySelector(".item-qty").value = itemDraft.qty;
+    if (itemDraft.price) row.querySelector(".item-price").value = itemDraft.price;
+    if (itemDraft.vendor) row.querySelector(".vendor-name").value = itemDraft.vendor;
+    checkRowShortage(row);
+  });
+  updateSelectOptions();
+
+  return true;
+}
 
 async function sendNotification(businessId, message, userEmail, type = "general", bookingId = null) {
   try {
@@ -50,34 +209,56 @@ async function sendNotification(businessId, message, userEmail, type = "general"
 
 
 
+function getFeeValue(id) {
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  return parseFloat((el.value || "0").toString().replace(/,/g, '')) || 0;
+}
+
 function recalcTotal() {
-  let total = 0;
+  let itemsSubtotal = 0;
   let itemsSummary = "";
 
   document.querySelectorAll(".item-row").forEach(row => {
-    const select = row.querySelector(".item-name");
-    const name = select.value || "Item Name";
+    const { name } = getRowItemName(row);
     const qty = Number(row.querySelector(".item-qty")?.value || 0);
     const price = Number(row.querySelector(".item-price")?.value || 0);
-    
-    const vendor = row.querySelector(".vendor-name")?.value;
-    
-    const rowTotal = qty * price;
-    total += rowTotal;
 
-    if (qty > 0) {
+    const vendor = row.querySelector(".vendor-name")?.value;
+
+    const rowTotal = qty * price;
+    itemsSubtotal += rowTotal;
+
+    if (qty > 0 && name) {
       const vendorTag = vendor ? ` [Ext: ${vendor}]` : "";
       itemsSummary += `• ${name} (x${qty})${vendorTag} - ₦${rowTotal.toLocaleString()}\n`;
     }
   });
 
+  const cautionFee = getFeeValue("cautionFee");
+  const transportationFee = getFeeValue("transportationFee");
+  const otherFees = getFeeValue("otherFees");
+  const feesTotal = cautionFee + transportationFee + otherFees;
+  const computedTotal = itemsSubtotal + feesTotal;
+
+  const itemsSubtotalDisplay = document.getElementById("itemsSubtotalDisplay");
+  if (itemsSubtotalDisplay) {
+    itemsSubtotalDisplay.textContent = `Items subtotal: ₦${itemsSubtotal.toLocaleString('en-NG')}${feesTotal ? ` + ₦${feesTotal.toLocaleString('en-NG')} fees = ₦${computedTotal.toLocaleString('en-NG')}` : ""}`;
+  }
+
   const totalAmountInput = document.getElementById("totalAmount");
   const amountPaidInput = document.getElementById("amountPaid");
 
-  // ✅ Set raw number (NO commas) for text inputs
+  // ✅ Set raw number (NO commas) for text inputs — but only while the user
+  // hasn't manually overridden the total themselves (e.g. to fold in a
+  // caution fee negotiated outside these fields).
   if (totalAmountInput && !totalAmountInput.dataset.userEdited) {
-    totalAmountInput.value = total || 0;
+    totalAmountInput.value = computedTotal || 0;
   }
+
+  const total = totalAmountInput
+    ? parseFloat((totalAmountInput.value || "0").toString().replace(/,/g, '')) || 0
+    : computedTotal;
 
   // Get Paid Amount - handle both formatted and raw values
   const paidRaw = amountPaidInput ? amountPaidInput.value.replace(/,/g, '') : '0';
@@ -93,6 +274,11 @@ function recalcTotal() {
   const formattedTotal = total.toLocaleString('en-NG');
   const formattedPaid = paidValue.toLocaleString('en-NG');
 
+  let feesLines = "";
+  if (cautionFee) feesLines += `Caution Fee: ₦${cautionFee.toLocaleString('en-NG')}\n`;
+  if (transportationFee) feesLines += `Transportation: ₦${transportationFee.toLocaleString('en-NG')}\n`;
+  if (otherFees) feesLines += `Other Fees: ₦${otherFees.toLocaleString('en-NG')}\n`;
+
   // Build Preview with formatted values
   const previewText = 
     `*BOOKING CONFIRMATION - ${currentBusinessName.toUpperCase()}*\n\n` +
@@ -101,6 +287,7 @@ function recalcTotal() {
     `Return Date: ${document.getElementById("returnDate")?.value || "Date"}\n` +
     `Location: ${document.getElementById("eventLocation")?.value || "Not specified"}\n\n` +
     `Items Ordered: \n${itemsSummary}\n` +
+    (feesLines ? `${feesLines}\n` : "") +
     `Total: ₦${formattedTotal}\n` +
     `Paid: ₦${formattedPaid}\n` +
     `Balance: ₦${balance.toLocaleString()}\n\n` +
@@ -152,6 +339,26 @@ document.addEventListener('DOMContentLoaded', function() {
       this.dataset.userEdited = 'true';
     });
   }
+
+  // ✅ Caution / Transportation / Other fees roll into the total automatically,
+  // same "stop auto-updating once the user has typed their own total" rule.
+  ["cautionFee", "transportationFee", "otherFees"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("input", recalcTotal);
+  });
+
+  // ✅ Changing any of the three date fields re-checks availability against
+  // OTHER bookings for that specific window, instead of a flat global pool.
+  let dateDebounce;
+  ["eventDate", "deliveryDate", "returnDate"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("input", () => {
+        clearTimeout(dateDebounce);
+        dateDebounce = setTimeout(refreshAvailabilityForFormDates, 250);
+      });
+    }
+  });
 });
 
 
@@ -161,6 +368,50 @@ document.addEventListener('DOMContentLoaded', function() {
 /* =========================
    ADD ITEM ROW (FIXED WITH VENDOR FIELD)
 ========================= */
+
+/**
+ * Reads the effective item name for a row: either the picked catalog item,
+ * or whatever the user typed in the "not in inventory" text box.
+ */
+function getRowItemName(row) {
+  const select = row.querySelector(".item-name");
+  const isCustom = select.value === "__custom__";
+  const customInput = row.querySelector(".item-custom-name");
+  const name = isCustom ? (customInput?.value.trim() || "") : (select.value || "");
+  return { name, isCustom };
+}
+
+/**
+ * Looks up how many units are free for the CURRENT form dates (not just raw
+ * stock) and shows/hides the vendor field accordingly. Custom items always
+ * show the vendor field, since there's no catalog stock to check them against.
+ */
+function checkRowShortage(row) {
+  const select = row.querySelector(".item-name");
+  const qtyInput = row.querySelector(".item-qty");
+  const vendorContainer = row.querySelector(".vendor-container");
+  const { name, isCustom } = getRowItemName(row);
+  const requested = Number(qtyInput.value || 0);
+
+  if (isCustom) {
+    // Not in inventory at all — always borrowed from a vendor.
+    vendorContainer.classList.remove("hidden");
+    recalcTotal();
+    return;
+  }
+
+  const key = name.trim().toLowerCase();
+  const freeForDates = availabilityMap.has(key)
+    ? availabilityMap.get(key)
+    : Number(select.selectedOptions[0]?.dataset.avail || 0);
+
+  if (requested > freeForDates) {
+    vendorContainer.classList.remove("hidden");
+  } else {
+    vendorContainer.classList.add("hidden");
+  }
+  recalcTotal();
+}
 
 window.addItemRow = function () {
   const container = document.getElementById("itemsContainer");
@@ -175,12 +426,16 @@ window.addItemRow = function () {
           ${item.name} (${item.availableQuantity} avail)
         </option>
       `).join("")}
+      <option value="__custom__">✏️ Not in inventory (type item name)</option>
     </select>
     <div class="flex gap-2 w-full sm:w-auto">
         <input class="item-qty w-20 p-2 border rounded-lg outline-none" type="number" min="1" value="1" required>
         <input class="item-price w-24 p-2 border rounded-lg outline-none" type="number" placeholder="Price">
     </div>
-    
+
+    <input class="item-custom-name hidden w-full p-2 border rounded-lg outline-none"
+           placeholder="Type the item name">
+
     <div class="vendor-container hidden w-full mt-2 p-3 border border-purple-200 bg-purple-50 rounded-lg">
         <label class="block text-[10px] font-bold text-purple-700 uppercase mb-1">Vendor Name (To borrow from):</label>
         <input class="vendor-name w-full p-2 border border-purple-300 rounded-md text-sm outline-none" 
@@ -194,36 +449,36 @@ window.addItemRow = function () {
   const select = row.querySelector(".item-name");
   const qtyInput = row.querySelector(".item-qty");
   const priceInput = row.querySelector(".item-price");
+  const customNameInput = row.querySelector(".item-custom-name");
   const vendorInput = row.querySelector(".vendor-name");
-  const vendorContainer = row.querySelector(".vendor-container"); // Target the wrapper
+  const vendorContainer = row.querySelector(".vendor-container");
   const removeBtn = row.querySelector("button");
 
-  const checkShortage = () => {
-    const opt = select.selectedOptions[0];
-    const avail = Number(opt?.dataset.avail || 0);
-    const requested = Number(qtyInput.value);
-
-    if (requested > avail) {
-      vendorContainer.classList.remove("hidden");
-    } else {
-      vendorContainer.classList.add("hidden");
-    }
-    recalcTotal();
-  };
-
-  select.addEventListener("change", (e) => {
-    const opt = e.target.selectedOptions[0];
+select.addEventListener("change", (e) => {
+  const opt = e.target.selectedOptions[0];
+  if (e.target.value === "__custom__") {
+    customNameInput.classList.remove("hidden");
+    customNameInput.focus();
+    priceInput.value = "";               // clear stale price
+    priceInput.placeholder = "price";
+  } else {
+    customNameInput.classList.add("hidden");
+    customNameInput.value = "";
     priceInput.value = opt?.dataset.price || "";
-    checkShortage();
-  });
-
-  qtyInput.addEventListener("input", checkShortage);
+    priceInput.placeholder = "Price";
+  }
+  checkRowShortage(row);
+  updateSelectOptions();
+});
+  qtyInput.addEventListener("input", () => checkRowShortage(row));
   priceInput.addEventListener("input", recalcTotal);
+  customNameInput.addEventListener("input", recalcTotal);
   vendorInput.addEventListener("input", recalcTotal);
 
   removeBtn.addEventListener("click", () => {
     row.remove();
     recalcTotal();
+    updateSelectOptions();
   });
 
   container.appendChild(row);
@@ -293,8 +548,19 @@ onAuthStateChanged(auth, async (user) => {
       }
     });
 
-    addItemRow();
+    const restoredDraft = await restoreDraftIfAny();
+    if (!restoredDraft) {
+      addItemRow();
+    }
+    await refreshAvailabilityForFormDates();
     recalcTotal();
+
+    // Autosave every keystroke (debounced) across the whole form, including
+    // dynamically-added item rows — nothing is written to Firestore until
+    // "Create Booking" is actually pressed.
+    const bookingForm = document.getElementById("addBookingForm");
+    bookingForm?.addEventListener("input", scheduleDraftSave);
+    bookingForm?.addEventListener("change", scheduleDraftSave);
 
   } catch (error) {
     console.error("Auth Init Error:", error);
@@ -363,55 +629,77 @@ try {
   // ✅ REMOVE this completely (no longer needed)
   // if (new Date(returnDate.value) < new Date(eventDate.value)) { ... }
 
-        const items = [];
+        const rawItems = [];
         document.querySelectorAll(".item-row").forEach(row => {
-          const name = row.querySelector(".item-name").value.trim();
+          const { name, isCustom } = getRowItemName(row);
           const qty = Number(row.querySelector(".item-qty").value);
           const price = Number(row.querySelector(".item-price").value);
+          const supplierInput = row.querySelector(".vendor-name");
 
           if (!name || qty <= 0) return;
-// find inventory item
-const inventoryItem = inventoryItems.find(
-  i => i.name.toLowerCase() === name.toLowerCase()
-);
 
-const availableAtBooking = inventoryItem?.availableQuantity || 0;
-const shortage = Math.max(0, qty - availableAtBooking);
-
-const supplierInput = row.querySelector(".vendor-name");
-
-items.push({
-  name,
-  qty,
-  price,
-  total: qty * price,
-  availableAtBooking,
-  shortage,
-  borrowed: shortage > 0 ? shortage : 0,
-  supplier: shortage > 0 ? (supplierInput?.value || "") : ""
-});
-
+          rawItems.push({ name, qty, price, isCustom, supplierInput: supplierInput?.value || "" });
         });
 
-        const overbookedItems = items.filter(i => i.shortage > 0);
-if (overbookedItems.length) {
-  const msg = overbookedItems
-    .map(i => `${i.name}: borrow ${i.shortage}`)
-    .join("\n");
-
-  if (!confirm(`⚠ Overbooking detected:\n${msg}\n\nContinue anyway?`)) {
-    submitBtn.disabled = false;
-    submitBtn.textContent = originalText;
-    return;
-  }
-}
-
-
-        if (!items.length) {
+        if (!rawItems.length) {
           alert("Add at least one item");
           submitBtn.disabled = false;
           submitBtn.textContent = originalText;
           return;
+        }
+
+        /* ===== DATE-BASED AVAILABILITY CHECK =====
+           Re-verify (right before saving) how much of each item is actually
+           free for THIS booking's date window, since inventory or other
+           bookings may have changed since the page loaded. */
+        const { start: windowStart, end: windowEnd } = getFormDateWindow();
+        const { availabilityMap: freshAvailabilityMap } = await checkDateAvailability(
+          businessId,
+          inventoryItems,
+          rawItems,
+          windowStart,
+          windowEnd
+        );
+
+        const items = rawItems.map(ri => {
+          if (ri.isCustom) {
+            return {
+              name: ri.name,
+              qty: ri.qty,
+              price: ri.price,
+              total: ri.qty * ri.price,
+              isCustom: true,
+              shortage: ri.qty,
+              borrowed: ri.qty,
+              supplier: ri.supplierInput
+            };
+          }
+          const key = ri.name.trim().toLowerCase();
+          const freeForDates = freshAvailabilityMap.has(key) ? freshAvailabilityMap.get(key) : 0;
+          const shortage = Math.max(0, ri.qty - freeForDates);
+          return {
+            name: ri.name,
+            qty: ri.qty,
+            price: ri.price,
+            total: ri.qty * ri.price,
+            availableAtBooking: freeForDates,
+            shortage,
+            borrowed: shortage > 0 ? shortage : 0,
+            supplier: shortage > 0 ? ri.supplierInput : ""
+          };
+        });
+
+        const overbookedItems = items.filter(i => i.shortage > 0);
+        if (overbookedItems.length) {
+          const msg = overbookedItems
+            .map(i => `${i.name}: borrow ${i.shortage} (only ${i.availableAtBooking ?? 0} free for these dates)`)
+            .join("\n");
+
+          if (!confirm(`⚠ Not enough stock for these dates:\n${msg}\n\nContinue anyway (borrow the shortfall)?`)) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            return;
+          }
         }
 
         /* ===== UPLOAD RECEIPT IMAGE ===== */
@@ -430,6 +718,9 @@ const amountPaid = document.getElementById("amountPaid");
 
 const cleanTotal = parseFloat(totalAmount.value.replace(/,/g, '')) || 0;
 const cleanPaid = parseFloat(amountPaid.value.replace(/,/g, '')) || 0;
+const cleanCaution = getFeeValue("cautionFee");
+const cleanTransportation = getFeeValue("transportationFee");
+const cleanOtherFees = getFeeValue("otherFees");
 
 
 
@@ -451,7 +742,10 @@ const bookingData = {
   payment: {
     total: cleanTotal,
     paid: cleanPaid,
-    method: paymentMethod.value
+    method: paymentMethod.value,
+    cautionFee: cleanCaution,
+    transportationFee: cleanTransportation,
+    otherFees: cleanOtherFees
   },
   receiptImage: receiptImageUrl,
   notes: document.getElementById("notes")?.value || "",
@@ -506,9 +800,10 @@ if (allBookings.size === 1) {
   );
 }
 
-        /* ===== DEDUCT INVENTORY ===== */
-        await deductInventory(businessId, items);
+        /* Nothing to deduct — availability for any date window is computed
+           live from active bookings (see availabilityService.js). */
 
+        clearDraft();
         window.location.href = "bookings.html";
       } catch (error) {
         console.error("Error saving booking:", error);
@@ -522,11 +817,11 @@ if (allBookings.size === 1) {
 function updateSelectOptions() {
   const selectedItems = Array.from(document.querySelectorAll(".item-name"))
     .map(s => s.value)
-    .filter(v => v); // remove empty
+    .filter(v => v && v !== "__custom__"); // "not in inventory" can be picked in more than one row
 
   document.querySelectorAll(".item-name").forEach(select => {
     Array.from(select.options).forEach(option => {
-      if (!option.value) return; // keep placeholder
+      if (!option.value || option.value === "__custom__") return; // keep placeholder + custom option always enabled
       // disable option if selected elsewhere
       option.disabled = selectedItems.includes(option.value) && select.value !== option.value;
     });

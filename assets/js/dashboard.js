@@ -22,6 +22,7 @@ import {
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getMessaging, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 import { runAutomatedChecks } from "./services/reminderService.js";
+import { getBookingLifecycle, isBookingOverbooked, renderLifecycleBadge } from "./services/bookingStatus.js";
 
 /* =========================
    HELPERS
@@ -42,11 +43,19 @@ function isWithinThisWeek(dateValue) {
   const d = new Date(dateValue);
   const now = new Date();
   const start = new Date(now);
-  start.setDate(now.getDate() - now.getDay());
+  start.setDate(now.getDate() - now.getDay()); // back to this week's Sunday
   start.setHours(0, 0, 0, 0);
   const end = new Date(start);
-  end.setDate(start.getDate() + 7);
+  end.setDate(start.getDate() + 6); // through this week's Saturday
+  end.setHours(23, 59, 59, 999);
   return d >= start && d <= end;
+}
+
+/** The date a booking's items actually move (delivery date, falling back to
+ * the plain event date) — used for "this week" and other date-window logic,
+ * matching what availabilityService.js treats as the start of the window. */
+function getBookingEffectiveDate(booking) {
+  return booking?.event?.deliveryDate || booking?.event?.date || booking?.eventDate || null;
 }
 
 /* =========================
@@ -103,46 +112,37 @@ function listenToBookingStats(businessId) {
 
   onSnapshot(ref, async snap => {
     let active = 0;
+    let upcoming = 0;
     let returned = 0;
     let overdue = 0;
     let overbooked = 0;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
     for (const d of snap.docs) {
       const b = d.data();
-      let currentStatus = b.status;
 
-      if (currentStatus !== "returned" && b.items?.some(i => Number(i.shortage) > 0)) overbooked++;
+      if (isBookingOverbooked(b)) overbooked++;
 
-      if (!currentStatus) {
-        currentStatus = "active";
+      // Backfill only — legacy docs that never got a status/createdAt.
+      if (!b.status) {
         await updateDoc(d.ref, { status: "active" });
       }
       if (!b.createdAt) {
         await updateDoc(d.ref, { createdAt: serverTimestamp() });
       }
 
-      if (currentStatus !== "returned" && b.event?.returnDate) {
-        const rDate = new Date(b.event.returnDate);
-        rDate.setHours(0, 0, 0, 0);
-        if (today > rDate && currentStatus !== "overdue") {
-          await updateDoc(d.ref, { status: "overdue" });
-          currentStatus = "overdue";
-        } else if (today <= rDate && currentStatus === "overdue") {
-          await updateDoc(d.ref, { status: "active" });
-          currentStatus = "active";
-        }
-      }
-
-      if (currentStatus === "active") active++;
-      else if (currentStatus === "returned") returned++;
-      else if (currentStatus === "overdue") overdue++;
+      // Active/Upcoming/Overdue/Returned is now computed live from dates —
+      // see bookingStatus.js — so every page (dashboard/bookings/inventory)
+      // always agrees, with nothing to keep in sync by writing back to Firestore.
+      const life = getBookingLifecycle(b);
+      if (life.key === "active") active++;
+      else if (life.key === "upcoming") upcoming++;
+      else if (life.key === "returned") returned++;
+      else if (life.key === "overdue") overdue++;
     }
 
     safeSetText("overbooked-bookings", overbooked);
     safeSetText("active-bookings", active);
+    safeSetText("upcoming-bookings", upcoming);
     safeSetText("returned-bookings", returned);
     safeSetText("overdue-bookings", overdue);
   });
@@ -176,14 +176,15 @@ function listenToRecentBookings(businessId) {
       return timeB - timeA;
     });
 
-    const recentDocs = mapped.filter(({ data }) => isWithinThisWeek(data.event?.date)).slice(0, 10);
+    const recentDocs = mapped.filter(({ data }) => isWithinThisWeek(getBookingEffectiveDate(data))).slice(0, 10);
 
     recentDocs.forEach(({ id, data: b }) => {
       hasEvent = true;
+      const overbookedTag = isBookingOverbooked(b) ? `<span class="ml-1 text-[9px] font-black uppercase text-orange-600">⚠ Overbooked</span>` : "";
       tbody.innerHTML += `
         <tr class="hover:bg-gray-50 border-b border-gray-100 transition-colors cursor-pointer" onclick="window.location.href='bookings.html?id=${id}'">
           <td class="py-4 px-4 text-sm font-semibold text-gray-800">
-            ${b.event?.date || "-"}
+            ${getBookingEffectiveDate(b) || "-"}
           </td>
           
           <td class="py-4 px-2 text-sm text-gray-600">
@@ -194,9 +195,8 @@ function listenToRecentBookings(businessId) {
           </td>
           
           <td class="py-4 px-4 text-right">
-            <span class="status ${b.status} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
-              ${b.status || "active"}
-            </span>
+            ${renderLifecycleBadge(b, "text-[10px] tracking-widest")}
+            ${overbookedTag}
           </td>
         </tr>`;
     });
@@ -376,7 +376,7 @@ function triggerNotificationAlert() {
 
 function listenToNotifications(businessId) {
   const notifRef = collection(db, "businesses", businessId, "notifications");
-  const q = query(notifRef, orderBy("createdAt", "desc"), limit(20));
+  const q = query(notifRef, orderBy("createdAt", "desc"), limit(30));
 
   const dot = document.getElementById("notifDot");
   const notifList = document.getElementById("notifList");
@@ -446,7 +446,7 @@ function listenToNotifications(businessId) {
             <span class="material-symbols-outlined" style="font-size:1.5rem; color:purple;">${icon}</span>
             <div class="flex-1">
               <p class="text-sm ${textWeight}">${n.message}</p>
-              <p class="text-[10px] text-gray-500">By: ${n.triggeredBy || "Unknown"}</p>
+              <p class="text-[10px] text-gray-500">By: ${n.triggeredBy || "System"}</p>
               <p class="text-[10px] text-gray-400 flex items-center gap-2">
                 ${n.createdAt?.toDate?.().toLocaleString() || ""}
                 ${tickIcon}

@@ -120,7 +120,13 @@ export async function deleteInventoryItem(businessId, itemId) {
 }
 
 /**
- * Deduct inventory when booking is created (transactional & safe)
+ * @deprecated Inventory is no longer permanently deducted when a booking is
+ * created. Availability is now computed on the fly, per date range, by
+ * assets/js/services/availabilityService.js (checkDateAvailability /
+ * getAvailabilityMap). This function is kept only so nothing breaks if some
+ * old code path still imports it, but it should not be called anymore —
+ * calling it would incorrectly reserve stock forever, regardless of the
+ * booking's dates.
  * @param {string} businessId 
  * @param {Array} items - Array of items to deduct, supporting both ID-based and name-based schemas
  * @returns {Promise<void>}
@@ -220,7 +226,9 @@ export async function deductInventory(businessId, items) {
 }
 
 /**
- * Restore inventory when booking is completed/cancelled (transactional & safe)
+ * @deprecated See deductInventory above — restoring is no longer needed
+ * because nothing is permanently deducted anymore. Kept for backward
+ * compatibility only.
  * @param {string} businessId 
  * @param {Array} items - Array of items to restore
  * @returns {Promise<void>}
@@ -310,7 +318,9 @@ export async function restoreInventory(businessId, items) {
 }
 
 /**
- * Check if items are available for booking
+ * @deprecated This checks the flat availableQuantity pool and ignores
+ * dates entirely. Use availabilityService.checkDateAvailability(...) instead,
+ * which checks availability for the booking's specific date window.
  * @param {string} businessId 
  * @param {Array} items - [{itemId, quantity}]
  * @returns {Promise<{available: boolean, shortages: Array}>}
@@ -442,6 +452,11 @@ export async function getInventorySummary(businessId) {
 }
 
 /**
+ * @deprecated Booking edits no longer mutate the shared inventory pool.
+ * See bookingService.editBookingTransaction, which now recomputes each
+ * item's shortage using availabilityService.checkDateAvailability (date-aware)
+ * instead of this flat-pool diffing. Kept for backward compatibility only.
+ *
  * Transactional helper to calculate and update inventory quantities based on booking edits.
  * Must be called INSIDE an active Firestore transaction!
  * @param {Transaction} transaction

@@ -19,13 +19,21 @@ export function generateReceiptImage(booking, businessName = "Tracknrent") {
 
   const items = booking.items || [];
   const width = 600;
-  
+
+  const fees = booking.payment || {};
+  const feeRows = [
+    fees.cautionFee ? { label: "Caution Fee", value: Number(fees.cautionFee) } : null,
+    fees.transportationFee ? { label: "Transportation", value: Number(fees.transportationFee) } : null,
+    fees.otherFees ? { label: "Other Fees", value: Number(fees.otherFees) } : null
+  ].filter(Boolean);
+
   // Calculate dynamic height
   const itemRowHeight = 40;
   const headerHeight = 220;
+  const feeRowHeight = 24;
   const paymentHeight = 160;
   const footerHeight = 140;
-  const height = headerHeight + (items.length * itemRowHeight) + paymentHeight + footerHeight;
+  const height = headerHeight + (items.length * itemRowHeight) + (feeRows.length * feeRowHeight) + paymentHeight + footerHeight;
 
   canvas.width = width;
   canvas.height = height;
@@ -35,7 +43,7 @@ export function generateReceiptImage(booking, businessName = "Tracknrent") {
   ctx.fillRect(0, 0, width, height);
 
   // Border/Accent
-  ctx.strokeStyle = "#7c3aed"; // Purple accent
+  ctx.strokeStyle = "#800080"; // Purple accent
   ctx.lineWidth = 10;
   ctx.strokeRect(0, 0, width, height);
 
@@ -45,7 +53,7 @@ export function generateReceiptImage(booking, businessName = "Tracknrent") {
   ctx.strokeRect(15, 15, width - 30, height - 30);
 
   // Header Title
-  ctx.fillStyle = "#7c3aed";
+  ctx.fillStyle = "#800080";
   ctx.font = "bold 28px 'Segoe UI', Roboto, sans-serif";
   ctx.textAlign = "center";
   ctx.fillText(businessName.toUpperCase(), width / 2, 60);
@@ -105,7 +113,7 @@ export function generateReceiptImage(booking, businessName = "Tracknrent") {
 
   // Divider
   ctx.beginPath();
-  ctx.strokeStyle = "#7c3aed";
+  ctx.strokeStyle = "#800080";
   ctx.lineWidth = 1.5;
   ctx.moveTo(40, 240);
   ctx.lineTo(width - 40, 240);
@@ -119,7 +127,8 @@ export function generateReceiptImage(booking, businessName = "Tracknrent") {
   items.forEach(item => {
     // Description
     ctx.textAlign = "left";
-    ctx.fillText(item.name || item.itemName, 40, currentY);
+    const label = (item.name || item.itemName) + (item.isCustom ? " (not in inventory)" : "");
+    ctx.fillText(label, 40, currentY);
 
     // Qty
     ctx.textAlign = "center";
@@ -144,6 +153,17 @@ export function generateReceiptImage(booking, businessName = "Tracknrent") {
     ctx.stroke();
 
     currentY += itemRowHeight;
+  });
+
+  // Additional fees (Caution / Transportation / Other)
+  feeRows.forEach(fee => {
+    ctx.textAlign = "left";
+    ctx.font = "italic 13px 'Segoe UI', Roboto, sans-serif";
+    ctx.fillStyle = "#6b7280";
+    ctx.fillText(fee.label, 40, currentY);
+    ctx.textAlign = "right";
+    ctx.fillText(`₦${fee.value.toLocaleString()}`, width - 40, currentY);
+    currentY += feeRowHeight;
   });
 
   // Totals Area

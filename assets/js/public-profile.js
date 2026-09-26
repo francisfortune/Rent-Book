@@ -2,14 +2,19 @@
 //
 // Internal, authenticated dashboard controller for public.html.
 //
-// PERMISSION MODEL
-//   Owner        -> full CRUD: settings, slug, contact info, the Go Online
-//                   toggle, logo, and can delete any gallery media.
-//   Team member  -> read-only on all settings/toggle/slug, but CAN add new
-//                   gallery photos/videos. Cannot delete anything.
-// The UI below enforces this by disabling inputs for team members, but the
-// authoritative check is the Firestore Security Rules (see
-// firestore.rules) — never trust the client alone.
+// PERMISSION MODEL (same shape as bookings page)
+//   Owner        -> full access, including the two things that are
+//                   owner-only on this page:
+//                     • turning the store OFFLINE via the Go Online toggle
+//                     • deleting gallery media
+//   Partner      -> full access to everything else: all settings, slug,
+//                   contact info, bio, categories, logo, cover, gallery
+//                   UPLOAD, location pin, and the Go Online toggle (but
+//                   only to turn it ON — once it's on, only the owner can
+//                   turn it back off).
+//
+// The UI below enforces this, but the authoritative check is in Firestore
+// Security Rules — never trust the client alone. See firestore.rules.
 import { auth, db } from "./firebase.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
@@ -41,9 +46,7 @@ const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOU
 const functions = getFunctions();
 const deleteGalleryMediaFn = httpsCallable(functions, "deleteGalleryMedia");
 
-// Quick-add suggestions for the Services & Categories tag editor. Kept in
-// sync (loosely) with the marketplace's top-level CATEGORIES list, plus a
-// few finer-grained service tags vendors commonly want.
+// Quick-add suggestions for the Services & Categories tag editor.
 const CATEGORY_SUGGESTIONS = [
   "Equipment", "Vehicles", "Event Rentals", "Photography", "Furniture",
   "Sound & Lighting", "Decor", "Catering", "Bounce Castles", "Tents & Canopies",
@@ -52,10 +55,13 @@ const CATEGORY_SUGGESTIONS = [
 const MAX_CATEGORIES = 12;
 
 let currentBusinessId = null;
-let currentGallery = []; // array of { id, url, type, publicId, resourceType, addedBy, addedAt }
-let currentCategories = []; // array of strings, e.g. ["Equipment", "Tents & Canopies"]
+let currentGallery = [];
+let currentCategories = [];
 let currentUid = null;
 let isOwner = false;
+let isPartner = false;
+let profileWasEnabled = false;
+
 let unsubscribeBusiness = null;
 
 // --- DOM refs ---------------------------------------------------------
@@ -94,33 +100,87 @@ const categoryInput = document.getElementById("categoryInput");
 const categoryAddBtn = document.getElementById("categoryAddBtn");
 const categorySuggestions = document.getElementById("categorySuggestions");
 const saveBtn = document.getElementById("savePublicSettings");
+const saveBtnFloating = document.getElementById("savePublicSettingsFloating");
 const liveProfileLink = document.getElementById("liveProfileLink");
 const teamMemberNotice = document.getElementById("teamMemberNotice");
+const toggleHelper = document.getElementById("toggleHelper");
+const saveBarWrapper = document.getElementById("saveBarWrapper");
 
-// Inputs only the OWNER may change. Locked (disabled, not hidden — so team
-// members can still see current settings) for team members.
-const OWNER_ONLY_FIELDS = [
-  publicProfileToggle,
-  profileSlug,
-  businessBio,
-  publicPhone,
-  publicWhatsapp,
-  publicInstagram,
-  publicTiktok,
-  publicFacebook,
-  depositCautionFee,
-  depositIdRequirement,
-  depositNotes,
-  publicAddress,
-  showInventoryToggle,
-  showAvailabilityToggle,
-  logoUploadInput,
-  coverUploadInput,
-  removeCoverBtn,
-  categoryInput,
-  categoryAddBtn,
-  btnUseMyLocation
-];
+/* =========================
+   UNSAVED CHANGES STATE
+
+   The Save bar is rendered inline at the bottom of the page by default.
+   When there is anything unsaved we add `body.has-unsaved-changes`, which
+   hides the inline Save button and shows the floating bar (hint + Save)
+   pinned to the bottom of the viewport. Saving removes the class and the
+   inline button returns.
+========================= */
+let pageIsDirty = false;
+let dirtyWired = false;
+
+function markDirty() {
+  if (pageIsDirty) return;
+  pageIsDirty = true;
+  document.body.classList.add("has-unsaved-changes");
+}
+
+function clearDirty() {
+  pageIsDirty = false;
+  document.body.classList.remove("has-unsaved-changes");
+}
+
+// Expose for other modules/handlers (gallery, cover, logo, delete).
+window._markPublicDirty = markDirty;
+window._clearPublicDirty = clearDirty;
+
+// Attach dirty listeners to every input that can affect saved state.
+function wireDirtyTracking() {
+  if (dirtyWired) return;
+  dirtyWired = true;
+
+  const watchedIds = [
+    "publicProfileToggle",
+    "showInventoryToggle",
+    "showAvailabilityToggle",
+    "profileSlug",
+    "businessBio",
+    "publicPhone",
+    "publicWhatsapp",
+    "publicInstagram",
+    "publicTiktok",
+    "publicFacebook",
+    "depositCautionFee",
+    "depositIdRequirement",
+    "depositNotes",
+    "publicAddress"
+  ];
+
+  watchedIds.forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("input", markDirty);
+    el.addEventListener("change", markDirty);
+  });
+
+  // Category editor
+  if (categoryInput) categoryInput.addEventListener("input", markDirty);
+  if (categoryAddBtn) categoryAddBtn.addEventListener("click", markDirty);
+
+  // File inputs — picking a file is a change even before the upload runs.
+  [coverUploadInput, logoUploadInput, galleryUploadInput].forEach((input) => {
+    if (input) input.addEventListener("change", markDirty);
+  });
+
+  if (removeCoverBtn) removeCoverBtn.addEventListener("click", markDirty);
+  if (btnUseMyLocation) btnUseMyLocation.addEventListener("click", markDirty);
+}
+
+// Warn on tab close if there are unsaved changes.
+window.addEventListener("beforeunload", (e) => {
+  if (!pageIsDirty) return;
+  e.preventDefault();
+  e.returnValue = "";
+});
 
 /* =========================
    SLUG SANITIZER
@@ -132,7 +192,7 @@ if (profileSlug) {
 }
 
 function sanitizeSlug(rawSlug) {
-  return rawSlug
+  return String(rawSlug || "")
     .toLowerCase()
     .trim()
     .replace(/\s+/g, "-")
@@ -155,27 +215,26 @@ onAuthStateChanged(auth, async (user) => {
     const membership = await getBusinessMembership(user.uid);
     currentBusinessId = membership.businessId;
     isOwner = membership.role === "owner";
+    isPartner = !isOwner;
 
     applyRoleToUI();
     await loadSettings();
+    wireDirtyTracking();
   } catch (err) {
     console.error("Failed to load storefront settings:", err);
     alert("Error loading business info.");
   }
 });
 
-// Resolves { businessId, role } for the signed-in user. A business's
-// `ownerId` field is the source of truth for who the owner is; the
-// businessMembers collection lists everyone (owner included) who has
-// access, with a `role` of "owner" or "member".
 async function getBusinessMembership(uid) {
   const cacheKey = `businessMembership_${uid}`;
   const cached = localStorage.getItem(cacheKey);
   if (cached) {
     try {
-      return JSON.parse(cached);
+      const parsed = JSON.parse(cached);
+      if (parsed && parsed.businessId) return parsed;
     } catch {
-      /* fall through to a fresh lookup */
+      /* fall through */
     }
   }
 
@@ -186,12 +245,9 @@ async function getBusinessMembership(uid) {
   const memberDoc = snap.docs[0].data();
   const businessId = memberDoc.businessId;
 
-  // Cross-check against the business doc's ownerId, since that's the
-  // field Security Rules trust — a stale/incorrect `role` on the member
-  // doc should never grant owner-level UI.
   const businessSnap = await getDoc(doc(db, "businesses", businessId));
   const ownerId = businessSnap.exists() ? businessSnap.data().ownerId : null;
-  const role = ownerId === uid ? "owner" : (memberDoc.role === "owner" ? "owner" : "member");
+  const role = ownerId === uid ? "owner" : "member";
 
   const result = { businessId, role };
   localStorage.setItem(cacheKey, JSON.stringify(result));
@@ -199,28 +255,48 @@ async function getBusinessMembership(uid) {
 }
 
 /* =========================
-   LOCK DOWN THE UI FOR TEAM MEMBERS
+   ROLE-BASED UI
 ========================= */
 function applyRoleToUI() {
-  if (isOwner) {
-    if (teamMemberNotice) teamMemberNotice.style.display = "none";
-    OWNER_ONLY_FIELDS.forEach((el) => { if (el) el.disabled = false; });
-    if (saveBtn) { saveBtn.style.display = ""; saveBtn.disabled = false; }
-    return;
+  if (teamMemberNotice) {
+    teamMemberNotice.style.display = isOwner ? "none" : "flex";
   }
 
-  // Team member: show the notice, disable every owner-only field.
-  if (teamMemberNotice) teamMemberNotice.style.display = "flex";
-  OWNER_ONLY_FIELDS.forEach((el) => { if (el) el.disabled = true; });
-  // The save button only ever writes owner-only fields, so hide it —
-  // team members' only write path is the gallery upload input below.
-  if (saveBtn) saveBtn.style.display = "none";
+  if (saveBtn) {
+    saveBtn.style.display = "";
+    saveBtn.disabled = false;
+  }
+
+  syncTogglePermission();
+}
+
+function syncTogglePermission() {
+  if (!publicProfileToggle) return;
+
+  const wantsToTurnOff = profileWasEnabled && !publicProfileToggle.checked;
+  const ownerOnlyAction = isPartner && (profileWasEnabled || wantsToTurnOff);
+
+  if (ownerOnlyAction) {
+    publicProfileToggle.disabled = true;
+    if (toggleHelper) {
+      toggleHelper.textContent = "Only the business owner can take the store offline.";
+    }
+  } else {
+    publicProfileToggle.disabled = false;
+    if (toggleHelper) {
+      toggleHelper.textContent = isPartner
+        ? "As a partner you can publish the store, but only the owner can unpublish it."
+        : "";
+    }
+  }
+}
+
+if (publicProfileToggle) {
+  publicProfileToggle.addEventListener("change", syncTogglePermission);
 }
 
 /* =========================
-   LOAD SETTINGS (initial paint + live sync)
-   onSnapshot keeps this dashboard in sync if the owner edits settings
-   from another device/tab, or a teammate adds a gallery item.
+   LOAD SETTINGS
 ========================= */
 async function loadSettings() {
   if (!currentBusinessId) return;
@@ -236,9 +312,11 @@ async function loadSettings() {
 function applyProfileToForm(data) {
   const profile = data.publicProfile || {};
 
-  if (publicProfileToggle) publicProfileToggle.checked = profile.enabled || false;
-  if (showInventoryToggle) showInventoryToggle.checked = profile.showInventory !== false; // default true
-  if (showAvailabilityToggle) showAvailabilityToggle.checked = profile.showAvailability !== false; // default true
+  profileWasEnabled = profile.enabled === true;
+
+  if (publicProfileToggle) publicProfileToggle.checked = profileWasEnabled;
+  if (showInventoryToggle) showInventoryToggle.checked = profile.showInventory !== false;
+  if (showAvailabilityToggle) showAvailabilityToggle.checked = profile.showAvailability !== false;
   if (profileSlug) profileSlug.value = profile.slug || "";
   if (businessBio) businessBio.value = profile.bio || "";
   if (publicPhone) publicPhone.value = profile.phone || "";
@@ -246,10 +324,12 @@ function applyProfileToForm(data) {
   if (publicInstagram) publicInstagram.value = profile.instagram || "";
   if (publicTiktok) publicTiktok.value = profile.tiktok || "";
   if (publicFacebook) publicFacebook.value = profile.facebook || "";
+
   const deposit = profile.depositPolicy || {};
   if (depositCautionFee) depositCautionFee.value = deposit.cautionFee || "";
   if (depositIdRequirement) depositIdRequirement.value = deposit.idRequirement || "";
   if (depositNotes) depositNotes.value = deposit.notes || "";
+
   if (publicAddress) publicAddress.value = profile.address || "";
   if (publicLatitude) publicLatitude.value = profile.latitude ?? "";
   if (publicLongitude) publicLongitude.value = profile.longitude ?? "";
@@ -264,9 +344,6 @@ function applyProfileToForm(data) {
 
   applyCoverToPreview(data.coverImageUrl || "");
 
-  // Categories can live on either publicProfile.categories (new) or the
-  // top-level `categories`/`category` fields (older/simpler records) —
-  // read whichever is present so nothing regresses for existing vendors.
   currentCategories = normalizeCategories(
     profile.categories || data.categories || (data.category ? [data.category] : [])
   );
@@ -277,6 +354,8 @@ function applyProfileToForm(data) {
 
   updateLiveLink(profile.slug, profile.enabled);
   renderGallery();
+
+  syncTogglePermission();
 }
 
 function normalizeCategories(list) {
@@ -295,7 +374,6 @@ function normalizeCategories(list) {
   return out;
 }
 
-// Older records stored gallery as a plain array of URL strings.
 function normalizeGallery(gallery) {
   if (!Array.isArray(gallery)) return [];
   return gallery.map((entry, i) => {
@@ -308,25 +386,41 @@ function normalizeGallery(gallery) {
 
 function updateLiveLink(slug, enabled) {
   if (!liveProfileLink) return;
-  const parentCard = liveProfileLink.closest(".profile-card") || document.getElementById("liveStatusBanner");
+  const banner = document.getElementById("liveStatusBanner");
+  const titleEl = banner?.querySelector("p.font-bold");
+  const subtitleEl = banner?.querySelector("p.text-purple-200");
+
   if (enabled && slug) {
     const url = `${window.location.origin}/p/${slug}`;
     liveProfileLink.href = url;
-    liveProfileLink.textContent = `View Store `;
-    if (parentCard) parentCard.style.display = "";
-  } else if (parentCard) {
-    parentCard.style.display = "none";
+    liveProfileLink.target = "_blank";
+    liveProfileLink.innerHTML = `View Store <i class="fas fa-link text-xs mr-1"></i>`;
+    if (titleEl) titleEl.textContent = "Your store is live";
+    if (subtitleEl) subtitleEl.textContent = "Share your link with customers";
+    if (banner) banner.style.display = "flex";
+    liveProfileLink.onclick = null;
+  } else {
+    liveProfileLink.href = "#";
+    liveProfileLink.removeAttribute("target");
+    liveProfileLink.innerHTML = `Go to toggle <i class="fas fa-arrow-down text-xs mr-1"></i>`;
+    if (titleEl) titleEl.textContent = "Your store is offline";
+    if (subtitleEl) subtitleEl.textContent = "Flip the Go Online switch below to publish";
+    if (banner) banner.style.display = "flex";
+    liveProfileLink.onclick = (e) => {
+      e.preventDefault();
+      document.getElementById("publicProfileToggle")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
   }
 }
 
 /* =========================
-   COVER / BANNER IMAGE (Owner only)
+   COVER / BANNER IMAGE
 ========================= */
 function applyCoverToPreview(url) {
   if (!coverImagePreview) return;
   if (url) {
     coverImagePreview.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;" alt="Store cover image">`;
-    if (removeCoverBtn && isOwner) removeCoverBtn.classList.remove("hidden");
+    if (removeCoverBtn) removeCoverBtn.classList.remove("hidden");
   } else {
     coverImagePreview.innerHTML = `<span class="w-full h-full flex items-center justify-center text-white/70 text-xs font-medium">No banner uploaded yet</span>`;
     if (removeCoverBtn) removeCoverBtn.classList.add("hidden");
@@ -336,8 +430,9 @@ function applyCoverToPreview(url) {
 if (coverUploadInput) {
   coverUploadInput.addEventListener("change", async (e) => {
     const file = e.target.files[0];
-    if (!file || !currentBusinessId || !isOwner) return;
+    if (!file || !currentBusinessId) return;
 
+    markDirty();
     if (coverUploadStatus) {
       coverUploadStatus.classList.remove("hidden");
       coverUploadStatus.textContent = "Uploading cover image...";
@@ -365,8 +460,9 @@ if (coverUploadInput) {
 
 if (removeCoverBtn) {
   removeCoverBtn.addEventListener("click", async () => {
-    if (!isOwner || !currentBusinessId) return;
+    if (!currentBusinessId) return;
     if (!confirm("Remove your storefront's cover image?")) return;
+    markDirty();
     try {
       const businessRef = doc(db, "businesses", currentBusinessId);
       await updateDoc(businessRef, { coverImageUrl: "" });
@@ -380,11 +476,7 @@ if (removeCoverBtn) {
 }
 
 /* =========================
-   SERVICES & CATEGORIES TAG EDITOR (Owner only)
-   A real add/remove tag editor — not decorative. Tags live in-memory in
-   `currentCategories` as the user edits, and are persisted to Firestore
-   (publicProfile.categories) when "Save" is pressed, same as every other
-   field on this page.
+   SERVICES & CATEGORIES TAG EDITOR
 ========================= */
 function renderCategoryTags() {
   if (!categoryTagsList) return;
@@ -399,21 +491,20 @@ function renderCategoryTags() {
       <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
             style="background:#F1E9FB; color:purple; border:1px solid #E4D6F7;">
         ${escapeHtmlLocal(tag)}
-        ${isOwner ? `<button type="button" data-tag="${escapeHtmlLocal(tag)}" class="remove-category-tag hover:text-red-600 transition-colors" aria-label="Remove ${escapeHtmlLocal(tag)}">
+        <button type="button" data-tag="${escapeHtmlLocal(tag)}" class="remove-category-tag hover:text-red-600 transition-colors" aria-label="Remove ${escapeHtmlLocal(tag)}">
           <i class="fas fa-times text-[10px]"></i>
-        </button>` : ""}
+        </button>
       </span>`)
     .join("");
 
-  if (isOwner) {
-    categoryTagsList.querySelectorAll(".remove-category-tag").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        currentCategories = currentCategories.filter((t) => t !== btn.dataset.tag);
-        renderCategoryTags();
-        renderCategorySuggestions();
-      });
+  categoryTagsList.querySelectorAll(".remove-category-tag").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      currentCategories = currentCategories.filter((t) => t !== btn.dataset.tag);
+      renderCategoryTags();
+      renderCategorySuggestions();
+      markDirty();
     });
-  }
+  });
 }
 
 function renderCategorySuggestions() {
@@ -435,15 +526,11 @@ function renderCategorySuggestions() {
     .join("");
 
   categorySuggestions.querySelectorAll(".category-suggestion-chip").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      if (!isOwner) return;
-      addCategoryTag(btn.dataset.suggestion);
-    });
+    btn.addEventListener("click", () => addCategoryTag(btn.dataset.suggestion));
   });
 }
 
 function addCategoryTag(rawValue) {
-  if (!isOwner) return;
   const tag = String(rawValue || "").trim();
   if (!tag) return;
   if (currentCategories.some((t) => t.toLowerCase() === tag.toLowerCase())) {
@@ -458,6 +545,7 @@ function addCategoryTag(rawValue) {
   renderCategoryTags();
   renderCategorySuggestions();
   if (categoryInput) categoryInput.value = "";
+  markDirty();
 }
 
 if (categoryAddBtn) {
@@ -479,11 +567,7 @@ function escapeHtmlLocal(str) {
 }
 
 /* =========================
-   USE MY CURRENT LOCATION (Owner only)
-   Captured straight from the device via navigator.geolocation — there is
-   no visible/editable coordinate field, so no one can type in a fake or
-   miscalculated latitude/longitude. The values only ever get here through
-   this button.
+   USE MY CURRENT LOCATION
 ========================= */
 function updatePinStatus(lat, lng) {
   if (!pinStatus) return;
@@ -494,7 +578,6 @@ function updatePinStatus(lat, lng) {
 
 if (btnUseMyLocation) {
   btnUseMyLocation.addEventListener("click", () => {
-    if (!isOwner) return;
     if (!navigator.geolocation) {
       alert("Location isn't supported on this device/browser.");
       return;
@@ -507,13 +590,14 @@ if (btnUseMyLocation) {
         if (publicLongitude) publicLongitude.value = pos.coords.longitude.toFixed(6);
         updatePinStatus(pos.coords.latitude, pos.coords.longitude);
         btnUseMyLocation.disabled = false;
-        btnUseMyLocation.textContent = "Use My Current Location";
+        btnUseMyLocation.textContent = "Use my location";
+        markDirty();
       },
       (err) => {
         console.error("Geolocation error:", err);
         alert("Couldn't get your location. Make sure location access is allowed for this site.");
         btnUseMyLocation.disabled = false;
-        btnUseMyLocation.textContent = "Use My Current Location";
+        btnUseMyLocation.textContent = "Use my location";
       }
     );
   });
@@ -538,7 +622,6 @@ async function logActivity(type, detail) {
 
 /* =========================
    RENDER GALLERY PREVIEW
-   Delete buttons are only rendered (and only work) for the owner.
 ========================= */
 function renderGallery() {
   if (!imagePreviewGrid) return;
@@ -554,7 +637,7 @@ function renderGallery() {
     wrapper.className = "relative group aspect-square rounded-xl overflow-hidden border bg-gray-100 shadow-sm";
 
     const sourceTag = item.addedBy && item.addedBy !== "owner"
-      ? `<span class="absolute top-2 left-2 bg-purple-900/80 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">Team upload</span>`
+      ? `<span class="absolute top-2 left-2 bg-purple-900/80 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">Partner upload</span>`
       : "";
 
     const mediaTag = item.type === "video"
@@ -563,8 +646,8 @@ function renderGallery() {
 
     const deleteBtn = isOwner
       ? `<button data-id="${item.id}" class="delete-gallery-btn absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity">
-          <span class="material-symbols-outlined text-xs" style="font-size: 16px;">delete</span>
-        </button>`
+           <span class="material-symbols-outlined text-xs" style="font-size: 16px;">delete</span>
+         </button>`
       : "";
 
     wrapper.innerHTML = `${mediaTag}${sourceTag}${deleteBtn}`;
@@ -579,16 +662,18 @@ function renderGallery() {
 }
 
 async function deleteGalleryImage(itemId) {
-  if (!isOwner) return; // UI-level guard; Security Rules are the real gate
+  if (!isOwner) {
+    alert("Only the business owner can delete gallery media.");
+    return;
+  }
   if (!confirm("Are you sure you want to delete this item?")) return;
 
   const item = currentGallery.find((g) => g.id === itemId);
   if (!item) return;
 
+  markDirty();
   try {
     if (item.publicId) {
-      // Cloudinary asset — destroyed server-side (needs the API secret).
-      // This Cloud Function verifies you're the owner before deleting.
       try {
         await deleteGalleryMediaFn({
           businessId: currentBusinessId,
@@ -616,7 +701,7 @@ async function deleteGalleryImage(itemId) {
 }
 
 /* =========================
-   GALLERY UPLOAD (Owner AND Team Members)
+   GALLERY UPLOAD
 ========================= */
 async function uploadToCloudinary(file) {
   const formData = new FormData();
@@ -633,6 +718,7 @@ if (galleryUploadInput) {
     const file = e.target.files[0];
     if (!file || !currentBusinessId) return;
 
+    markDirty();
     if (galleryUploadStatus) {
       galleryUploadStatus.style.display = "block";
       galleryUploadStatus.textContent = "Uploading...";
@@ -672,13 +758,14 @@ if (galleryUploadInput) {
 }
 
 /* =========================
-   LOGO / PROFILE PICTURE UPLOAD (Owner only)
+   LOGO UPLOAD
 ========================= */
 if (logoUploadInput) {
   logoUploadInput.addEventListener("change", async (e) => {
     const file = e.target.files[0];
-    if (!file || !currentBusinessId || !isOwner) return;
+    if (!file || !currentBusinessId) return;
 
+    markDirty();
     if (logoUploadStatus) {
       logoUploadStatus.style.display = "block";
       logoUploadStatus.textContent = "Uploading logo...";
@@ -728,10 +815,7 @@ async function checkSlugAvailable(slug, myBusinessId) {
 }
 
 /* =========================
-   SAVE SETTINGS (Owner only)
-   The save button is hidden entirely for team members (see
-   applyRoleToUI), and Firestore Security Rules re-enforce this
-   server-side, so this handler only ever runs for the owner.
+   SAVE SETTINGS
 ========================= */
 [publicPhone, publicWhatsapp].forEach((el) => {
   el?.addEventListener("input", () => {
@@ -741,33 +825,39 @@ async function checkSlugAvailable(slug, myBusinessId) {
 
 if (saveBtn) {
   saveBtn.addEventListener("click", async () => {
-    if (!isOwner) return;
-
     const cleanSlug = sanitizeSlug(profileSlug.value);
-    const enabled = publicProfileToggle.checked;
+    const requestedEnabled = publicProfileToggle.checked;
     const showInventory = showInventoryToggle ? showInventoryToggle.checked : true;
     const showAvailability = showAvailabilityToggle ? showAvailabilityToggle.checked : true;
 
-    // Phone and WhatsApp are marked `required` in the HTML, but that
-    // attribute only does anything on a native <form> submit — this is a
-    // plain button click, so it was never actually being enforced.
-    // Validate both explicitly here instead.
+    // Owner-only guard: a partner cannot turn OFF an already-live store.
+    if (isPartner && profileWasEnabled && !requestedEnabled) {
+      alert("Only the business owner can take the store offline.");
+      if (publicProfileToggle) publicProfileToggle.checked = true;
+      return;
+    }
+
+    // Phone + WhatsApp validation.
     const phoneValue = (publicPhone?.value || "").trim();
     const whatsappValue = (publicWhatsapp?.value || "").trim();
     const missingContact = [];
     if (!phoneValue) missingContact.push(publicPhone);
     if (!whatsappValue) missingContact.push(publicWhatsapp);
 
-    [publicPhone, publicWhatsapp].forEach((el) => el?.closest("div")?.classList.remove("ring-2", "ring-red-400", "border-red-400"));
+    [publicPhone, publicWhatsapp].forEach((el) =>
+      el?.closest("div")?.classList.remove("ring-2", "ring-red-400", "border-red-400")
+    );
 
     if (missingContact.length) {
-      missingContact.forEach((el) => el?.closest("div")?.classList.add("ring-2", "ring-red-400", "border-red-400"));
+      missingContact.forEach((el) =>
+        el?.closest("div")?.classList.add("ring-2", "ring-red-400", "border-red-400")
+      );
       missingContact[0]?.focus();
       alert("Phone and WhatsApp numbers are both required so customers can reach you.");
       return;
     }
 
-    if (enabled && !cleanSlug) {
+    if (requestedEnabled && !cleanSlug) {
       alert("Please enter a custom URL handle to enable your public store.");
       return;
     }
@@ -791,7 +881,7 @@ if (saveBtn) {
         }
 
         const newSlugRef = doc(db, "publicSlugs", cleanSlug);
-        if (enabled) {
+        if (requestedEnabled) {
           await setDoc(newSlugRef, { businessId: currentBusinessId, updatedAt: new Date().toISOString() });
         } else {
           await deleteDoc(newSlugRef);
@@ -800,9 +890,6 @@ if (saveBtn) {
         await deleteDoc(doc(db, "publicSlugs", oldSlug));
       }
 
-      // Optional — leave blank if not applicable. Only stored when at
-      // least one field has content, so the banner on the storefront
-      // stays hidden for vendors who don't use a deposit policy.
       const depositPolicy = {
         cautionFee: (depositCautionFee?.value || "").trim(),
         idRequirement: (depositIdRequirement?.value || "").trim(),
@@ -811,7 +898,7 @@ if (saveBtn) {
 
       await updateDoc(businessRef, {
         publicProfile: {
-          enabled,
+          enabled: requestedEnabled,
           showInventory,
           showAvailability,
           slug: cleanSlug,
@@ -829,26 +916,38 @@ if (saveBtn) {
           gallery: currentGallery,
           updatedAt: new Date().toISOString()
         },
-        // Keep the legacy top-level `category` field (singular) in sync
-        // with the first tag, so marketplace cards/filters that only know
-        // about a single category continue to work for existing vendors.
         categories: currentCategories,
         category: currentCategories[0] || "Equipment",
-        // The "Go Online" toggle controls both the storefront AND the
-        // marketplace listing at once — one switch, not two.
-        "marketplace.visible": enabled
+        "marketplace.visible": requestedEnabled
       });
 
       profileSlug.value = cleanSlug;
-      updateLiveLink(cleanSlug, enabled);
-      await logActivity("settings_update", { enabled, slug: cleanSlug });
+      profileWasEnabled = requestedEnabled;
+      updateLiveLink(cleanSlug, requestedEnabled);
+      await logActivity("settings_update", {
+        enabled: requestedEnabled,
+        slug: cleanSlug,
+        actorRole: isOwner ? "owner" : "partner"
+      });
+
       alert("Storefront settings updated successfully!");
+      clearDirty();
     } catch (err) {
       console.error("Save storefront error:", err);
       alert("Failed to save: " + err.message);
     } finally {
       saveBtn.disabled = false;
-      saveBtn.textContent = "Save Store Link & Settings";
+      saveBtn.textContent = "Save changes";
+      syncTogglePermission();
     }
   });
+}
+
+/* =========================
+   FLOATING SAVE BUTTON
+   The floating bar's Save button delegates to the inline button's
+   handler, so all the save logic lives in one place.
+========================= */
+if (saveBtnFloating && saveBtn) {
+  saveBtnFloating.addEventListener("click", () => saveBtn.click());
 }

@@ -1,6 +1,8 @@
 import { auth, db } from "./firebase.js";
 import { getBusinessIdByEmail } from "./shared.js";
 import { sendPush } from "./onesignal.js";  // ✅ ADD THIS
+import { fetchActiveBookings, getAvailabilityMap, checkDateAvailability } from "./services/availabilityService.js";
+import { isBookingOverbooked, getBookingLifecycle, renderLifecycleBadge } from "./services/bookingStatus.js";
 
 import {
   collection,
@@ -57,6 +59,25 @@ const calcResult = document.getElementById("calcResult");
 
 const overbookedList = document.getElementById("overbookedList");
 
+// Module-level state shared across the availability calculator, the
+// overbooked panel and the stats cards, so everything stays in sync.
+let currentBusinessId = null;
+let allInventoryItemsCache = [];
+let activeBookingsCache = [];
+let lastRenderedItems = { filtered: [], all: [] };
+
+async function refreshActiveBookingsCache(businessId) {
+  try {
+    activeBookingsCache = await fetchActiveBookings(businessId);
+  } catch (err) {
+    console.error("[Inventory] Failed to refresh active bookings cache:", err);
+  }
+  // Re-render with the freshest booking data so "Free today" stays accurate
+  if (lastRenderedItems.all.length || lastRenderedItems.filtered.length) {
+    renderInventory(lastRenderedItems.filtered, lastRenderedItems.all);
+  }
+}
+
 // Edit modal elements
 const editModal = document.getElementById("editModal");
 const editItemForm = document.getElementById("editItemForm");
@@ -87,43 +108,54 @@ function openEditModal(item) {
 
 /* =========================
    RENDER INVENTORY
+   ("Available" / "Out" now reflect what's actually free RIGHT NOW —
+   i.e. usable stock minus whatever other active bookings currently
+   overlap today's date — instead of a permanently-decremented counter.)
 ========================= */
 function renderInventory(filteredItems, allItems) {
   inventoryList.innerHTML = "";
   calcItem.innerHTML = "";
+  lastRenderedItems = { filtered: filteredItems, all: allItems };
+  allInventoryItemsCache = allItems;
+
+  const nowMap = getAvailabilityMap(allItems, activeBookingsCache, new Date(), new Date());
 
   let totalAssetsValue = 0;
-let totalAvailableQty = 0;
-let totalOutQty = 0;
+  let totalAvailableQty = 0;
+  let totalOutQty = 0;
 
-// Totals & dropdown
-allItems.forEach(item => {
-  const totalQty = Number(item.totalQuantity || 0);
-  const availableQty = Number(item.availableQuantity || 0);
-  const price = Number(item.price || 0);
+  // Totals & dropdown
+  allItems.forEach(item => {
+    const totalQty = Number(item.totalQuantity || 0);
+    const usableQty = Number(item.availableQuantity || 0);
+    const price = Number(item.price || 0);
+    const freeNow = nowMap.has(item.name.trim().toLowerCase())
+      ? nowMap.get(item.name.trim().toLowerCase())
+      : usableQty;
 
-  totalAvailableQty += availableQty;
-  totalOutQty += (totalQty - availableQty);
+    totalAvailableQty += freeNow;
+    totalOutQty += Math.max(0, usableQty - freeNow);
 
-  // Asset value calculation
-  totalAssetsValue += totalQty * price;
+    // Asset value calculation (based on total owned, not just what's free)
+    totalAssetsValue += totalQty * price;
 
-  calcItem.innerHTML += `
-    <option value="${availableQty}">
-      ${item.name} (${availableQty} avail)
-    </option>
-  `;
-});
+    calcItem.innerHTML += `
+      <option value="${item.name}" data-stock="${usableQty}">
+        ${item.name} (${usableQty} usable stock)
+      </option>
+    `;
+  });
 
-// Dashboard stats
-totalItemsEl.textContent = `₦${totalAssetsValue.toLocaleString()}`;
-availableItemsEl.textContent = totalAvailableQty.toLocaleString();
-outItemsEl.textContent = totalOutQty.toLocaleString();
-
-
+  // Dashboard stats
+  totalItemsEl.textContent = `₦${totalAssetsValue.toLocaleString()}`;
+  availableItemsEl.textContent = totalAvailableQty.toLocaleString();
+  outItemsEl.textContent = totalOutQty.toLocaleString();
 
   // Inventory list
   filteredItems.forEach(item => {
+    const key = item.name.trim().toLowerCase();
+    const freeNow = nowMap.has(key) ? nowMap.get(key) : item.availableQuantity;
+
     const div = document.createElement("div");
     div.className = "inventory-item flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100 mb-3";
     div.innerHTML = `
@@ -131,10 +163,11 @@ outItemsEl.textContent = totalOutQty.toLocaleString();
         <strong class="text-lg">${item.name}</strong><br>
         <span class="text-sm text-gray-500">
           Total: ${item.totalQuantity} |
-          Available:
-          <span class="${item.availableQuantity <= 5 ? "text-red-600 font-bold" : ""}">
-            ${item.availableQuantity}
+          Free today:
+          <span class="${freeNow <= 5 ? "text-red-600 font-bold" : ""}">
+            ${freeNow}
           </span>
+          <span class="text-[11px] text-gray-400">(usable stock: ${item.availableQuantity})</span>
         </span><br>
         <span class="text-purple-600">₦${item.price} / unit</span>
       </div>
@@ -148,8 +181,10 @@ outItemsEl.textContent = totalOutQty.toLocaleString();
 }
 
 /* =========================
-   OVERBOOKED PANEL (SYNCED WITH BOOKINGS.JS)
-========================= */function listenToOverbooked(businessId) {
+   OVERBOOKED PANEL (SYNCED WITH BOOKINGS.JS via bookingStatus.js —
+   the exact same isBookingOverbooked() definition used there)
+========================= */
+function listenToOverbooked(businessId) {
   const overbookedList =
     document.getElementById("overbookedList") ||
     document.getElementById("overbooked-list");
@@ -159,31 +194,19 @@ outItemsEl.textContent = totalOutQty.toLocaleString();
   const ref = collection(db, "businesses", businessId, "bookings");
 
   onSnapshot(ref, (snap) => {
+    // Keep the shared active-bookings cache fresh for the availability
+    // calculator + "Free today" stats every time bookings change.
+    activeBookingsCache = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(b => b.status !== "returned" && b.status !== "cancelled");
+    if (lastRenderedItems.all.length) {
+      renderInventory(lastRenderedItems.filtered, lastRenderedItems.all);
+    }
+
     overbookedList.innerHTML = "";
 
-    const today = new Date().toISOString().split("T")[0];
-
-    const overbooked = snap.docs
-      .map((d) => ({ id: d.id, ...d.data() }))
-      .filter((b) => {
-        const status =
-          b.status === "returned"
-            ? "returned"
-            : today > b.event?.returnDate
-            ? "overdue"
-            : "active";
-
-        return (
-          status !== "returned" &&
-          b.items?.some(
-            (i) =>
-              Number(i.shortage || 0) > 0 ||
-              i.supplier ||
-              i.vendor ||
-              i.vendorName
-          )
-        );
-      });
+    const allBookings = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const overbooked = allBookings.filter(isBookingOverbooked);
 
     if (!overbooked.length) {
       overbookedList.innerHTML = `
@@ -195,24 +218,15 @@ outItemsEl.textContent = totalOutQty.toLocaleString();
     }
 
     overbooked.forEach((b) => {
+      const life = getBookingLifecycle(b);
       const borrowedItems = b.items
-        .filter(
-          (i) =>
-            Number(i.shortage || 0) > 0 ||
-            i.supplier ||
-            i.vendor ||
-            i.vendorName
-        )
+        .filter((i) => Number(i.shortage || 0) > 0 || i.isCustom)
         .map((i) => {
-          const vendor =
-            i.supplier ||
-            i.vendorName ||
-            i.vendor ||
-            "Unknown Vendor";
-
+          const vendor = i.supplier || "Unknown Vendor";
           const qty = Number(i.shortage || i.qty || 0);
+          const customTag = i.isCustom ? " (not in inventory)" : "";
 
-          return `• ${qty} × ${i.name}
+          return `• ${qty} × ${i.name}${customTag}
             <span class="text-purple-700 font-bold">[${vendor}]</span>`;
         });
 
@@ -230,6 +244,7 @@ outItemsEl.textContent = totalOutQty.toLocaleString();
               <span class="material-symbols-outlined" style="font-size: 14px;">calendar_today</span>
               ${b.event?.date || "No Date"}
             </p>
+            <div class="mt-1">${renderLifecycleBadge(b, "text-[9px]")}</div>
           </div>
           <span class="bg-orange-100 text-orange-600 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
             Shortage
@@ -285,6 +300,7 @@ onAuthStateChanged(auth, async user => {
 
   try {
     const businessId = await getBusinessIdByEmail(user.email, user);
+    currentBusinessId = businessId;
     if (!navigator.onLine) {
       showOfflineBanner();
     }
@@ -414,11 +430,24 @@ deleteItemBtn.onclick = async () => {
 });
 
 /* =========================
-   AVAILABILITY CHECK
+   AVAILABILITY CHECK (date-aware)
+   Locks in exactly the same way a real booking would: it checks how many
+   units are free for a SPECIFIC date window, not just raw stock — so a
+   500-chair booking two months out no longer blocks chairs needed tomorrow.
 ========================= */
-document.getElementById("checkBtn").onclick = () => {
-  const available = Number(calcItem.value);
+document.getElementById("checkBtn").onclick = async () => {
+  const itemName = calcItem.value;
   const needed = Number(calcQty.value);
+  const startEl = document.getElementById("calcStart");
+  const endEl = document.getElementById("calcEnd");
+  const startVal = startEl?.value || "";
+  const endVal = endEl?.value || startVal;
+
+  if (!itemName) {
+    calcResult.textContent = "Choose an item first";
+    calcResult.style.color = "orange";
+    return;
+  }
 
   if (!needed || needed <= 0) {
     calcResult.textContent = "Enter a valid quantity";
@@ -426,13 +455,36 @@ document.getElementById("checkBtn").onclick = () => {
     return;
   }
 
-  if (needed <= available) {
-    const remaining = available - needed;
-    calcResult.textContent = `Available ✅ (${remaining} will remain)`;
-    calcResult.style.color = "green";
-  } else {
-    const shortage = needed - available;
-    calcResult.textContent = `Not enough ❌ (short by ${shortage})`;
+  calcResult.textContent = "Checking...";
+  calcResult.style.color = "#6b7280";
+
+  try {
+    const start = startVal ? new Date(startVal) : new Date();
+    const end = endVal ? new Date(endVal) : start;
+
+    // Always re-fetch fresh bookings for the check itself, so the result is
+    // correct even if the cache hasn't caught up yet.
+    const bookings = currentBusinessId ? await fetchActiveBookings(currentBusinessId) : activeBookingsCache;
+    const map = getAvailabilityMap(allInventoryItemsCache, bookings, start, end);
+    const key = itemName.trim().toLowerCase();
+    const available = map.has(key) ? map.get(key) : 0;
+
+    const dateNote = startVal
+      ? ` for ${start.toLocaleDateString()}${endVal && endVal !== startVal ? ` → ${end.toLocaleDateString()}` : ""}`
+      : " (today, since no dates were chosen)";
+
+    if (needed <= available) {
+      const remaining = available - needed;
+      calcResult.textContent = `Available ✅ (${remaining} will remain)${dateNote}`;
+      calcResult.style.color = "green";
+    } else {
+      const shortage = needed - available;
+      calcResult.textContent = `Not enough ❌ (short by ${shortage}, only ${available} free)${dateNote}`;
+      calcResult.style.color = "red";
+    }
+  } catch (err) {
+    console.error("[Inventory] Availability check failed:", err);
+    calcResult.textContent = "Could not check availability — please try again.";
     calcResult.style.color = "red";
   }
 };
