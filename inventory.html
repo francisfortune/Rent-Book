@@ -841,6 +841,22 @@
             width: 100%;
         }
 
+        #calcStart,
+        #calcEnd {
+            padding: 12px 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-family: inherit;
+            background: white;
+        }
+
+        @media (max-width: 360px) {
+            .calc-date-row {
+                flex-direction: column;
+            }
+        }
+
         #calcQty {
             margin: 16px 0;
             width: 100%;
@@ -920,6 +936,86 @@
     .dashboard {
         padding: 0 20px 80px 20px; /* Top padding set to 0 */
     }
+}
+
+.calc-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+
+.calc-field label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #4a5568;
+    letter-spacing: 0.2px;
+}
+
+.calc-dates {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+@media (max-width: 380px) {
+    .calc-dates {
+        grid-template-columns: 1fr;
+    }
+}
+
+#calcItem,
+#calcQty,
+#calcStart,
+#calcEnd {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    background: white;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
+}
+
+#calcItem:focus,
+#calcQty:focus,
+#calcStart:focus,
+#calcEnd:focus {
+    border-color: #800080;
+    box-shadow: 0 0 0 3px rgba(128, 0, 128, 0.12);
+}
+
+#checkBtn {
+    width: 100%;
+    padding: 12px;
+    background: purple;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 6px;
+}
+
+#checkBtn:hover {
+    background: #6b21a5;
+    transform: translateY(-1px);
+}
+
+.calc-result {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-align: center;
+    background: #f7fafc;
+    min-height: 20px;
 }
 
         
@@ -1028,16 +1124,37 @@
 
 
                 <!-- CALCULATOR -->
-                <div class="inventory-box">
-                    <h3 style=" color: purple; font-size: 1.2rem; margin-bottom: 15px;">Availability Checker</h3>
+<div class="inventory-box">
+    <h3 style="color: purple; font-size: 1.2rem; margin-bottom: 6px;">Availability Checker</h3>
+    <p style="font-size: 11px; color: #9ca3af; margin-bottom: 16px;">
+        Checks how many units are free for a specific date range — the same date-lock logic used when a booking is created.
+    </p>
 
-                    <select id="calcItem"></select>
-                    <input id="calcQty" type="number" placeholder="Quantity needed" />
-                    <button id="checkBtn">Check</button>
+    <div class="calc-field">
+        <label for="calcItem" style="color: purple;font-weight: bold; font-size: 15px;">Item</label>
+        <select id="calcItem"></select>
+    </div>
 
+    <div class="calc-dates">
+        <div class="calc-field">
+            <label for="calcStart" style="color: purple;font-weight: bold; font-size: 15px;">Event Date</label>
+            <input id="calcStart" type="date">
+        </div>
+        <div class="calc-field">
+            <label for="calcEnd" style="color: purple;font-weight: bold; font-size: 15px;">Return Date</label>
+            <input id="calcEnd" type="date">
+        </div>
+    </div>
 
-                    <p id="calcResult" class="calc-result"></p>
-                </div>
+    <div class="calc-field">
+        <label for="calcQty" style="color: purple;font-weight: bold; font-size: 15px;">Quantity needed</label>
+        <input id="calcQty" type="number" placeholder="e.g. 5" min="1">
+    </div>
+
+    <button id="checkBtn">Check Availability</button>
+
+    <p id="calcResult" class="calc-result"></p>
+</div>
 
 
 

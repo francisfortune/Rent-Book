@@ -597,6 +597,10 @@
                 font-size: 0.8rem;
             }
 
+            .fees-grid {
+                grid-template-columns: 1fr !important;
+            }
+
             .mobile-brand {
                 font-size: 1.1rem;
             }
@@ -857,14 +861,31 @@
                             + Add Item
                         </button>
 
+                        <h3 style="margin-top:20px;">Additional Fees</h3>
+                        <div class="fees-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px;">
+                            <div class="form-group">
+                                <label>Caution Fee (₦)</label>
+                                <input type="text" id="cautionFee" inputmode="numeric" placeholder="0" style="padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
+                            </div>
+                            <div class="form-group">
+                                <label>Logistics (₦)</label>
+                                <input type="text" id="transportationFee" inputmode="numeric" placeholder="0" style="padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
+                            </div>
+                            <div class="form-group">
+                                <label>Other Fees (₦)</label>
+                                <input type="text" id="otherFees" inputmode="numeric" placeholder="0" style="padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
+                            </div>
+                        </div>
+
                         <h3 style="margin-top:20px;">Payment</h3>
                         <div class="form-group">
                             <label>Total Amount (₦)</label>
-                            <input type="text" id="totalAmount" inputmode="numeric" style="background:#f7fafc; font-weight:700; color:purple; padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%;">
+                            <input type="text" id="totalAmount" inputmode="numeric" style="background:#f7fafc; font-weight:700; color:purple; padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
+                            <p style="font-size:11px; color:#9ca3af; margin-top:2px;">Auto-calculated from items + fees.</p>
                         </div>
                         <div class="form-group">
                             <label>Amount Paid (₦)</label>
-                            <input type="text" id="amountPaid" inputmode="numeric" placeholder="0" style="background:#f7fafc; font-weight:700; color:purple; padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%;">
+                            <input type="text" id="amountPaid" inputmode="numeric" placeholder="0" style="background:#f7fafc; font-weight:700; color:purple; padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
                         </div>
                         <div class="form-group">
                             <label>Payment Method</label>
@@ -1035,21 +1056,6 @@
             });
         }
 
-        function addItemRow() {
-            const container = document.getElementById("itemsContainer");
-
-            const row = document.createElement("div");
-            row.className = "item-row";
-
-            row.innerHTML = `
-                <input class="item-name" placeholder="Item name">
-                <input class="item-qty" type="number" placeholder="Qty" oninput="recalcTotal()">
-                <input class="item-price" type="number" placeholder="Price" oninput="recalcTotal()">
-                <button type="button" onclick="this.parentElement.remove(); recalcTotal()">✕</button>
-            `;
-
-            container.appendChild(row);
-        }
     </script>
 
     <script type="module" src="assets/js/avatar.js"></script>
