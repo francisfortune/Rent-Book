@@ -16,12 +16,11 @@ import {
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-
 import { onAuthStateChanged } from
   "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 
-let currentBusinessName = "Our Business"; 
+let currentBusinessName = "Our Business";
 let inventoryItems = [];
 let activeBookingsCache = []; // other bookings, refreshed whenever the event/delivery/return dates change
 let availabilityMap = new Map(); // itemNameLower -> units free for the currently selected date window
@@ -215,6 +214,21 @@ function getFeeValue(id) {
   return parseFloat((el.value || "0").toString().replace(/,/g, '')) || 0;
 }
 
+/**
+ * When items or fees change, clear the "user override" state on the total,
+ * so recalcTotal() will auto-update it again with the new computed value.
+ * This is what makes "edit items → total updates" work even after the user
+ * has manually typed a custom total.
+ */
+function clearTotalUserOverride() {
+  const totalInput = document.getElementById("totalAmount");
+  if (totalInput) {
+    delete totalInput.dataset.lastComputed;
+    // Also clear any legacy flag from the old logic
+    delete totalInput.dataset.userEdited;
+  }
+}
+
 function recalcTotal() {
   let itemsSubtotal = 0;
   let itemsSummary = "";
@@ -223,7 +237,6 @@ function recalcTotal() {
     const { name } = getRowItemName(row);
     const qty = Number(row.querySelector(".item-qty")?.value || 0);
     const price = Number(row.querySelector(".item-price")?.value || 0);
-
     const vendor = row.querySelector(".vendor-name")?.value;
 
     const rowTotal = qty * price;
@@ -249,18 +262,29 @@ function recalcTotal() {
   const totalAmountInput = document.getElementById("totalAmount");
   const amountPaidInput = document.getElementById("amountPaid");
 
-  // ✅ Set raw number (NO commas) for text inputs — but only while the user
-  // hasn't manually overridden the total themselves (e.g. to fold in a
-  // caution fee negotiated outside these fields).
-  if (totalAmountInput && !totalAmountInput.dataset.userEdited) {
+  // ✅ Track the last auto-computed value so we can detect user overrides.
+  // If the user's typed total matches what we last computed (or is empty),
+  // it means they didn't truly override it — so keep auto-updating.
+  // If they typed something DIFFERENT from our last computed value, treat
+  // that as a manual override (skip auto-update until items/fees change).
+  const lastComputed = totalAmountInput?.dataset.lastComputed;
+  const currentVal = (totalAmountInput?.value || "").toString().trim();
+
+  const isUserOverride =
+    totalAmountInput &&
+    currentVal !== "" &&
+    lastComputed !== undefined &&
+    currentVal !== lastComputed;
+
+  if (totalAmountInput && !isUserOverride) {
     totalAmountInput.value = computedTotal || 0;
+    totalAmountInput.dataset.lastComputed = String(computedTotal || 0);
   }
 
   const total = totalAmountInput
     ? parseFloat((totalAmountInput.value || "0").toString().replace(/,/g, '')) || 0
     : computedTotal;
 
-  // Get Paid Amount - handle both formatted and raw values
   const paidRaw = amountPaidInput ? amountPaidInput.value.replace(/,/g, '') : '0';
   const paidValue = parseFloat(paidRaw) || 0;
 
@@ -270,7 +294,6 @@ function recalcTotal() {
 
   const balance = total - paidValue;
 
-  // ✅ Format with commas ONLY for display preview
   const formattedTotal = total.toLocaleString('en-NG');
   const formattedPaid = paidValue.toLocaleString('en-NG');
 
@@ -304,12 +327,12 @@ function recalcTotal() {
 
 
 
-// ✅ Add event listeners to detect user editing
 // ✅ Add event listeners for text inputs (type="text" with inputmode="numeric")
 document.addEventListener('DOMContentLoaded', function() {
   const totalAmountInput = document.getElementById("totalAmount");
   const amountPaidInput = document.getElementById("amountPaid");
   
+  // ===== TOTAL AMOUNT: allow editing but auto-update on item/fee change =====
   if (totalAmountInput) {
     totalAmountInput.addEventListener('focus', function() {
       // Show raw number when focused
@@ -321,11 +344,11 @@ document.addEventListener('DOMContentLoaded', function() {
       const raw = parseFloat(this.value.replace(/,/g, '')) || 0;
       this.value = raw;
     });
-    totalAmountInput.addEventListener('input', function() {
-      this.dataset.userEdited = 'true';
-    });
+    // ❌ NO input listener setting data-user-edited —
+    // the new logic in recalcTotal() handles user override detection.
   }
   
+  // ===== AMOUNT PAID: user-edited flag (independent) =====
   if (amountPaidInput) {
     amountPaidInput.addEventListener('focus', function() {
       const raw = this.value.replace(/,/g, '');
@@ -340,15 +363,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ✅ Caution / Transportation / Other fees roll into the total automatically,
-  // same "stop auto-updating once the user has typed their own total" rule.
+  // ===== FEES: clear total override so items + fees recalc =====
   ["cautionFee", "transportationFee", "otherFees"].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.addEventListener("input", recalcTotal);
+    if (el) {
+      el.addEventListener("input", () => {
+        clearTotalUserOverride();
+        recalcTotal();
+      });
+    }
   });
 
-  // ✅ Changing any of the three date fields re-checks availability against
-  // OTHER bookings for that specific window, instead of a flat global pool.
+  // ===== DATE CHANGES: refresh availability =====
   let dateDebounce;
   ["eventDate", "deliveryDate", "returnDate"].forEach(id => {
     const el = document.getElementById(id);
@@ -364,9 +390,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* =========================
    ADD ITEM ROW
-========================= */
-/* =========================
-   ADD ITEM ROW (FIXED WITH VENDOR FIELD)
 ========================= */
 
 /**
@@ -454,29 +477,44 @@ window.addItemRow = function () {
   const vendorContainer = row.querySelector(".vendor-container");
   const removeBtn = row.querySelector("button");
 
-select.addEventListener("change", (e) => {
-  const opt = e.target.selectedOptions[0];
-  if (e.target.value === "__custom__") {
-    customNameInput.classList.remove("hidden");
-    customNameInput.focus();
-    priceInput.value = "";               // clear stale price
-    priceInput.placeholder = "price";
-  } else {
-    customNameInput.classList.add("hidden");
-    customNameInput.value = "";
-    priceInput.value = opt?.dataset.price || "";
-    priceInput.placeholder = "Price";
-  }
-  checkRowShortage(row);
-  updateSelectOptions();
-});
-  qtyInput.addEventListener("input", () => checkRowShortage(row));
-  priceInput.addEventListener("input", recalcTotal);
-  customNameInput.addEventListener("input", recalcTotal);
+  select.addEventListener("change", (e) => {
+    const opt = e.target.selectedOptions[0];
+    if (e.target.value === "__custom__") {
+      customNameInput.classList.remove("hidden");
+      customNameInput.focus();
+      priceInput.value = "";               // clear stale price
+      priceInput.placeholder = "price";
+    } else {
+      customNameInput.classList.add("hidden");
+      customNameInput.value = "";
+      priceInput.value = opt?.dataset.price || "";
+      priceInput.placeholder = "Price";
+    }
+    clearTotalUserOverride();  // ✅ Reset total override on item change
+    checkRowShortage(row);
+    updateSelectOptions();
+  });
+
+  qtyInput.addEventListener("input", () => {
+    clearTotalUserOverride();  // ✅ Reset total override on qty change
+    checkRowShortage(row);
+  });
+
+  priceInput.addEventListener("input", () => {
+    clearTotalUserOverride();  // ✅ Reset total override on price change
+    recalcTotal();
+  });
+
+  customNameInput.addEventListener("input", () => {
+    clearTotalUserOverride();  // ✅ Reset total override on name change
+    recalcTotal();
+  });
+
   vendorInput.addEventListener("input", recalcTotal);
 
   removeBtn.addEventListener("click", () => {
     row.remove();
+    clearTotalUserOverride();  // ✅ Reset total override on row removal
     recalcTotal();
     updateSelectOptions();
   });
@@ -530,18 +568,18 @@ onAuthStateChanged(auth, async (user) => {
     }
 
     const invSnap = await getDocs(
-  collection(db, "businesses", businessId, "inventory")
-);
+      collection(db, "businesses", businessId, "inventory")
+    );
 
-inventoryItems = invSnap.docs
-  .map(d => ({
-    id: d.id,
-    ...d.data()
-  }))
-  .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), undefined, { sensitivity: "base" }));
-  
-// ✅ ADD LISTENERS FOR LIVE UPDATES
-    const liveFields = ["clientName", "eventDate", "eventLocation", "amountPaid","returnDate"];
+    inventoryItems = invSnap.docs
+      .map(d => ({
+        id: d.id,
+        ...d.data()
+      }))
+      .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), undefined, { sensitivity: "base" }));
+    
+    // ✅ ADD LISTENERS FOR LIVE UPDATES
+    const liveFields = ["clientName", "eventDate", "eventLocation", "amountPaid", "returnDate"];
     liveFields.forEach(id => {
       const el = document.getElementById(id);
       if (el) {
@@ -581,239 +619,235 @@ inventoryItems = invSnap.docs
     }
   }
 });
-  // 3. Receipt image preview handler
-  const receiptInput = document.getElementById("receiptImage");
-  const receiptPreview = document.getElementById("receiptPreview");
-  const receiptThumbnail = document.getElementById("receiptThumbnail");
-  const receiptText = document.getElementById("receiptText");
 
-  if (receiptInput) {
-    receiptInput.addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          receiptThumbnail.src = e.target.result;
-          receiptPreview.style.display = "block";
-          receiptText.textContent = "Tap to change receipt";
-        };
-        reader.readAsDataURL(file);
+// 3. Receipt image preview handler
+const receiptInput = document.getElementById("receiptImage");
+const receiptPreview = document.getElementById("receiptPreview");
+const receiptThumbnail = document.getElementById("receiptThumbnail");
+const receiptText = document.getElementById("receiptText");
+
+if (receiptInput) {
+  receiptInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        receiptThumbnail.src = e.target.result;
+        receiptPreview.style.display = "block";
+        receiptText.textContent = "Tap to change receipt";
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+}
+
+document
+  .getElementById("addBookingForm")
+  .addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Saving...";
+
+    try {
+      /* ===== VALIDATION ===== */
+
+      const delivery = deliveryDate.value || eventDate.value;
+
+      if (new Date(returnDate.value) < new Date(delivery)) {
+        alert("Return date cannot be before delivery date");
+
+        // ✅ FIX: restore button
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+
+        return;
       }
-    });
-  }
 
-  document
-    .getElementById("addBookingForm")
-    .addEventListener("submit", async (e) => {
-      e.preventDefault();
+      const rawItems = [];
+      document.querySelectorAll(".item-row").forEach(row => {
+        const { name, isCustom } = getRowItemName(row);
+        const qty = Number(row.querySelector(".item-qty").value);
+        const price = Number(row.querySelector(".item-price").value);
+        const supplierInput = row.querySelector(".vendor-name");
 
-      const submitBtn = e.target.querySelector('button[type="submit"]');
-const originalText = submitBtn.textContent;
+        if (!name || qty <= 0) return;
 
-submitBtn.disabled = true;
-submitBtn.textContent = "Saving...";
+        rawItems.push({ name, qty, price, isCustom, supplierInput: supplierInput?.value || "" });
+      });
 
-try {
-  /* ===== VALIDATION ===== */
+      if (!rawItems.length) {
+        alert("Add at least one item");
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        return;
+      }
 
-  const delivery = deliveryDate.value || eventDate.value;
+      /* ===== DATE-BASED AVAILABILITY CHECK =====
+         Re-verify (right before saving) how much of each item is actually
+         free for THIS booking's date window, since inventory or other
+         bookings may have changed since the page loaded. */
+      const { start: windowStart, end: windowEnd } = getFormDateWindow();
+      const { availabilityMap: freshAvailabilityMap } = await checkDateAvailability(
+        businessId,
+        inventoryItems,
+        rawItems,
+        windowStart,
+        windowEnd
+      );
 
-  if (new Date(returnDate.value) < new Date(delivery)) {
-    alert("Return date cannot be before delivery date");
-
-    // ✅ FIX: restore button
-    submitBtn.disabled = false;
-    submitBtn.textContent = originalText;
-
-    return;
-  }
-
-  // ✅ REMOVE this completely (no longer needed)
-  // if (new Date(returnDate.value) < new Date(eventDate.value)) { ... }
-
-        const rawItems = [];
-        document.querySelectorAll(".item-row").forEach(row => {
-          const { name, isCustom } = getRowItemName(row);
-          const qty = Number(row.querySelector(".item-qty").value);
-          const price = Number(row.querySelector(".item-price").value);
-          const supplierInput = row.querySelector(".vendor-name");
-
-          if (!name || qty <= 0) return;
-
-          rawItems.push({ name, qty, price, isCustom, supplierInput: supplierInput?.value || "" });
-        });
-
-        if (!rawItems.length) {
-          alert("Add at least one item");
-          submitBtn.disabled = false;
-          submitBtn.textContent = originalText;
-          return;
-        }
-
-        /* ===== DATE-BASED AVAILABILITY CHECK =====
-           Re-verify (right before saving) how much of each item is actually
-           free for THIS booking's date window, since inventory or other
-           bookings may have changed since the page loaded. */
-        const { start: windowStart, end: windowEnd } = getFormDateWindow();
-        const { availabilityMap: freshAvailabilityMap } = await checkDateAvailability(
-          businessId,
-          inventoryItems,
-          rawItems,
-          windowStart,
-          windowEnd
-        );
-
-        const items = rawItems.map(ri => {
-          if (ri.isCustom) {
-            return {
-              name: ri.name,
-              qty: ri.qty,
-              price: ri.price,
-              total: ri.qty * ri.price,
-              isCustom: true,
-              shortage: ri.qty,
-              borrowed: ri.qty,
-              supplier: ri.supplierInput
-            };
-          }
-          const key = ri.name.trim().toLowerCase();
-          const freeForDates = freshAvailabilityMap.has(key) ? freshAvailabilityMap.get(key) : 0;
-          const shortage = Math.max(0, ri.qty - freeForDates);
+      const items = rawItems.map(ri => {
+        if (ri.isCustom) {
           return {
             name: ri.name,
             qty: ri.qty,
             price: ri.price,
             total: ri.qty * ri.price,
-            availableAtBooking: freeForDates,
-            shortage,
-            borrowed: shortage > 0 ? shortage : 0,
-            supplier: shortage > 0 ? ri.supplierInput : ""
+            isCustom: true,
+            shortage: ri.qty,
+            borrowed: ri.qty,
+            supplier: ri.supplierInput
           };
-        });
-
-        const overbookedItems = items.filter(i => i.shortage > 0);
-        if (overbookedItems.length) {
-          const msg = overbookedItems
-            .map(i => `${i.name}: borrow ${i.shortage} (only ${i.availableAtBooking ?? 0} free for these dates)`)
-            .join("\n");
-
-          if (!confirm(`⚠ Not enough stock for these dates:\n${msg}\n\nContinue anyway (borrow the shortfall)?`)) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = originalText;
-            return;
-          }
         }
+        const key = ri.name.trim().toLowerCase();
+        const freeForDates = freshAvailabilityMap.has(key) ? freshAvailabilityMap.get(key) : 0;
+        const shortage = Math.max(0, ri.qty - freeForDates);
+        return {
+          name: ri.name,
+          qty: ri.qty,
+          price: ri.price,
+          total: ri.qty * ri.price,
+          availableAtBooking: freeForDates,
+          shortage,
+          borrowed: shortage > 0 ? shortage : 0,
+          supplier: shortage > 0 ? ri.supplierInput : ""
+        };
+      });
 
-        /* ===== UPLOAD RECEIPT IMAGE ===== */
-        let receiptImageUrl = null;
-        const receiptFile = receiptInput?.files[0];
-        if (receiptFile) {
-          submitBtn.textContent = "Uploading receipt...";
-          receiptImageUrl = await uploadReceiptImage(businessId, receiptFile);
+      const overbookedItems = items.filter(i => i.shortage > 0);
+      if (overbookedItems.length) {
+        const msg = overbookedItems
+          .map(i => `${i.name}: borrow ${i.shortage} (only ${i.availableAtBooking ?? 0} free for these dates)`)
+          .join("\n");
+
+        if (!confirm(`⚠ Not enough stock for these dates:\n${msg}\n\nContinue anyway (borrow the shortfall)?`)) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+          return;
         }
-
-// Inside the submit event listener, before creating bookingData:
-
-// ✅ Remove commas from total and paid before saving
-const totalAmount = document.getElementById("totalAmount");
-const amountPaid = document.getElementById("amountPaid");
-
-const cleanTotal = parseFloat(totalAmount.value.replace(/,/g, '')) || 0;
-const cleanPaid = parseFloat(amountPaid.value.replace(/,/g, '')) || 0;
-const cleanCaution = getFeeValue("cautionFee");
-const cleanTransportation = getFeeValue("transportationFee");
-const cleanOtherFees = getFeeValue("otherFees");
-
-
-
-// ✅ Update the bookingData payment section
-const bookingData = {
-  client: {
-    name: clientName.value.trim(),
-    phone: clientPhone.value.trim(),
-    email: clientEmail.value.trim() || ""
-  },
-  event: {
-    type: eventType.value,
-    date: eventDate.value,
-    deliveryDate: deliveryDate.value || "",
-    returnDate: returnDate.value,
-    location: eventLocation.value || ""
-  },
-  items,
-  payment: {
-    total: cleanTotal,
-    paid: cleanPaid,
-    method: paymentMethod.value,
-    cautionFee: cleanCaution,
-    transportationFee: cleanTransportation,
-    otherFees: cleanOtherFees
-  },
-  receiptImage: receiptImageUrl,
-  notes: document.getElementById("notes")?.value || "",
-  status: "active",
-  createdBy: {
-    uid: currentUser.uid,
-    email: currentUser.email
-  },
-  createdAt: serverTimestamp()
-};
-       
-  /* ===== SAVE BOOKING ===== */
-const bookingRef = await addDoc(
-  collection(db, "businesses", businessId, "bookings"),
-  bookingData
-);
-
-// Add listeners for live updates
-["clientName", "eventDate", "eventLocation", "amountPaid"].forEach(id => {
-  const el = document.getElementById(id);
-  if (el) el.addEventListener("input", recalcTotal);
-});
-
-// Also recalc on page load
-recalcTotal();
-
-// 🔔 Send notification about new booking with bookingId
-await sendNotification(
-  businessId,
-  `New booking added ${bookingData.client.name} on ${bookingData.event.date}`,
-  currentUser.email, // ✅ FIXED
-  "booking_added",      // type
-  bookingRef.id         // bookingId
-);
-
-// Send real-time OneSignal push notification
-await sendPush(
-  `New booking added for ${bookingData.client.name} on ${bookingData.event.date}`,
-  `/bookings.html?highlight=${bookingRef.id}`
-);
-
-// 🎇 2. WELCOME NOTIFICATION (Add this part)
-// This checks if this is the very first booking in the system
-const allBookings = await getDocs(collection(db, "businesses", businessId, "bookings"));
-if (allBookings.size === 1) {
-  await sendNotification(
-    businessId,
-    `🎉 Welcome ${currentBusinessName}! ! You've just created your first booking for ${bookingData.client.name}. This platform is designed to help you track rentals and payments effortlessly. Explore your dashboard to see your new stats!`,
-    "Tracknrent",
-    "welcome_message",
-    bookingRef.id
-  );
-}
-
-        /* Nothing to deduct — availability for any date window is computed
-           live from active bookings (see availabilityService.js). */
-
-        clearDraft();
-        window.location.href = "bookings.html";
-      } catch (error) {
-        console.error("Error saving booking:", error);
-        alert("Failed to save booking. Please try again.");
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
       }
-    });
+
+      /* ===== UPLOAD RECEIPT IMAGE ===== */
+      let receiptImageUrl = null;
+      const receiptFile = receiptInput?.files[0];
+      if (receiptFile) {
+        submitBtn.textContent = "Uploading receipt...";
+        receiptImageUrl = await uploadReceiptImage(businessId, receiptFile);
+      }
+
+      // Inside the submit event listener, before creating bookingData:
+
+      // ✅ Remove commas from total and paid before saving
+      const totalAmount = document.getElementById("totalAmount");
+      const amountPaid = document.getElementById("amountPaid");
+
+      const cleanTotal = parseFloat(totalAmount.value.replace(/,/g, '')) || 0;
+      const cleanPaid = parseFloat(amountPaid.value.replace(/,/g, '')) || 0;
+      const cleanCaution = getFeeValue("cautionFee");
+      const cleanTransportation = getFeeValue("transportationFee");
+      const cleanOtherFees = getFeeValue("otherFees");
+
+      // ✅ Update the bookingData payment section
+      const bookingData = {
+        client: {
+          name: clientName.value.trim(),
+          phone: clientPhone.value.trim(),
+          email: clientEmail.value.trim() || ""
+        },
+        event: {
+          type: eventType.value,
+          date: eventDate.value,
+          deliveryDate: deliveryDate.value || "",
+          returnDate: returnDate.value,
+          location: eventLocation.value || ""
+        },
+        items,
+        payment: {
+          total: cleanTotal,
+          paid: cleanPaid,
+          method: paymentMethod.value,
+          cautionFee: cleanCaution,
+          transportationFee: cleanTransportation,
+          otherFees: cleanOtherFees
+        },
+        receiptImage: receiptImageUrl,
+        notes: document.getElementById("notes")?.value || "",
+        status: "active",
+        createdBy: {
+          uid: currentUser.uid,
+          email: currentUser.email
+        },
+        createdAt: serverTimestamp()
+      };
+       
+      /* ===== SAVE BOOKING ===== */
+      const bookingRef = await addDoc(
+        collection(db, "businesses", businessId, "bookings"),
+        bookingData
+      );
+
+      // Add listeners for live updates
+      ["clientName", "eventDate", "eventLocation", "amountPaid"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener("input", recalcTotal);
+      });
+
+      // Also recalc on page load
+      recalcTotal();
+
+      // 🔔 Send notification about new booking with bookingId
+      await sendNotification(
+        businessId,
+        `New booking added ${bookingData.client.name} on ${bookingData.event.date}`,
+        currentUser.email, // ✅ FIXED
+        "booking_added",      // type
+        bookingRef.id         // bookingId
+      );
+
+      // Send real-time OneSignal push notification
+      await sendPush(
+        `New booking added for ${bookingData.client.name} on ${bookingData.event.date}`,
+        `/bookings.html?highlight=${bookingRef.id}`
+      );
+
+      // 🎇 2. WELCOME NOTIFICATION (Add this part)
+      // This checks if this is the very first booking in the system
+      const allBookings = await getDocs(collection(db, "businesses", businessId, "bookings"));
+      if (allBookings.size === 1) {
+        await sendNotification(
+          businessId,
+          `🎉 Welcome ${currentBusinessName}! ! You've just created your first booking for ${bookingData.client.name}. This platform is designed to help you track rentals and payments effortlessly. Explore your dashboard to see your new stats!`,
+          "Tracknrent",
+          "welcome_message",
+          bookingRef.id
+        );
+      }
+
+      /* Nothing to deduct — availability for any date window is computed
+         live from active bookings (see availabilityService.js). */
+
+      clearDraft();
+      window.location.href = "bookings.html";
+    } catch (error) {
+      console.error("Error saving booking:", error);
+      alert("Failed to save booking. Please try again.");
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  });
 
 
 function updateSelectOptions() {
@@ -845,7 +879,6 @@ window.shareToWhatsApp = function() {
 
   window.open(`https://wa.me/${cleanPhone}?text=${encodedMsg}`, '_blank');
 };
-
 // // ===== DYNAMIC BUY ME A COFFEE BUTTON WITH FLOATING ANIMATION =====
 // (function() {
 //   const bmcLink = "https://www.buymeacoffee.com/francisfortune"; // your profile link
