@@ -119,8 +119,12 @@ function renderInventory(filteredItems, allItems) {
   allInventoryItemsCache = allItems;
 
   const nowMap = getAvailabilityMap(allItems, activeBookingsCache, new Date(), new Date());
-
-  let totalAssetsValue = 0;
+  
+  
+  
+  
+  
+  let totalOwnedQty = 0;
   let totalAvailableQty = 0;
   let totalOutQty = 0;
 
@@ -128,16 +132,20 @@ function renderInventory(filteredItems, allItems) {
   allItems.forEach(item => {
     const totalQty = Number(item.totalQuantity || 0);
     const usableQty = Number(item.availableQuantity || 0);
-    const price = Number(item.price || 0);
     const freeNow = nowMap.has(item.name.trim().toLowerCase())
       ? nowMap.get(item.name.trim().toLowerCase())
       : usableQty;
 
-    totalAvailableQty += freeNow;
-    totalOutQty += Math.max(0, usableQty - freeNow);
+    // "Owned" is the sum of every unit you track, regardless of what's out.
+    totalOwnedQty += totalQty;
 
-    // Asset value calculation (based on total owned, not just what's free)
-    totalAssetsValue += totalQty * price;
+    // "Free today" = units not currently tied to a booking that overlaps today.
+    totalAvailableQty += freeNow;
+
+    // "Out today" = units that ARE tied to a booking overlapping today.
+    // Computed from OWNED minus FREE, not from the raw availableQuantity,
+    // so the three cards always reconcile: owned = free + out.
+    totalOutQty += Math.max(0, totalQty - freeNow);
 
     calcItem.innerHTML += `
       <option value="${item.name}" data-stock="${usableQty}">
@@ -147,9 +155,11 @@ function renderInventory(filteredItems, allItems) {
   });
 
   // Dashboard stats
-  totalItemsEl.textContent = `₦${totalAssetsValue.toLocaleString()}`;
+  totalItemsEl.textContent = totalOwnedQty.toLocaleString();
   availableItemsEl.textContent = totalAvailableQty.toLocaleString();
   outItemsEl.textContent = totalOutQty.toLocaleString();
+
+
 
   // Inventory list
   filteredItems.forEach(item => {
@@ -306,29 +316,33 @@ onAuthStateChanged(auth, async user => {
     }
     const invRef = collection(db, "businesses", businessId, "inventory");
 
-    onSnapshot(invRef, snap => {
-      const allItems = snap.docs.map(d => {
-        const data = d.data();
-        return {
-          id: d.id,
-          ...data,
-          totalQuantity: Math.max(0, Number(data.totalQuantity || 0)),
-          availableQuantity: Math.min(
-            Math.max(0, Number(data.availableQuantity || 0)),
-            Number(data.totalQuantity || 0)
-          )
-        };
-      });
+  onSnapshot(invRef, snap => {
+  const allItems = snap.docs
+    .map(d => {
+      const data = d.data();
+      return {
+        id: d.id,
+        ...data,
+        totalQuantity: Math.max(0, Number(data.totalQuantity || 0)),
+        availableQuantity: Math.min(
+          Math.max(0, Number(data.availableQuantity || 0)),
+          Number(data.totalQuantity || 0)
+        )
+      };
+    })
+    .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), undefined, { sensitivity: "base" }));
 
-      function filterAndRender() {
-        const q = inventorySearch.value.toLowerCase();
-        const filtered = allItems.filter(i => i.name.toLowerCase().includes(q));
-        renderInventory(filtered, allItems);
-      }
+  function filterAndRender() {
+    const q = inventorySearch.value.toLowerCase();
+    const filtered = allItems.filter(i => String(i.name || "").toLowerCase().includes(q));
+    renderInventory(filtered, allItems);
+  }
 
-      inventorySearch.oninput = filterAndRender;
-      filterAndRender();
-    });
+  inventorySearch.oninput = filterAndRender;
+  filterAndRender();
+});
+
+
 
     listenToOverbooked(businessId);
 

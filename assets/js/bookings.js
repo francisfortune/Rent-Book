@@ -166,7 +166,7 @@ function generateReceiptText(booking) {
 
   if (publicProfileSettings.enabled && publicProfileSettings.slug) {
     const storeUrl = `${window.location.origin}/p/${publicProfileSettings.slug}`;
-    receiptText += `\n🌐 _View our Online Store: ${storeUrl}_`;
+    receiptText += `\n🌐 _View our Online Store and Leave Your Review: ${storeUrl}_`;
   }
 
   receiptText += `\n_Powered by Tracknrent_\n👉 https://tracknrent.vercel.app`;
@@ -198,10 +198,15 @@ function getCalculatedStatus(booking) {
 let inventoryItems = [];
 let allBookingsGlobal = [];
 
+
 async function loadInventory(businessId) {
   const snap = await getDocs(collection(db, "businesses", businessId, "inventory"));
-  inventoryItems = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  inventoryItems = snap.docs
+    .map(doc => ({ id: doc.id, ...doc.data() }))
+    .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), undefined, { sensitivity: "base" }));
 }
+
+
 
 /* =========================
    GENERATE RECEIPT IMAGE HTML

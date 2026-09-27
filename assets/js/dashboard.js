@@ -214,7 +214,7 @@ function listenToInventory(businessId) {
   const tbody = document.getElementById("recent-customers");
   if (!tbody) return;
 
-  const q = query(collection(db, "businesses", businessId, "inventory"), orderBy("createdAt", "desc"));
+  const q = query(collection(db, "businesses", businessId, "inventory"));
 
   onSnapshot(q, snap => {
     tbody.innerHTML = "";
@@ -223,9 +223,12 @@ function listenToInventory(businessId) {
       return;
     }
 
-    snap.forEach(docSnap => {
-      const i = docSnap.data();
-      const isLow = i.availableQuantity <= 5;
+    const items = snap.docs
+      .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+      .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), undefined, { sensitivity: "base" }));
+
+    items.forEach(i => {
+      const isLow = Number(i.availableQuantity || 0) <= 5;
       tbody.innerHTML += `
         <tr class="hover:bg-gray-50 transition-colors">
           <td class="py-3 px-4">
@@ -246,7 +249,6 @@ function listenToInventory(businessId) {
     });
   });
 }
-
 /* =========================
    AUTH GUARD
 ========================= */

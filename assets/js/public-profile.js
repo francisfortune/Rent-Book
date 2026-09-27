@@ -106,14 +106,12 @@ const teamMemberNotice = document.getElementById("teamMemberNotice");
 const toggleHelper = document.getElementById("toggleHelper");
 const saveBarWrapper = document.getElementById("saveBarWrapper");
 
+// --- Share storefront button (added) ----------------------------------
+const shareStoreBtn = document.getElementById("shareStoreBtn");
+const storeUrlHelp = document.getElementById("storeUrlHelp");
+
 /* =========================
    UNSAVED CHANGES STATE
-
-   The Save bar is rendered inline at the bottom of the page by default.
-   When there is anything unsaved we add `body.has-unsaved-changes`, which
-   hides the inline Save button and shows the floating bar (hint + Save)
-   pinned to the bottom of the viewport. Saving removes the class and the
-   inline button returns.
 ========================= */
 let pageIsDirty = false;
 let dirtyWired = false;
@@ -129,11 +127,9 @@ function clearDirty() {
   document.body.classList.remove("has-unsaved-changes");
 }
 
-// Expose for other modules/handlers (gallery, cover, logo, delete).
 window._markPublicDirty = markDirty;
 window._clearPublicDirty = clearDirty;
 
-// Attach dirty listeners to every input that can affect saved state.
 function wireDirtyTracking() {
   if (dirtyWired) return;
   dirtyWired = true;
@@ -162,11 +158,9 @@ function wireDirtyTracking() {
     el.addEventListener("change", markDirty);
   });
 
-  // Category editor
   if (categoryInput) categoryInput.addEventListener("input", markDirty);
   if (categoryAddBtn) categoryAddBtn.addEventListener("click", markDirty);
 
-  // File inputs — picking a file is a change even before the upload runs.
   [coverUploadInput, logoUploadInput, galleryUploadInput].forEach((input) => {
     if (input) input.addEventListener("change", markDirty);
   });
@@ -175,7 +169,6 @@ function wireDirtyTracking() {
   if (btnUseMyLocation) btnUseMyLocation.addEventListener("click", markDirty);
 }
 
-// Warn on tab close if there are unsaved changes.
 window.addEventListener("beforeunload", (e) => {
   if (!pageIsDirty) return;
   e.preventDefault();
@@ -201,6 +194,79 @@ function sanitizeSlug(rawSlug) {
 }
 
 /* =========================
+   SHARE STOREFRONT LINK
+   Only works when the store is live AND a slug is set.
+   Re-evaluated any time the toggle flips or the slug changes.
+========================= */
+function syncShareStoreButton() {
+  if (!shareStoreBtn) return;
+
+  const slug = (profileSlug?.value || "").trim();
+  const enabled = publicProfileToggle?.checked === true;
+  const canShare = enabled && slug.length > 0;
+
+  shareStoreBtn.disabled = !canShare;
+  shareStoreBtn.title = canShare
+    ? "Share your storefront link"
+    : "Turn on Go Online to enable sharing";
+
+  if (storeUrlHelp) {
+    if (!slug) {
+      storeUrlHelp.textContent = "Choose a unique name for your storefront link";
+    } else if (!enabled) {
+      storeUrlHelp.textContent = "Turn on Go Online to make this link shareable";
+    } else {
+      storeUrlHelp.textContent = `Your store is live at ${window.location.origin}/p/${slug}`;
+    }
+  }
+}
+
+if (profileSlug) profileSlug.addEventListener("input", syncShareStoreButton);
+if (publicProfileToggle) publicProfileToggle.addEventListener("change", syncShareStoreButton);
+
+if (shareStoreBtn) {
+  shareStoreBtn.addEventListener("click", async () => {
+    const slug = (profileSlug?.value || "").trim();
+    const enabled = publicProfileToggle?.checked === true;
+
+    if (!enabled) {
+      alert("Turn on 'Go Online' first to publish and share your storefront.");
+      return;
+    }
+    if (!slug) {
+      alert("Please choose a store URL first.");
+      return;
+    }
+
+    const url = `${window.location.origin}/p/${slug}`;
+    const shareData = {
+      title: document.title || "Our Store on Tracknrent",
+      text: "Check out our rental catalogue on Tracknrent:",
+      url,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(url);
+        alert("Store link copied to clipboard.");
+      }
+    } catch (err) {
+      if (err?.name !== "AbortError") {
+        console.warn("Share failed:", err);
+        try {
+          await navigator.clipboard.writeText(url);
+          alert("Couldn't open the share menu — link copied instead.");
+        } catch {
+          alert("Couldn't share or copy the link. Please copy it manually.");
+        }
+      }
+    }
+  });
+}
+
+/* =========================
    AUTHENTICATION GUARD
 ========================= */
 onAuthStateChanged(auth, async (user) => {
@@ -220,6 +286,7 @@ onAuthStateChanged(auth, async (user) => {
     applyRoleToUI();
     await loadSettings();
     wireDirtyTracking();
+    syncShareStoreButton();
   } catch (err) {
     console.error("Failed to load storefront settings:", err);
     alert("Error loading business info.");
@@ -289,6 +356,9 @@ function syncTogglePermission() {
         : "";
     }
   }
+
+  // The share button mirrors the toggle state, so keep it in sync.
+  syncShareStoreButton();
 }
 
 if (publicProfileToggle) {
@@ -356,6 +426,7 @@ function applyProfileToForm(data) {
   renderGallery();
 
   syncTogglePermission();
+  syncShareStoreButton();
 }
 
 function normalizeCategories(list) {
@@ -932,6 +1003,7 @@ if (saveBtn) {
 
       alert("Storefront settings updated successfully!");
       clearDirty();
+      syncShareStoreButton();
     } catch (err) {
       console.error("Save storefront error:", err);
       alert("Failed to save: " + err.message);
@@ -945,8 +1017,6 @@ if (saveBtn) {
 
 /* =========================
    FLOATING SAVE BUTTON
-   The floating bar's Save button delegates to the inline button's
-   handler, so all the save logic lives in one place.
 ========================= */
 if (saveBtnFloating && saveBtn) {
   saveBtnFloating.addEventListener("click", () => saveBtn.click());

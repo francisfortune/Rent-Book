@@ -153,6 +153,51 @@ async function loadReferralAnalytics(businessId) {
       `;
     }
 
+
+/* =========================
+   SHARE REFERRAL LINK
+   Uses the native share sheet on mobile (WhatsApp, SMS, etc.).
+   Falls back to copying + alert on desktop browsers that don't
+   support navigator.share.
+========================= */
+document.getElementById("shareReferralBtn")?.addEventListener("click", async () => {
+  const input = document.getElementById("referralLinkInput");
+  const url = (input?.value || "").trim();
+
+  if (!url) {
+    alert("Referral link not ready yet. Please wait a moment and try again.");
+    return;
+  }
+
+  const shareData = {
+    title: "Join me on Tracknrent",
+    text: "I use Tracknrent to manage my rental business — bookings, inventory, WhatsApp receipts, all in one place. Sign up with my link:",
+    url,
+  };
+
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData);
+    } else {
+      // Fallback for desktop / unsupported browsers
+      await navigator.clipboard.writeText(url);
+      alert("Referral link copied. Share it anywhere you like.");
+    }
+  } catch (err) {
+    // User cancelled the share sheet — silent fail is correct here.
+    if (err?.name !== "AbortError") {
+      console.warn("Share failed:", err);
+      try {
+        await navigator.clipboard.writeText(url);
+        alert("Couldn't open the share menu — link copied instead.");
+      } catch {
+        alert("Couldn't share or copy the link. Please copy it manually.");
+      }
+    }
+  }
+});
+
+
     // Build referral list
     if (refsSnap.empty) {
       referralList.innerHTML = `

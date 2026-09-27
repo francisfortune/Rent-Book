@@ -530,14 +530,16 @@ onAuthStateChanged(auth, async (user) => {
     }
 
     const invSnap = await getDocs(
-      collection(db, "businesses", businessId, "inventory")
-    );
+  collection(db, "businesses", businessId, "inventory")
+);
 
-    inventoryItems = invSnap.docs.map(d => ({
-      id: d.id,
-      ...d.data()
-    }));
-
+inventoryItems = invSnap.docs
+  .map(d => ({
+    id: d.id,
+    ...d.data()
+  }))
+  .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), undefined, { sensitivity: "base" }));
+  
 // ✅ ADD LISTENERS FOR LIVE UPDATES
     const liveFields = ["clientName", "eventDate", "eventLocation", "amountPaid","returnDate"];
     liveFields.forEach(id => {
