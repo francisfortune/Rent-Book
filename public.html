@@ -1358,21 +1358,32 @@
                 </div>
               </div>
 
-              <div>
+                           <div>
                 <label class="block text-xs font-semibold uppercase tracking-wider mb-1.5"
                   style="color: purple;">Store URL</label>
-                <div
-                  class="flex items-stretch bg-gray-50 rounded-xl border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-purple-400 focus-within:border-transparent transition-all">
-                  <span
-                    class="bg-gray-100 text-gray-500 text-xs px-3 py-2.5 flex items-center whitespace-nowrap border-r border-gray-200 font-medium">
-                    <i class="fas fa-link text-xs mr-1"></i>
-                    tracknrent.app/p/
-                  </span>
-                  <input id="profileSlug" type="text" placeholder="your-shop-name"
-                    class="flex-1 px-3 py-2.5 text-sm bg-transparent focus:outline-none min-w-0 placeholder:text-gray-400">
+                <div class="flex items-stretch gap-2">
+                  <div
+                    class="flex-1 flex items-stretch bg-gray-50 rounded-xl border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-purple-400 focus-within:border-transparent transition-all min-w-0">
+                    <span
+                      class="bg-gray-100 text-gray-500 text-xs px-3 py-2.5 flex items-center whitespace-nowrap border-r border-gray-200 font-medium">
+                      <i class="fas fa-link text-xs mr-1"></i>
+                      tracknrent.app/p/
+                    </span>
+                    <input id="profileSlug" type="text" placeholder="your-shop-name"
+                      class="flex-1 px-3 py-2.5 text-sm bg-transparent focus:outline-none min-w-0 placeholder:text-gray-400">
+                  </div>
+
+                  <button type="button" id="shareStoreBtn" disabled
+                    title="Turn on Go Online to enable sharing"
+                    class="flex-shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all border disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200"
+                    style="background: purple; color: white; border-color: purple;">
+                    <i class="fas fa-share-alt text-sm"></i>
+                    <span class="hidden sm:inline">Share</span>
+                  </button>
                 </div>
-                <p class="text-xs text-gray-400 mt-1">Choose a unique name for your storefront link</p>
+                <p class="text-xs text-gray-400 mt-1" id="storeUrlHelp">Choose a unique name for your storefront link</p>
               </div>
+              
 
               <div>
                 <label class="block text-xs font-semibold uppercase tracking-wider mb-1.5" style="color: purple;">About

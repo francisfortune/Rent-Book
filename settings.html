@@ -1074,28 +1074,38 @@
 
 
   <!-- Referral Link Share Input -->
+  <!-- Referral Link Share Input -->
 <div class="mb-2">
   <label for="referralLinkInput" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
     Your Referral Link
   </label>
-  <div class="flex flex-col min-[400px]:flex-row gap-2">
+  <div class="flex flex-col gap-2 mb-2">
     <input 
       id="referralLinkInput" 
       type="text" 
       readonly 
       class="w-full min-w-0 bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-lg px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-[purple] select-all truncate"
     />
-    <button 
-      id="copyReferralBtn" 
-      type="button"
-      class="w-full min-[400px]:w-auto bg-[purple] hover:opacity-90 active:scale-95 text-white font-medium text-sm px-5 py-2.5 rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer shadow-sm"
-    >
-      <span class="material-symbols-outlined text-lg">content_copy</span>
-      <span>Copy Link</span>
-    </button>
+    <div class="flex flex-row gap-2">
+      <button 
+        id="copyReferralBtn" 
+        type="button"
+        class="flex-1 bg-[purple] hover:opacity-90 active:scale-95 text-white font-medium text-sm px-4 py-2.5 rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+      >
+        <span class="material-symbols-outlined text-lg">content_copy</span>
+        <span>Copy Link</span>
+      </button>
+      <button 
+        id="shareReferralBtn" 
+        type="button"
+        class="flex-1 bg-white border border-[purple] text-[purple] hover:bg-[purple]/5 active:scale-95 font-medium text-sm px-4 py-2.5 rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+      >
+        <span class="material-symbols-outlined text-lg">share</span>
+        <span>Share</span>
+      </button>
+    </div>
   </div>
 </div>
-
 
 
   <!-- Success / Unlocked Badge State -->
