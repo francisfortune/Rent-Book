@@ -20,7 +20,6 @@ import {
 
 
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getMessaging, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 import { runAutomatedChecks } from "./services/reminderService.js";
 import { getBookingLifecycle, isBookingOverbooked, renderLifecycleBadge } from "./services/bookingStatus.js";
 
@@ -321,25 +320,6 @@ onAuthStateChanged(auth, async user => {
 
 
 
-const messaging = getMessaging();
-
-async function requestPushPermission() {
-  try {
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") return;
-
-    const token = await getToken(messaging, {
-      vapidKey: "539d08e3-cada-4b7e-88c3-f89af30ff7f9"
-    });
-
-    console.log("FCM Token:", token);
-
-    // SAVE token to Firestore for this user
-    // db -> users/{uid}/fcmTokens
-  } catch (err) {
-    console.error("Push permission error:", err);
-  }
-}
 });
 // /* =========================
 //    COFFEE BUTTON

@@ -1,233 +1,150 @@
-// ============================================
-// ONESIGNAL v16 — COMPLETE FIX
-// ============================================
+// assets/js/onesignal.js — OneSignal Web SDK v16 (fixed)
+//
+// What this does:
+//  1. Initializes OneSignal once per page (production only).
+//  2. When a Firebase user is signed in, links the device to them
+//     (OneSignal.login(uid)) and tags it with their businessId, so pushes go
+//     to *that business's team only* (not "All" subscribers).
+//  3. Asks for notification permission via the OneSignal slidedown prompt.
+//  4. sendPush(message, url) -> POST /api/send-push (server holds the REST key).
+//
+// Every existing `sendPush(message, deepLink)` call keeps working unchanged.
+
+import { auth } from "./firebase.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const ONESIGNAL_APP_ID = "539d08e3-cada-4b7e-88c3-f89af30ff7f9";
 
-// ✅ Detect if running on localhost
-const isLocalhost = window.location.hostname === 'localhost' ||
-                    window.location.hostname === '127.0.0.1' ||
-                    window.location.hostname === '';
+const isLocalhost =
+  ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
 
-// ============================================
-// ✅ HELPER: Wait for OneSignal SDK to be ready
-// ============================================
-function waitForOneSignal(timeoutMs = 3000) {
-    return new Promise((resolve) => {
-        if (window.OneSignal && typeof window.OneSignal.User !== 'undefined') {
-            return resolve(true);
-        }
+/* ---------------------------------------------------------
+   SDK bootstrap — resolves with the OneSignal instance once
+   init() has finished (or null on localhost / init failure)
+--------------------------------------------------------- */
+window.OneSignalDeferred = window.OneSignalDeferred || [];
 
-        let elapsed = 0;
-        const interval = 100;
+const osReady = new Promise((resolve) => {
+  if (isLocalhost) {
+    console.log("[OneSignal] Localhost: SDK disabled, pushes skipped");
+    return resolve(null);
+  }
+  if (window.__onesignal_initialized) {
+    // another copy of this module already ran init
+    window.OneSignalDeferred.push((OS) => resolve(OS));
+    return;
+  }
+  window.__onesignal_initialized = true;
 
-        const timer = setInterval(() => {
-            elapsed += interval;
-
-            if (window.OneSignal && typeof window.OneSignal.User !== 'undefined') {
-                clearInterval(timer);
-                resolve(true);
-            } else if (elapsed >= timeoutMs) {
-                clearInterval(timer);
-                resolve(false);
-            }
-        }, interval);
-    });
-}
-
-// ============================================
-// ✅ HELPER: Normalize permission (string OR boolean)
-// ============================================
-function isPermissionGranted(perm) {
-    return perm === 'granted' || perm === true;
-}
-
-// ============================================
-// ✅ HELPER: Get OneSignal user ID (v16 property)
-// ============================================
-function getOneSignalUserId() {
+  window.OneSignalDeferred.push(async (OneSignal) => {
     try {
-        // v16: it's a property, not a method
-        return window.OneSignal?.User?.onesignalId || null;
+      await OneSignal.init({
+        appId: ONESIGNAL_APP_ID,
+        serviceWorkerPath: "/sw.js",
+        serviceWorkerParam: { scope: "/" },
+        notifyButton: { enable: false }
+      });
+      console.log("[OneSignal] ✅ Initialized");
+      resolve(OneSignal);
     } catch (err) {
-        console.warn('[OneSignal] Failed to get user ID:', err.message);
-        return null;
+      console.warn("[OneSignal] Init error:", err.message);
+      resolve(null);
     }
-}
+  });
+});
 
-// ============================================
-// ✅ MAIN: sendPush — SDK first, then serverless
-// ============================================
+/* ---------------------------------------------------------
+   Identity: Firebase user -> OneSignal external id + businessId tag
+--------------------------------------------------------- */
+let currentBusinessId = null;
+let resolveIdentity;
+const identityReady = new Promise((r) => (resolveIdentity = r));
+
+onAuthStateChanged(auth, async (user) => {
+  const OneSignal = await osReady;
+
+  if (!user) {
+    currentBusinessId = null;
+    try { await OneSignal?.logout(); } catch (_) {}
+    return;
+  }
+
+  try {
+    const { getBusinessIdByEmail } = await import("./shared.js");
+    currentBusinessId = await getBusinessIdByEmail(user.email, user);
+  } catch (err) {
+    console.warn("[OneSignal] Could not resolve businessId:", err.message);
+  }
+  resolveIdentity(true);
+
+  if (!OneSignal || !currentBusinessId) return;
+
+  try {
+    await OneSignal.login(user.uid);
+    OneSignal.User.addTags({ businessId: currentBusinessId, role: "member" });
+    console.log("[OneSignal] Linked device to", user.uid, "/", currentBusinessId);
+
+    // Ask for permission (needs a user gesture on some browsers -> slidedown)
+    if (OneSignal.Notifications.permission) {
+      // already granted: make sure the subscription is actually opted in
+      if (!OneSignal.User.PushSubscription.optedIn) {
+        await OneSignal.User.PushSubscription.optIn();
+      }
+    } else if (OneSignal.Notifications.permissionNative === "default") {
+      OneSignal.Slidedown.promptPush();
+    }
+  } catch (err) {
+    console.warn("[OneSignal] Identity/permission setup failed:", err.message);
+  }
+});
+
+/* Call this from a button (e.g. Settings -> "Enable notifications") */
+export async function enablePushNotifications() {
+  const OneSignal = await osReady;
+  if (!OneSignal) return false;
+  await OneSignal.Slidedown.promptPush({ force: true });
+  return !!OneSignal.Notifications.permission;
+}
+window.enablePushNotifications = enablePushNotifications;
+
+/* ---------------------------------------------------------
+   sendPush — asks the server to notify this business's devices
+--------------------------------------------------------- */
 export async function sendPush(message, url = "/dashboard.html") {
-    // Skip on localhost
-    if (isLocalhost) {
-        console.log('[OneSignal] ⏭️ Skipping push on localhost');
-        return { success: true, message: 'Skipped - localhost' };
+  if (isLocalhost) {
+    console.log("[OneSignal] Skipping push on localhost:", message);
+    return { success: true, skipped: true };
+  }
+
+  // wait (max 5s) for auth + businessId
+  await Promise.race([identityReady, new Promise((r) => setTimeout(r, 5000))]);
+  if (!currentBusinessId) {
+    console.warn("[OneSignal] No businessId yet — push not sent");
+    return { success: false, error: "no_business" };
+  }
+
+  try {
+    const idToken = await auth.currentUser?.getIdToken();
+    const res = await fetch("/api/send-push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message,
+        url,
+        businessId: currentBusinessId,
+        idToken
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.success === false) {
+      console.error("[OneSignal] Push failed:", res.status, data);
+      return { success: false, error: data };
     }
-
-    console.log('[OneSignal] 📨 Sending push:', { message, url });
-
-    // ============================================
-    // ✅ STRATEGY 1: Try OneSignal SDK (instant)
-    // ============================================
-    try {
-        const sdkReady = await waitForOneSignal(3000);
-
-        if (sdkReady && window.OneSignal) {
-            const OneSignal = window.OneSignal;
-
-            // ✅ v16: permission is a property (may be string or boolean)
-            const rawPermission = OneSignal.Notifications.permission;
-            const granted = isPermissionGranted(rawPermission);
-
-            console.log('[OneSignal] SDK permission:', rawPermission, '(granted:', granted + ')');
-
-            if (granted) {
-                // ✅ v16: use property, not method
-                const userId = getOneSignalUserId();
-                console.log('[OneSignal] SDK user ID:', userId);
-
-                if (userId) {
-                    await OneSignal.Notifications.add({
-                        contents: { en: message },
-                        data: { url: url },
-                        targetUserId: userId,
-                        web_url: url.startsWith('http')
-                            ? url
-                            : `https://tracknrent.vercel.app${url}`
-                    });
-                    console.log('[OneSignal] ✅ Push sent via SDK (instant)');
-                    return { success: true, method: 'sdk' };
-                } else {
-                    console.log('[OneSignal] ⚠️ No user ID yet — falling back to serverless');
-                }
-            } else {
-                console.log('[OneSignal] ⚠️ Permission not granted — falling back to serverless');
-            }
-        } else {
-            console.log('[OneSignal] ⚠️ SDK not ready — falling back to serverless');
-        }
-    } catch (sdkError) {
-        console.warn('[OneSignal] ⚠️ SDK send failed:', sdkError.message);
-    }
-
-    // ============================================
-    // ✅ STRATEGY 2: Fallback to serverless API
-    // ============================================
-    console.log('[OneSignal] 🔄 Trying serverless fallback...');
-    try {
-        const response = await fetch("/api/send-push", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            },
-            body: JSON.stringify({ message, url })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            console.error('[OneSignal] ❌ Serverless error:', data);
-            return { success: false, error: data };
-        }
-
-        console.log('[OneSignal] ✅ Push sent via serverless:', data);
-        return { success: true, method: 'serverless', data };
-
-    } catch (err) {
-        console.error('[OneSignal] ❌ Push network error:', err);
-        return { success: false, error: err.message };
-    }
+    console.log("[OneSignal] ✅ Push sent:", data);
+    return { success: true, data };
+  } catch (err) {
+    console.error("[OneSignal] Push network error:", err);
+    return { success: false, error: err.message };
+  }
 }
-
-// ✅ Expose to window for non-module use
 window.sendPush = sendPush;
-
-// ============================================
-// ✅ LOCALHOST — COMPLETE MOCK
-// ============================================
-if (isLocalhost) {
-    console.log('[OneSignal] ⏭️ Skipping initialization on localhost');
-
-    window.OneSignal = {
-        Notifications: {
-            permission: 'default',
-            add: async () => ({ success: true })
-        },
-        User: {
-            onesignalId: null,
-            getOnesignalId: async () => null
-        },
-        init: async () => {},
-        on: () => {},
-        emit: () => {},
-        off: () => {},
-        once: () => {}
-    };
-
-    window.OneSignalDeferred = [];
-
-    if (window.OneSignalSDK) {
-        window.OneSignalSDK = null;
-    }
-
-    console.log('[OneSignal] ✅ Localhost mock applied');
-
-} else {
-    // ============================================
-    // ✅ PRODUCTION — INITIALIZE ONESIGNAL
-    // ============================================
-    (function() {
-        'use strict';
-
-        if (window.__onesignal_initialized) {
-            console.log('[OneSignal] Already initialized, skipping');
-            return;
-        }
-        window.__onesignal_initialized = true;
-
-        const initOneSignal = () => {
-            window.OneSignalDeferred = window.OneSignalDeferred || [];
-
-            window.OneSignalDeferred.push(async function(OneSignal) {
-                try {
-                    console.log('[OneSignal] 🚀 Initializing...');
-                    await OneSignal.init({
-                        appId: ONESIGNAL_APP_ID,
-                        serviceWorkerPath: "/sw.js",
-                        serviceWorkerParam: { scope: "/" },
-                        allowLocalhostAsSecureOrigin: false,
-                        notifyButton: {
-                            enable: false
-                        }
-                    });
-
-                    // ✅ v16: property, may be string or boolean
-                    const rawPermission = OneSignal.Notifications.permission;
-                    const granted = isPermissionGranted(rawPermission);
-                    console.log('[OneSignal] Permission:', rawPermission, '(granted:', granted + ')');
-
-                    if (granted) {
-                        // ✅ v16: property, not method
-                        const userId = OneSignal.User.onesignalId;
-                        console.log('[OneSignal] User ID:', userId || '(not yet assigned)');
-                    }
-
-                    console.log('[OneSignal] ✅ Initialized successfully');
-                } catch (error) {
-                    console.warn('[OneSignal] ⚠️ Init error:', error.message);
-                }
-            });
-
-            console.log('[OneSignal] ✅ Module loaded for production');
-        };
-
-        if (document.readyState === 'complete') {
-            initOneSignal();
-        } else {
-            window.addEventListener('load', initOneSignal);
-        }
-
-    })();
-}

@@ -429,7 +429,7 @@ export async function runAutomatedChecks(businessId) {
                     const msg = `⏰ 12 Hours Reminder: Rental items for '${booking.eventName || 'Booking'}' (${booking.client?.name || 'Client'}) are due back in 12 hours.`;
                     await addDoc(notificationsRef, {
                         message: msg,
-                        triggeredBy:System,
+                        triggeredBy: "System",
                         type: "rental_return_reminder",
                         bookingId: bookingId,
                         createdAt: serverTimestamp(),
