@@ -1,5 +1,5 @@
-// PWA Registration Script - FIXED for Vercel
-(function() {
+// PWA Registration Script — FIXED (no reload loop)
+(function () {
     'use strict';
 
     // Prevent multiple registrations
@@ -9,54 +9,97 @@
     }
     window.__pwa_initialized = true;
 
-    // ✅ Check if running on localhost
-    const isLocalhost = window.location.hostname === 'localhost' || 
-                        window.location.hostname === '127.0.0.1' ||
-                        window.location.hostname === '';
+    // ✅ EMERGENCY KILL-SWITCH
+    // Visit yoursite.com/?killsw=1 once to unregister all SWs and clear caches.
+    if (new URLSearchParams(location.search).has('killsw')) {
+        (async () => {
+            try {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for (const r of regs) await r.unregister();
+                const keys = await caches.keys();
+                for (const k of keys) await caches.delete(k);
+                console.log('[PWA] 🧨 Kill-switch executed');
+                alert('Service worker + caches cleared. Reloading clean.');
+                location.href = location.pathname;
+            } catch (e) {
+                console.error('[PWA] Kill-switch failed:', e);
+            }
+        })();
+        return;
+    }
 
-    // Register Service Worker - SINGLE registration
+    // ✅ Environment check
+    const isLocalhost =
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        window.location.hostname === '';
+
+    // ============================================
+    // SERVICE WORKER REGISTRATION
+    // ============================================
     if ('serviceWorker' in navigator) {
-        // ✅ Only register if NOT localhost or if SW file exists
         window.addEventListener('load', () => {
             setTimeout(() => {
-                navigator.serviceWorker.register('/sw.js', { 
-                    scope: '/'
-                })
-                .then(registration => {
-                    console.log('[PWA] ✅ Service Worker registered:', registration.scope);
-                    
-                    registration.addEventListener('updatefound', () => {
-                        const newWorker = registration.installing;
-                        console.log('[PWA] New service worker found');
+                navigator.serviceWorker
+                    .register('/sw.js', { scope: '/' })
+                    .then((registration) => {
+                        console.log('[PWA] ✅ Service Worker registered:', registration.scope);
 
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                showUpdateNotification();
-                            }
+                        // If there's already a waiting SW on page load, prompt immediately
+                        if (registration.waiting && navigator.serviceWorker.controller) {
+                            showUpdateNotification(registration);
+                        }
+
+                        // Detect new SW being installed
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            if (!newWorker) return;
+                            console.log('[PWA] New service worker found');
+
+                            newWorker.addEventListener('statechange', () => {
+                                console.log('[PWA] SW state:', newWorker.state);
+                                if (
+                                    newWorker.state === 'installed' &&
+                                    navigator.serviceWorker.controller
+                                ) {
+                                    // New SW is waiting — show banner
+                                    showUpdateNotification(registration);
+                                }
+                            });
                         });
+
+                        // Optional: poll for updates every 30 minutes
+                        setInterval(() => {
+                            registration.update().catch(() => {});
+                        }, 30 * 60 * 1000);
+                    })
+                    .catch((error) => {
+                        if (isLocalhost) {
+                            console.log('[PWA] ⏭️ Service Worker skipped on localhost');
+                        } else {
+                            console.warn('[PWA] SW registration failed:', error.message);
+                        }
                     });
-                })
-                .catch(error => {
-                    // ✅ Don't crash on localhost - SW is optional
-                    if (isLocalhost) {
-                        console.log('[PWA] ⏭️ Service Worker skipped on localhost');
-                    } else {
-                        console.warn('[PWA] Service Worker registration failed:', error.message);
-                    }
-                });
             }, 500);
         });
 
-        // Handle controller change
+        // ✅ SINGLE controllerchange listener — NO auto-reload
+        let refreshing = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-            console.log('[PWA] New service worker activated');
+            if (refreshing) return;
+            refreshing = true;
+            console.log('[PWA] Controller changed (new SW active)');
+            // Intentionally do NOT reload here.
+            // The update button already reloads once after posting SKIP_WAITING.
         });
     }
 
-    // Show update notification
-    function showUpdateNotification() {
+    // ============================================
+    // UPDATE NOTIFICATION BANNER
+    // ============================================
+    function showUpdateNotification(registration) {
         if (document.getElementById('pwa-update-banner')) return;
-        
+
         const banner = document.createElement('div');
         banner.id = 'pwa-update-banner';
         banner.style.cssText = `
@@ -78,7 +121,7 @@
         `;
         banner.innerHTML = `
             <span>🚀 New version available</span>
-            <button onclick="location.reload()" style="
+            <button id="pwa-update-btn" style="
                 background: purple;
                 color: white;
                 border: none;
@@ -87,7 +130,7 @@
                 font-weight: 600;
                 cursor: pointer;
             ">Update</button>
-            <button onclick="this.parentElement.remove()" style="
+            <button id="pwa-dismiss-btn" style="
                 background: transparent;
                 color: #a0aec0;
                 border: none;
@@ -96,9 +139,50 @@
             ">✕</button>
         `;
         document.body.appendChild(banner);
+
+        // Update button — activates waiting SW then reloads ONCE
+        document.getElementById('pwa-update-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('pwa-update-btn');
+            btn.disabled = true;
+            btn.textContent = 'Updating…';
+
+            try {
+                let reg = registration;
+                if (!reg) reg = await navigator.serviceWorker.getRegistration();
+
+                if (reg && reg.waiting) {
+                    // Tell waiting SW to take over
+                    reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+
+                    // Wait briefly for controllerchange, then reload once
+                    const reloadOnce = () => {
+                        window.location.reload();
+                    };
+                    navigator.serviceWorker.addEventListener('controllerchange', reloadOnce, {
+                        once: true,
+                    });
+
+                    // Fallback if controllerchange doesn't fire
+                    setTimeout(reloadOnce, 1500);
+                } else {
+                    // Nothing waiting — just reload
+                    window.location.reload();
+                }
+            } catch (e) {
+                console.warn('[PWA] Update failed, reloading anyway:', e);
+                window.location.reload();
+            }
+        });
+
+        // Dismiss button
+        document.getElementById('pwa-dismiss-btn').addEventListener('click', () => {
+            banner.remove();
+        });
     }
 
-    // Install prompt handling
+    // ============================================
+    // INSTALL PROMPT
+    // ============================================
     let deferredPrompt = null;
 
     window.addEventListener('beforeinstallprompt', (e) => {
@@ -132,11 +216,9 @@
 
     async function promptInstall() {
         if (!deferredPrompt) return;
-
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         console.log('[PWA] Install prompt outcome:', outcome);
-
         deferredPrompt = null;
         localStorage.setItem('pwa-install-prompted', 'true');
     }
@@ -194,7 +276,7 @@
                     to { transform: translateX(-50%) translateY(0); opacity: 1; }
                 }
             </style>
-            <button class="close-btn" onclick="this.parentElement.remove(); localStorage.setItem('pwa-install-prompted', 'true');">×</button>
+            <button class="close-btn" id="pwa-install-close">×</button>
             <div class="icon">📱</div>
             <div class="content">
                 <h4>Install Tracknrent</h4>
@@ -208,15 +290,22 @@
             promptInstall();
             installBanner.remove();
         });
+        document.getElementById('pwa-install-close').addEventListener('click', () => {
+            localStorage.setItem('pwa-install-prompted', 'true');
+            installBanner.remove();
+        });
     }
 
     window.promptPWAInstall = promptInstall;
     window.showInstallPrompt = showInstallPrompt;
 
+    // ============================================
+    // ONLINE / OFFLINE INDICATOR
+    // ============================================
     function updateOnlineStatus() {
         const isOnline = navigator.onLine;
-        const existingIndicator = document.getElementById('connection-status');
-        if (existingIndicator) existingIndicator.remove();
+        const existing = document.getElementById('connection-status');
+        if (existing) existing.remove();
 
         if (!isOnline) {
             const indicator = document.createElement('div');
@@ -234,7 +323,7 @@
                 font-weight: 500;
                 z-index: 10001;
             `;
-            indicator.textContent = '📡 You\'re offline. Some features may be unavailable.';
+            indicator.textContent = "📡 You're offline. Some features may be unavailable.";
             document.body.prepend(indicator);
         }
     }
@@ -242,19 +331,6 @@
     window.addEventListener('online', updateOnlineStatus);
     window.addEventListener('offline', updateOnlineStatus);
     updateOnlineStatus();
-
-    // Prevent auto-refresh loop
-    let refreshing = false;
-    navigator.serviceWorker?.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-            refreshing = true;
-            if (document.visibilityState === 'visible') {
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
-            }
-        }
-    });
 
     console.log('[PWA] ✅ Initialized successfully');
 })();
