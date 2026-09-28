@@ -1,13 +1,18 @@
-// assets/js/onesignal.js — OneSignal Web SDK v16 (FIXED: no cross-account leaks)
+// assets/js/onesignal.js — FINAL VERIFIED VERSION
 //
-//  Fixes:
-//   • On login:  removes any stale businessId tag, then adds the correct one.
-//   • On logout: removes businessId tag AND opts the device OUT so it can't
-//                receive pushes meant for the previous account.
-//   • Never silently skips identity setup — logs clearly.
+// Multi-tenant push routing for Tracknrent.
+//   • Each device is tagged with the businessId it belongs to.
+//   • Server-side /api/send-push sends to ALL devices with that tag.
+//   • Logout wipes the tag so a shared browser never leaks pushes.
+//
+// Public API (do not rename — used across the app):
+//   - sendPush(message, url)         → module export + window.sendPush
+//   - enablePushNotifications()      → module export + window
+//   - window.__osDebug()             → console helper
 
 import { auth } from "./firebase.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { onAuthStateChanged } from
+  "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const ONESIGNAL_APP_ID = "539d08e3-cada-4b7e-88c3-f89af30ff7f9";
 
@@ -15,13 +20,14 @@ const isLocalhost =
   ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
 
 /* ---------------------------------------------------------
-   SDK bootstrap
+   SDK BOOTSTRAP
+   OneSignal v16 loads async. We wait for it once and reuse.
 --------------------------------------------------------- */
 window.OneSignalDeferred = window.OneSignalDeferred || [];
 
 const osReady = new Promise((resolve) => {
   if (isLocalhost) {
-    console.log("[OneSignal] Localhost: SDK disabled");
+    console.log("[OneSignal] localhost → SDK disabled");
     return resolve(null);
   }
   if (window.__onesignal_initialized) {
@@ -48,50 +54,47 @@ const osReady = new Promise((resolve) => {
 });
 
 /* ---------------------------------------------------------
-   Identity: Firebase user -> OneSignal external id + businessId tag
+   IDENTITY
+   We resolve the caller's businessId once, then:
+     - login()        → ties this device to the Firebase uid
+     - addTags()      → tags it with businessId so server pushes match
+   On logout we wipe BOTH so a shared browser can't receive
+   notifications for a business it's no longer logged into.
 --------------------------------------------------------- */
 let currentBusinessId = null;
+
 let resolveIdentity;
 const identityReady = new Promise((r) => (resolveIdentity = r));
 
-/**
- * Wipes any previous businessId/role tags off this device and opts out
- * of push, so a device that logged out of Account A can never receive
- * Account A's notifications again — even if Account A keeps sending.
- */
 async function detachDeviceFromBusiness(OneSignal, reason = "") {
   if (!OneSignal) return;
   try {
     await OneSignal.User.removeTags(["businessId", "role"]);
-    console.log("[OneSignal] Removed businessId tag" + (reason ? ` (${reason})` : ""));
-
+    console.log(`[OneSignal] Removed businessId tag (${reason})`);
     if (OneSignal.User?.PushSubscription?.optedIn) {
       await OneSignal.User.PushSubscription.optOut();
       console.log("[OneSignal] Push subscription opted OUT");
     }
   } catch (err) {
-    console.warn("[OneSignal] detachDeviceFromBusiness failed:", err.message);
+    console.warn("[OneSignal] detach failed:", err.message);
   }
 }
 
 onAuthStateChanged(auth, async (user) => {
   const OneSignal = await osReady;
 
-  // ---------- LOGOUT PATH ----------
+  // ---------- LOGGED OUT ----------
   if (!user) {
     currentBusinessId = null;
     if (OneSignal) {
       await detachDeviceFromBusiness(OneSignal, "logout");
-      try {
-        await OneSignal.logout();
-        console.log("[OneSignal] External user id cleared");
-      } catch (_) {}
+      try { await OneSignal.logout(); } catch (_) {}
     }
     resolveIdentity(false);
     return;
   }
 
-  // ---------- LOGIN PATH ----------
+  // ---------- LOGGED IN ----------
   let resolvedBusinessId = null;
   try {
     const { getBusinessIdByEmail } = await import("./shared.js");
@@ -103,7 +106,6 @@ onAuthStateChanged(auth, async (user) => {
   resolveIdentity(!!resolvedBusinessId);
 
   if (!OneSignal) return;
-
   if (!resolvedBusinessId) {
     await detachDeviceFromBusiness(OneSignal, "no-business");
     return;
@@ -112,9 +114,8 @@ onAuthStateChanged(auth, async (user) => {
   try {
     await OneSignal.login(user.uid);
 
-    // Remove any stale tags from a previously-logged-in account on this
-    // same browser, THEN set the new tag. This is the actual fix for
-    // "phone push appears on laptop".
+    // Remove any tags left over from a previous account on this browser,
+    // THEN set the correct ones. This is the fix for cross-account leaks.
     await OneSignal.User.removeTags(["businessId", "role"]);
     await OneSignal.User.addTags({
       businessId: resolvedBusinessId,
@@ -122,12 +123,11 @@ onAuthStateChanged(auth, async (user) => {
     });
 
     console.log(
-      "[OneSignal] ✅ Linked device → user:",
-      user.uid,
-      "| business:",
-      resolvedBusinessId
+      "[OneSignal] ✅ Device linked → uid:", user.uid,
+      "| business:", resolvedBusinessId
     );
 
+    // Prompt for permission on first login
     if (OneSignal.Notifications.permission) {
       if (!OneSignal.User.PushSubscription.optedIn) {
         await OneSignal.User.PushSubscription.optIn();
@@ -136,31 +136,24 @@ onAuthStateChanged(auth, async (user) => {
       OneSignal.Slidedown.promptPush();
     }
   } catch (err) {
-    console.warn("[OneSignal] Identity/permission setup failed:", err.message);
+    console.warn("[OneSignal] Identity setup failed:", err.message);
   }
 });
 
-/* Call from a button (Settings -> "Enable notifications") */
-export async function enablePushNotifications() {
-  const OneSignal = await osReady;
-  if (!OneSignal) return false;
-  await OneSignal.Slidedown.promptPush({ force: true });
-  return !!OneSignal.Notifications.permission;
-}
-window.enablePushNotifications = enablePushNotifications;
-
 /* ---------------------------------------------------------
-   sendPush — asks the server to notify this business's devices
+   PUBLIC API — sendPush
+   Sends via /api/send-push, which filters by businessId tag.
 --------------------------------------------------------- */
 export async function sendPush(message, url = "/dashboard.html") {
   if (isLocalhost) {
-    console.log("[OneSignal] Skipping push on localhost:", message);
+    console.log("[OneSignal] localhost → push skipped:", message);
     return { success: true, skipped: true };
   }
 
+  // Wait up to 5s for businessId to be resolved
   await Promise.race([identityReady, new Promise((r) => setTimeout(r, 5000))]);
   if (!currentBusinessId) {
-    console.warn("[OneSignal] No businessId yet — push not sent");
+    console.warn("[OneSignal] No businessId — push not sent");
     return { success: false, error: "no_business" };
   }
 
@@ -176,6 +169,7 @@ export async function sendPush(message, url = "/dashboard.html") {
         idToken,
       }),
     });
+
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.success === false) {
       console.error("[OneSignal] Push failed:", res.status, data);
@@ -184,26 +178,38 @@ export async function sendPush(message, url = "/dashboard.html") {
     console.log("[OneSignal] ✅ Push sent:", data);
     return { success: true, data };
   } catch (err) {
-    console.error("[OneSignal] Push network error:", err);
+    console.error("[OneSignal] Network error:", err);
     return { success: false, error: err.message };
   }
 }
 window.sendPush = sendPush;
 
 /* ---------------------------------------------------------
-   DEBUG HELPER — run window.__osDebug() in the console
+   PUBLIC API — enablePushNotifications
+   Called from settings when the user clicks "Enable notifications".
+--------------------------------------------------------- */
+export async function enablePushNotifications() {
+  const OneSignal = await osReady;
+  if (!OneSignal) return false;
+  await OneSignal.Slidedown.promptPush({ force: true });
+  return !!OneSignal.Notifications.permission;
+}
+window.enablePushNotifications = enablePushNotifications;
+
+/* ---------------------------------------------------------
+   DEBUG helper — paste window.__osDebug() in console
 --------------------------------------------------------- */
 window.__osDebug = async () => {
   const OS = await osReady;
   if (!OS) return console.log("OneSignal not ready");
-  console.log("External user id:", OS.User?.externalId || "(none)");
-  console.log("Subscription id:", OS.User?.PushSubscription?.id || "(none)");
-  console.log("Opted in?", OS.User?.PushSubscription?.optedIn);
-  console.log("Permission:", OS.Notifications?.permission);
+  console.log("External user id :", OS.User?.externalId || "(none)");
+  console.log("Subscription id  :", OS.User?.PushSubscription?.id || "(none)");
+  console.log("Opted in?        :", OS.User?.PushSubscription?.optedIn);
+  console.log("Permission       :", OS.Notifications?.permission);
   try {
     const tags = await OS.User.getTags();
-    console.log("Tags:", tags);
+    console.log("Tags             :", tags);
   } catch (e) {
-    console.log("Could not read tags:", e.message);
+    console.log("Tags read error  :", e.message);
   }
 };

@@ -1,4 +1,5 @@
-// PWA Registration Script — FIXED (no reload loop, no repeating update banner)
+// PWA Registration Script — FINAL
+// Silent auto-updates. No more "New version available" banner spam.
 (function () {
     'use strict';
 
@@ -33,6 +34,8 @@
 
     // ============================================
     // SERVICE WORKER REGISTRATION
+    // No update banner. New SWs auto-activate via
+    // skipWaiting() + clients.claim() in sw.js.
     // ============================================
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -42,29 +45,7 @@
                     .then((registration) => {
                         console.log('[PWA] ✅ SW registered:', registration.scope);
 
-                        // If a SW is already waiting, prompt immediately
-                        if (registration.waiting && navigator.serviceWorker.controller) {
-                            showUpdateNotification(registration);
-                        }
-
-                        // Detect new SW being installed
-                        registration.addEventListener('updatefound', () => {
-                            const newWorker = registration.installing;
-                            if (!newWorker) return;
-                            console.log('[PWA] New SW found');
-
-                            newWorker.addEventListener('statechange', () => {
-                                console.log('[PWA] SW state:', newWorker.state);
-                                if (
-                                    newWorker.state === 'installed' &&
-                                    navigator.serviceWorker.controller
-                                ) {
-                                    showUpdateNotification(registration);
-                                }
-                            });
-                        });
-
-                        // Poll for updates every 30 minutes (silent)
+                        // Silent background update check every 30 min
                         setInterval(() => {
                             registration.update().catch(() => {});
                         }, 30 * 60 * 1000);
@@ -79,72 +60,9 @@
             }, 500);
         });
 
-        // ✅ SINGLE controllerchange listener — NO auto-reload
-        let refreshing = false;
+        // No auto-reload on controllerchange. The SW handles taking over.
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-            if (refreshing) return;
-            refreshing = true;
             console.log('[PWA] Controller changed (new SW active)');
-            // Do NOT reload here. The update button already reloads once.
-        });
-    }
-
-    // ============================================
-    // UPDATE BANNER — actually activates waiting SW
-    // ============================================
-    function showUpdateNotification(registration) {
-        if (document.getElementById('pwa-update-banner')) return;
-
-        const banner = document.createElement('div');
-        banner.id = 'pwa-update-banner';
-        banner.style.cssText = `
-            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
-            background: #1a202c; color: white; padding: 16px 24px; border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 10001;
-            display: flex; align-items: center; gap: 16px; max-width: 90%;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        `;
-        banner.innerHTML = `
-            <span>🚀 New version available</span>
-            <button id="pwa-update-btn" style="
-                background: purple; color: white; border: none;
-                padding: 8px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;
-            ">Update</button>
-            <button id="pwa-dismiss-btn" style="
-                background: transparent; color: #a0aec0; border: none;
-                cursor: pointer; font-size: 1.2rem;
-            ">✕</button>
-        `;
-        document.body.appendChild(banner);
-
-        document.getElementById('pwa-update-btn').addEventListener('click', async () => {
-            const btn = document.getElementById('pwa-update-btn');
-            btn.disabled = true;
-            btn.textContent = 'Updating…';
-
-            try {
-                let reg = registration;
-                if (!reg) reg = await navigator.serviceWorker.getRegistration();
-
-                if (reg && reg.waiting) {
-                    reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-
-                    const reloadOnce = () => window.location.reload();
-                    navigator.serviceWorker.addEventListener('controllerchange', reloadOnce, {
-                        once: true,
-                    });
-                    setTimeout(reloadOnce, 1500); // fallback
-                } else {
-                    window.location.reload();
-                }
-            } catch (e) {
-                console.warn('[PWA] Update failed, reloading anyway:', e);
-                window.location.reload();
-            }
-        });
-
-        document.getElementById('pwa-dismiss-btn').addEventListener('click', () => {
-            banner.remove();
         });
     }
 

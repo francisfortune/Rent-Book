@@ -6,6 +6,10 @@
 //   3. referralCode generation guarded so listener updates don't loop.
 //   4. notifiedAccepted flag set BEFORE push — prevents repeat pushes.
 //   5. marketplace/features objects seeded once, guarded.
+//   6. ✅ NEW: Self-heal pending invite → accepted on page load. Ensures
+//      the partner list and role-based UI are correct even if the primary
+//      accept in auth.js was skipped (e.g. user was already signed in
+//      when the invite was created).
 // ---------------------------------------------------------------------------
 
 import { auth, db } from "./firebase.js";
@@ -107,6 +111,65 @@ function renderReferralProgress(data) {
       : `${Math.max(0, goal - count)} more to unlock Marketplace`;
   }
   if (referralUnlockedBadge) referralUnlockedBadge.style.display = unlocked ? "block" : "none";
+}
+
+/* =========================================================
+   SELF-HEAL PENDING INVITE
+   Runs once on settings page load. If the currently-logged-in
+   user's own businessMembers doc is still "pending", flip it to
+   "accepted" and link their uid. This is a safety net for the
+   case where the primary accept in auth.js was skipped — e.g.
+   the user was already signed in when the invite was created,
+   so their signup flow never re-ran.
+========================================================= */
+async function selfHealPendingInvite(user, businessId) {
+  try {
+    const myEmail = user.email ? user.email.toLowerCase().trim() : null;
+    const myPhone = user.phoneNumber
+      ? user.phoneNumber.replace(/[\s\-\(\)]/g, "")
+      : null;
+
+    // Look up this user's own member doc scoped to the current business
+    let mySnap = null;
+
+    if (myEmail) {
+      mySnap = await getDocs(
+        query(
+          collection(db, "businessMembers"),
+          where("email", "==", myEmail),
+          where("businessId", "==", businessId)
+        )
+      );
+    }
+
+    if ((!mySnap || mySnap.empty) && myPhone) {
+      mySnap = await getDocs(
+        query(
+          collection(db, "businessMembers"),
+          where("phone", "==", myPhone),
+          where("businessId", "==", businessId)
+        )
+      );
+    }
+
+    if (!mySnap || mySnap.empty) return;
+
+    const myDoc = mySnap.docs[0];
+    const myData = myDoc.data();
+
+    if (myData.status !== "pending") return;
+
+    await updateDoc(doc(db, "businessMembers", myDoc.id), {
+      status: "accepted",
+      uid: user.uid,
+      joinedAt: serverTimestamp(),
+      notifiedAccepted: false
+    });
+
+    console.log("[Settings] Self-healed pending invite → accepted");
+  } catch (err) {
+    console.warn("[Settings] Self-heal check failed:", err.message);
+  }
 }
 
 /* =========================================================
@@ -560,6 +623,11 @@ onAuthStateChanged(auth, async (user) => {
 
     const businessRef = doc(db, "businesses", businessId);
     const membersRef = collection(db, "businessMembers");
+
+    // ---- ✅ SELF-HEAL: claim my own pending invite if still pending ----
+    // Runs BEFORE resolving role, so the role lookup below sees the
+    // freshly-accepted doc.
+    await selfHealPendingInvite(user, businessId);
 
     // ---- Resolve current role ----
     let memberQuery;

@@ -21,6 +21,7 @@ import {
   setDoc,
   doc,
   updateDoc,
+  addDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -66,6 +67,89 @@ async function getMembershipByEmail(email, rawEmail = null) {
 }
 
 /* =========================
+   CLAIM PENDING INVITE
+   Called immediately after a successful auth event, BEFORE routing.
+   Matches the user to any businessMembers doc by:
+     1. lowercased email
+     2. raw email (in case invite stored mixed case)
+     3. phone number (digits only)
+     4. existing uid (safety net)
+   If found, flips status -> "accepted", links uid, and writes an
+   in-app notification to the business so the owner's bell lights up.
+   Returns the businessId on success, or null if no invite was found.
+========================= */
+async function claimPendingInvite(user) {
+  const identifiers = [];
+
+  if (user.email) {
+    identifiers.push({ field: "email", value: user.email.toLowerCase().trim() });
+    if (user.email.trim() !== user.email.toLowerCase().trim()) {
+      identifiers.push({ field: "email", value: user.email.trim() });
+    }
+  }
+  if (user.phoneNumber) {
+    identifiers.push({
+      field: "phone",
+      value: user.phoneNumber.replace(/[\s\-\(\)]/g, "")
+    });
+  }
+  identifiers.push({ field: "uid", value: user.uid });
+
+  for (const { field, value } of identifiers) {
+    try {
+      const q = query(
+        collection(db, "businessMembers"),
+        where(field, "==", value)
+      );
+      const snap = await getDocs(q);
+      if (snap.empty) continue;
+
+      const memberDoc = snap.docs[0];
+      const data = memberDoc.data();
+
+      // Already accepted & linked? Just return the businessId.
+      if (data.status === "accepted" && data.uid === user.uid) {
+        return data.businessId;
+      }
+
+      // Claim it.
+      await updateDoc(doc(db, "businessMembers", memberDoc.id), {
+        status: "accepted",
+        uid: user.uid,
+        joinedAt: serverTimestamp(),
+        notifiedAccepted: false
+      });
+
+      console.log(
+        `[Auth] Claimed invite via ${field}=${value} → businessId=${data.businessId}`
+      );
+
+      // Write the in-app notification so the owner's bell lights up.
+      try {
+        await addDoc(
+          collection(db, "businesses", data.businessId, "notifications"),
+          {
+            message: `🎉 Welcome! ${user.email || user.phoneNumber} has accepted the invite and joined the team.`,
+            type: "invite_accepted",
+            triggeredBy: user.email || user.phoneNumber || user.uid,
+            createdAt: serverTimestamp(),
+            readBy: []
+          }
+        );
+      } catch (notifErr) {
+        console.warn("[Auth] Notification write failed:", notifErr.message);
+      }
+
+      return data.businessId;
+    } catch (err) {
+      console.warn(`[Auth] Invite lookup failed for ${field}=${value}:`, err.message);
+    }
+  }
+
+  return null;
+}
+
+/* =========================
    OTP AND PHONE HANDLERS
 ========================= */
 let registerConfirmationResult = null;
@@ -75,8 +159,8 @@ let isRegistering = false;
 
 function initRecaptcha() {
   if (recaptchaVerifier) return;
-  recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-    size: 'invisible'
+  recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+    size: "invisible"
   });
 }
 
@@ -85,15 +169,19 @@ if (sendRegisterOtpBtn) {
   sendRegisterOtpBtn.addEventListener("click", async () => {
     const phoneInput = document.getElementById("registerPhone");
     const countryCode = document.getElementById("registerCountryCode").value;
-    const phone = phoneInput.value.replace(/\D/g, '');
+    const phone = phoneInput.value.replace(/\D/g, "");
     if (!phone) return alert("Please enter your phone number.");
-    const fullPhone = countryCode + phone.replace(/^0+/, '');
+    const fullPhone = countryCode + phone.replace(/^0+/, "");
 
     try {
       initRecaptcha();
       sendRegisterOtpBtn.disabled = true;
       sendRegisterOtpBtn.textContent = "Sending...";
-      registerConfirmationResult = await signInWithPhoneNumber(auth, fullPhone, recaptchaVerifier);
+      registerConfirmationResult = await signInWithPhoneNumber(
+        auth,
+        fullPhone,
+        recaptchaVerifier
+      );
       alert("Verification code sent to " + fullPhone + " ✅");
       document.getElementById("registerOtpContainer").classList.remove("hidden");
       sendRegisterOtpBtn.textContent = "Resend SMS Code";
@@ -112,15 +200,19 @@ if (sendLoginOtpBtn) {
   sendLoginOtpBtn.addEventListener("click", async () => {
     const phoneInput = document.getElementById("loginPhone");
     const countryCode = document.getElementById("loginCountryCode").value;
-    const phone = phoneInput.value.replace(/\D/g, '');
+    const phone = phoneInput.value.replace(/\D/g, "");
     if (!phone) return alert("Please enter your phone number.");
-    const fullPhone = countryCode + phone.replace(/^0+/, '');
+    const fullPhone = countryCode + phone.replace(/^0+/, "");
 
     try {
       initRecaptcha();
       sendLoginOtpBtn.disabled = true;
       sendLoginOtpBtn.textContent = "Sending...";
-      loginConfirmationResult = await signInWithPhoneNumber(auth, fullPhone, recaptchaVerifier);
+      loginConfirmationResult = await signInWithPhoneNumber(
+        auth,
+        fullPhone,
+        recaptchaVerifier
+      );
       alert("Verification code sent to " + fullPhone + " ✅");
       document.getElementById("loginOtpContainer").classList.remove("hidden");
       sendLoginOtpBtn.textContent = "Resend SMS Code";
@@ -149,14 +241,19 @@ if (registerForm) {
 
     const name = document.getElementById("registerName").value.trim();
 
-    if (authMethod === 'email') {
+    if (authMethod === "email") {
       const email = registerForm.registerEmail.value.trim();
       const password = registerForm.registerPassword.value;
 
       try {
         isRegistering = true;
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
         const user = userCredential.user;
+
         await setDoc(doc(db, "users", user.uid), {
           uid: user.uid,
           email: email,
@@ -166,7 +263,17 @@ if (registerForm) {
           referredByCode: getReferralCodeFromUrl(),
           createdAt: serverTimestamp()
         });
-        window.location.href = "setup.html";
+
+        // ✅ Try to claim any pending invite BEFORE routing
+        const claimedBusinessId = await claimPendingInvite(user);
+
+        if (claimedBusinessId) {
+          console.log("[Auth] Invite claimed — routing to dashboard");
+          window.location.href = "dashboard.html";
+        } else {
+          console.log("[Auth] No invite — routing to setup");
+          window.location.href = "setup.html";
+        }
       } catch (err) {
         isRegistering = false;
         showMessage(err.message);
@@ -189,6 +296,7 @@ if (registerForm) {
         isRegistering = true;
         const userCredential = await registerConfirmationResult.confirm(otp);
         const user = userCredential.user;
+
         await setDoc(doc(db, "users", user.uid), {
           uid: user.uid,
           phone: user.phoneNumber,
@@ -198,7 +306,15 @@ if (registerForm) {
           referredByCode: getReferralCodeFromUrl(),
           createdAt: serverTimestamp()
         });
-        window.location.href = "setup.html";
+
+        // ✅ Try to claim any pending invite BEFORE routing
+        const claimedBusinessId = await claimPendingInvite(user);
+
+        if (claimedBusinessId) {
+          window.location.href = "dashboard.html";
+        } else {
+          window.location.href = "setup.html";
+        }
       } catch (err) {
         isRegistering = false;
         showMessage("Invalid verification code: " + err.message);
@@ -221,13 +337,31 @@ if (loginForm) {
     const btn = loginForm.querySelector("button[type='submit']");
     setLoading(btn, true);
 
-    if (authMethod === 'email') {
+    if (authMethod === "email") {
       const email = loginForm.loginEmail.value.trim();
       const password = loginForm.loginPassword.value;
 
       try {
-        await signInWithEmailAndPassword(auth, email, password);
-      } catch {
+        const userCredential = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+        // ✅ Claim any pending invite that might have been created after
+        // the user first signed up. If none exists, we still let
+        // onAuthStateChanged handle the redirect — but to be safe,
+        // route explicitly here.
+        const claimedBusinessId = await claimPendingInvite(userCredential.user);
+
+        if (claimedBusinessId) {
+          window.location.href = "dashboard.html";
+        } else {
+          // Fall through to onAuthStateChanged — it will route based on
+          // whether the user has any membership at all.
+          window.location.href = "dashboard.html";
+        }
+      } catch (err) {
         showMessage("Invalid login details");
         setLoading(btn, false);
       }
@@ -245,7 +379,16 @@ if (loginForm) {
       }
 
       try {
-        await loginConfirmationResult.confirm(otp);
+        const userCredential = await loginConfirmationResult.confirm(otp);
+
+        // ✅ Same as email login: attempt to claim pending invite
+        const claimedBusinessId = await claimPendingInvite(userCredential.user);
+
+        if (claimedBusinessId) {
+          window.location.href = "dashboard.html";
+        } else {
+          window.location.href = "dashboard.html";
+        }
       } catch (err) {
         showMessage("Invalid verification code: " + err.message);
         setLoading(btn, false);
@@ -253,35 +396,6 @@ if (loginForm) {
     }
   });
 }
-
-
-
-// async function initFCM(user, businessId) {
-//   try {
-//     const permission = await Notification.requestPermission();
-//     if (permission !== "granted") return;
-
-//     const token = await getToken(messaging, {
-//       vapidKey: "YOUR_VAPID_KEY_HERE"
-//     });
-
-//     console.log("FCM Token:", token);
-
-//     // Save token to Firestore (VERY IMPORTANT)
-//     const userRef = doc(db, "businessMembers", user.uid);
-
-//     await updateDoc(userRef, {
-//       fcmTokens: arrayUnion(token)
-//     });
-
-//   } catch (err) {
-//     console.error("FCM error:", err);
-//   }
-// }
-
-
-
-
 
 /* =========================
    GOOGLE AUTH
@@ -292,26 +406,37 @@ async function handleGoogleAuth() {
     const userCredential = await signInWithPopup(auth, provider);
     const user = userCredential.user;
 
-    // Check if user document exists
     const userDocRef = doc(db, "users", user.uid);
     const userSnapshot = await getDoc(userDocRef);
 
     if (!userSnapshot.exists()) {
       isRegistering = true;
-      // Create user document for new signups
       await setDoc(userDocRef, {
         uid: user.uid,
         email: user.email,
-        name: user.displayName || 'Google User',
+        name: user.displayName || "Google User",
         role: "owner",
         businessId: null,
         referredByCode: getReferralCodeFromUrl(),
         createdAt: serverTimestamp()
       });
-      window.location.href = "setup.html";
+
+      // ✅ Try to claim any pending invite BEFORE routing
+      const claimedBusinessId = await claimPendingInvite(user);
+
+      if (claimedBusinessId) {
+        window.location.href = "dashboard.html";
+      } else {
+        window.location.href = "setup.html";
+      }
+      return;
     }
 
-    // Auth listener will handle the redirect for existing users
+    // Returning Google user — still try to claim an invite, then route
+    const claimedBusinessId = await claimPendingInvite(user);
+    window.location.href = claimedBusinessId
+      ? "dashboard.html"
+      : "dashboard.html";
   } catch (err) {
     console.error("Google Auth Error:", err);
     showMessage(err.message || "Google Login failed");
@@ -325,12 +450,17 @@ if (googleLogin) googleLogin.addEventListener("click", handleGoogleAuth);
 if (googleSignUp) googleSignUp.addEventListener("click", handleGoogleAuth);
 
 /* =========================
-   AUTH STATE — ACCEPT INVITE
+   AUTH STATE — ROUTING ONLY
+   Invite-claim now lives in the submit handlers above.
+   This listener only handles the case where a user lands on the
+   page already authenticated (e.g. reloaded the tab).
 ========================= */
 onAuthStateChanged(auth, async (user) => {
   if (!user) return;
+
+  // If a submit handler is mid-flight, let it handle routing.
   if (isRegistering) {
-    console.log("Registration process detected. Bypassing state redirect.");
+    console.log("[Auth] Registration in progress — auth listener yielding.");
     return;
   }
 
@@ -338,7 +468,10 @@ onAuthStateChanged(auth, async (user) => {
 
   try {
     if (user.email) {
-      membership = await getMembershipByEmail(user.email.toLowerCase().trim(), user.email);
+      membership = await getMembershipByEmail(
+        user.email.toLowerCase().trim(),
+        user.email
+      );
     }
     if (!membership && user.phoneNumber) {
       const q = query(
@@ -351,7 +484,6 @@ onAuthStateChanged(auth, async (user) => {
       }
     }
     if (!membership) {
-      // Look up if there's any businessMembers where uid matches
       const q = query(
         collection(db, "businessMembers"),
         where("uid", "==", user.uid)
@@ -362,36 +494,35 @@ onAuthStateChanged(auth, async (user) => {
       }
     }
   } catch (err) {
-    console.error("Error checking membership on login:", err);
+    console.error("[Auth] Membership lookup failed on state change:", err);
   }
 
   if (!membership) {
-    // New user, no invite
+    // No invite, no business — send them to setup.
     window.location.href = "setup.html";
     return;
   }
 
-  // Accept invite if pending
+  // Belt-and-suspenders: if for some reason the doc is still pending,
+  // claim it now (covers the rare case where the submit handler's
+  // claimPendingInvite didn't run, e.g. user was already logged in
+  // when the invite was created).
   if (membership.status === "pending") {
     try {
-      await updateDoc(
-        doc(db, "businessMembers", membership.id),
-        {
-          status: "accepted",
-          uid: user.uid,
-          joinedAt: serverTimestamp()
-        }
-      );
+      await updateDoc(doc(db, "businessMembers", membership.id), {
+        status: "accepted",
+        uid: user.uid,
+        joinedAt: serverTimestamp(),
+        notifiedAccepted: false
+      });
+      console.log("[Auth] Self-healed pending invite → accepted");
     } catch (err) {
-      console.error("Error accepting invite:", err);
+      console.error("[Auth] Error accepting pending invite:", err);
     }
   }
 
   window.location.href = "dashboard.html";
 });
-/* =========================
-   PASSWORD RESET
-========================= */
 
 /* =========================
    PASSWORD RESET MODAL
@@ -407,19 +538,16 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  // Open modal when user clicks "Forgot Password?"
   forgotPassword.addEventListener("click", (e) => {
     e.preventDefault();
     resetModal.classList.remove("hidden");
     resetModal.classList.add("flex");
   });
 
-  // Close modal when user clicks "Cancel"
   closeReset.addEventListener("click", () => {
     resetModal.classList.add("hidden");
   });
 
-  // Send password reset email
   sendResetBtn.addEventListener("click", async () => {
     const email = document.getElementById("resetEmail").value.trim();
 
@@ -429,17 +557,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      // Try sending the reset email
       await sendPasswordResetEmail(auth, email);
-
-      // Success message
-      alert("A password reset link has been sent to your email address. Kindly check your inbox and spam folder.");
+      alert(
+        "A password reset link has been sent to your email address. Kindly check your inbox and spam folder."
+      );
       resetModal.classList.add("hidden");
-
     } catch (error) {
       console.error("Reset error:", error);
-
-      // If the account doesn't exist or is Google-only
       if (error.code === "auth/user-not-found") {
         alert("No password set for this account. Try logging in with Google.");
       } else {

@@ -819,7 +819,7 @@ document
 
       // Send real-time OneSignal push notification
       await sendPush(
-        `New booking added for ${bookingData.client.name} on ${bookingData.event.date}`,
+        `New booking added: ${bookingData.client.name} on ${bookingData.event.date}`,
         `/bookings.html?highlight=${bookingRef.id}`
       );
 
@@ -829,7 +829,7 @@ document
       if (allBookings.size === 1) {
         await sendNotification(
           businessId,
-          `🎉 Welcome ${currentBusinessName}! ! You've just created your first booking for ${bookingData.client.name}. This platform is designed to help you track rentals and payments effortlessly. Explore your dashboard to see your new stats!`,
+          ` Welcome ${currentBusinessName}! ! You've just created your first booking for ${bookingData.client.name}. This platform is designed to help you track rentals and payments effortlessly. Explore your dashboard to see your new stats!`,
           "Tracknrent",
           "welcome_message",
           bookingRef.id

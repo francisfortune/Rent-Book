@@ -147,7 +147,7 @@ function showStep(stepIndex) {
     <p style="font-size: 0.875rem; color: #4b5563; line-height: 1.6; margin-bottom: 20px;">${step.desc}</p>
     <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
       <button id="ob-back" style="background: #f3f4f6; color: #4b5563; border: none; padding: 8px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: background 0.2s; ${stepIndex === 0 ? 'visibility: hidden;' : ''}" onmouseover="this.style.backgroundColor='#e5e7eb'" onmouseout="this.style.backgroundColor='#f3f4f6'">Back</button>
-      <button id="ob-next" style="background: purple; color: #ffffff; border: none; padding: 8px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: background 0.2s; box-shadow: 0 4px 6px -1px rgba(84, 11, 158, 0.2);" onmouseover="this.style.backgroundColor='#43087e'" onmouseout="this.style.backgroundColor='#540b9e'">${stepIndex === steps.length - 1 ? 'Finish' : 'Next'}</button>
+      <button id="ob-next" style="background: purple; color: #ffffff; border: none; padding: 8px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: background 0.2s; box-shadow: 0 4px 6px -1px rgba(84, 11, 158, 0.2);" onmouseover="this.style.backgroundColor='#a008a0'" onmouseout="this.style.backgroundColor='#800080'">${stepIndex === steps.length - 1 ? 'Finish' : 'Next'}</button>
     </div>
   `;
 
