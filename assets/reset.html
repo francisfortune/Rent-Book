@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reset Password | Tracknrent</title>
+  <!-- FAVICON -->
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="shortcut icon" href="favicon.ico">
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Tracknrent",
+  "url": "https://tracknrent.vercel.app/"
+}
+</script>
+
+
+<link rel="canonical" href="https://tracknrent.vercel.app/" />
+<script type="module" src="assets/js/reset-password.js"></script>
+<style>
+body { font-family: Arial, sans-serif; display:flex; justify-content:center; align-items:center; height:100vh; background:#f4f4f4; }
+.container { background:white; padding:30px; border-radius:10px; box-shadow:0 0 15px rgba(0,0,0,0.2); width:320px; text-align:center; }
+input { width:100%; padding:10px; margin:10px 0; border-radius:5px; border:1px solid #ccc; }
+button { width:100%; padding:10px; background:purple; color:white; border:none; border-radius:5px; cursor:pointer; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h2>Reset Your Password</h2>
+  <p>Enter a new password to reset and login automatically.</p>
+  <input type="password" id="newPassword" placeholder="New Password" />
+  <button id="resetBtn">Reset Password</button>
+  <p id="msg" style="color:red;"></p>
+</div>
+</body>
+</html>

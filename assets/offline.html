@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline | Tracknrent</title>
+    <link rel="canonical" href="https://tracknrent.vercel.app/" />
+    <link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="shortcut icon" href="favicon.ico">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Tracknrent",
+  "url": "https://tracknrent.vercel.app/"
+}
+</script>
+
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: #4B0082; /* Deep Indigo/Purple */
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: hidden;
+            color: #1a202c;
+        }
+
+        .offline-container {
+            background: white;
+            border-radius: 32px;
+            padding: 40px;
+            text-align: center;
+            max-width: 450px;
+            width: 100%;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+            position: relative;
+            z-index: 10;
+        }
+
+        .game-area {
+            width: 100%;
+            height: 200px;
+            background: #f8f9fa;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+            border: 2px dashed #e2e8f0;
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        #player {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 50px;
+            background: purple;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            transition: left 0.1s ease-out;
+        }
+
+        .falling-item {
+            position: absolute;
+            font-size: 1.5rem;
+            user-select: none;
+        }
+
+        .offline-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            color: purple;
+        }
+
+        .score-board {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #718096;
+            margin-bottom: 15px;
+        }
+
+        .retry-btn {
+            background: purple;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 700;
+            transition: 0.3s;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .retry-btn:hover {
+            filter: brightness(1.2);
+            transform: translateY(-2px);
+        }
+
+        .cached-link {
+            display: block;
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: #a0aec0;
+            text-decoration: none;
+        }
+
+        .cached-link span {
+            color: purple;
+            font-weight: 600;
+        }
+
+        /* Animations for "Signal Lost" icons floating in background */
+        .bg-icon {
+            position: absolute;
+            color: rgba(255,255,255,0.1);
+            z-index: 1;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <ion-icon name="wifi-outline" class="bg-icon" style="top:10%; left:10%; font-size: 100px;"></ion-icon>
+    <ion-icon name="cloud-offline-outline" class="bg-icon" style="bottom:15%; right:10%; font-size: 120px;"></ion-icon>
+
+    <div class="offline-container">
+        <h1 class="offline-title">Connection Lost</h1>
+        <p class="score-board">Catch the Bookings! Score: <span id="score">0</span></p>
+
+        <div class="game-area" id="gameArea">
+            <div id="player">
+                <ion-icon name="cart"></ion-icon>
+            </div>
+            <div id="start-msg" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#cbd5e0; font-weight:bold; font-size:0.8rem; text-align:center;">
+                MOVE MOUSE OR SLIDE <br> TO PLAY
+            </div>
+        </div>
+
+        <button class="retry-btn" onclick="location.reload()">
+            Try to Reconnect
+        </button>
+
+        <a href="/bookings.html" class="cached-link">
+            Need your data? <span>View Cached Bookings</span>
+        </a>
+    </div>
+
+    <script>
+        const gameArea = document.getElementById('gameArea');
+        const player = document.getElementById('player');
+        const scoreEl = document.getElementById('score');
+        const startMsg = document.getElementById('start-msg');
+        
+        let score = 0;
+        let gameActive = true;
+
+        // 1. Move Player
+        const movePlayer = (e) => {
+            const rect = gameArea.getBoundingClientRect();
+            let x = (e.clientX || e.touches[0].clientX) - rect.left;
+            
+            // Boundary checks
+            if (x < 25) x = 25;
+            if (x > rect.width - 25) x = rect.width - 25;
+            
+            player.style.left = x + 'px';
+            startMsg.style.display = 'none';
+        };
+
+        gameArea.addEventListener('mousemove', movePlayer);
+        gameArea.addEventListener('touchmove', movePlayer);
+
+        // 2. Spawn Items
+        function spawnItem() {
+            if (!gameActive) return;
+
+            const item = document.createElement('div');
+            const isGood = Math.random() > 0.3; // 70% chance of a booking, 30% trap
+            
+            item.className = 'falling-item';
+            item.innerHTML = isGood ? '📄' : '❌';
+            item.style.left = Math.random() * (gameArea.clientWidth - 30) + 'px';
+            item.style.top = '-30px';
+            gameArea.appendChild(item);
+
+            let posY = -30;
+            const fallSpeed = 2 + Math.random() * 3;
+
+            const fallInterval = setInterval(() => {
+                posY += fallSpeed;
+                item.style.top = posY + 'px';
+
+                // Collision detection
+                const pRect = player.getBoundingClientRect();
+                const iRect = item.getBoundingClientRect();
+
+                if (
+                    iRect.bottom >= pRect.top &&
+                    iRect.left < pRect.right &&
+                    iRect.right > pRect.left &&
+                    iRect.top < pRect.bottom
+                ) {
+                    if (isGood) {
+                        score += 10;
+                        scoreEl.innerText = score;
+                        item.style.transform = 'scale(1.5)';
+                        item.style.opacity = '0';
+                    } else {
+                        score = Math.max(0, score - 20);
+                        scoreEl.innerText = score;
+                        gameArea.style.background = '#fed7d7';
+                        setTimeout(() => gameArea.style.background = '#f8f9fa', 200);
+                    }
+                    clearInterval(fallInterval);
+                    item.remove();
+                }
+
+                // Remove if out of bounds
+                if (posY > gameArea.clientHeight) {
+                    clearInterval(fallInterval);
+                    item.remove();
+                }
+            }, 20);
+        }
+
+        // Start game loop
+        setInterval(spawnItem, 1000);
+
+        // Auto-reload when connection is restored
+        window.addEventListener('online', () => {
+            gameActive = false;
+            document.querySelector('.offline-title').innerText = "Back Online!";
+            document.querySelector('.offline-title').style.color = "green";
+            setTimeout(() => location.reload(), 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1072 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Bookings | Tracknrent</title>
+    <link rel="canonical" href="https://tracknrent.vercel.app/add.html" />
+    <meta name="description" content="Add bookings and Track them and also Generate booking Receipt and share via WhatsApp">
+    <meta name="keywords" content="Tracknrent add item, SaaS inventory management, rental item addition">
+
+    <meta property="og:title" content="Add Item – Tracknrent SaaS">
+    <meta property="og:description" content="Add bookings and Track them and also Generate booking Receipt and share via WhatsApp">
+    <meta property="twitter:title" content="Add Item – Tracknrent SaaS">
+    <meta property="twitter:description" content="Add bookings and Track them and also Generate booking Receipt and share via WhatsApp">
+
+    <!-- ✅ MUST BE FIRST — Loads OneSignal SDK -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+
+<!-- ✅ Then your module -->
+<script type="module" src="assets/js/onesignal.js" defer></script>
+
+    <!-- FAVICON -->
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="shortcut icon" href="favicon.ico">
+
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined");
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f6fa;
+            overflow-x: hidden;
+        }
+
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* =============== Navigation ================ */
+        .navigation {
+            position: fixed;
+            width: 280px;
+            height: 100%;
+            background: purple;
+            border-left: 10px solid purple;
+            transition: 0.5s;
+            overflow: hidden;
+        }
+
+        .navigation.active {
+            width: 80px;
+        }
+
+        .navigation ul {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+        }
+
+        .navigation ul li {
+            position: relative;
+            width: 100%;
+            list-style: none;
+            border-top-left-radius: 30px;
+            border-bottom-left-radius: 30px;
+        }
+
+        .navigation ul li:hover,
+        .navigation ul li.hovered {
+            background-color: white;
+        }
+
+        .navigation ul li:nth-child(1) {
+            margin-bottom: 35px;
+            pointer-events: none;
+        }
+
+        .navigation ul li a {
+            position: relative;
+            display: block;
+            width: 100%;
+            display: flex;
+            text-decoration: none;
+            color: white;
+            margin: 20px;
+            font-size: 23px;
+        }
+
+        .navigation ul li:hover a,
+        .navigation ul li.hovered a {
+            color: purple;
+        }
+
+        .navigation ul li a .icon {
+            position: relative;
+            display: block;
+            min-width: 60px;
+            height: 60px;
+            line-height: 75px;
+            text-align: center;
+        }
+
+        .navigation ul li a .icon ion-icon {
+            font-size: 1.75rem;
+            padding-right: 30px;
+        }
+
+        .navigation ul li a .title {
+            position: relative;
+            display: block;
+            padding: 0 10px;
+            padding-top: 5.5px;
+            height: 60px;
+            line-height: 60px;
+            text-align: start;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        .logo {
+            width: 75px;
+            height: 65px;
+            margin-top: 5px;
+        }
+
+        .brand {
+            position: relative;
+            display: block;
+            padding: 0 3px;
+            height: 60px;
+            line-height: 60px;
+            text-align: start;
+            white-space: nowrap;
+            font-weight: 800;
+            font-size: 1.5rem;
+            font-family: "Ubuntu", sans-serif;
+        }
+
+        /* ================ Main ================ */
+        .main {
+            position: absolute;
+            width: calc(100% - 280px);
+            left: 280px;
+            min-height: 100%;
+            background: white;
+            transition: 0.5s;
+        }
+
+        .main.active {
+            width: calc(100% - 80px);
+            left: 80px;
+        }
+
+        /* Full Width Topbar */
+        .topbar {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            z-index: 100;
+            gap: 10px;
+        }
+
+        .main.active .topbar {
+            left: 0;
+            width: 100%;
+        }
+
+        .toggle {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            cursor: pointer;
+            color: purple;
+        }
+
+        .page-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #2d3748;
+        }
+
+        .page-title ion-icon {
+            font-size: 1.5rem;
+            color: purple;
+        }
+
+        .page-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .mobile-brand {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            color: purple;
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .mobile-brand .logo {
+            font-size: 1.5rem;
+        }
+
+        .user {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .user img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* ================ Dashboard Content ================ */
+        .dashboard {
+            padding: 0 30px 45px 30px;
+            overflow-y: visible;
+            height: auto;
+        }
+
+        .welcome-section {
+            background: purple;
+            padding: 30px;
+            border-radius: 0 0 15px 15px;
+            margin-top: 0;
+            margin-bottom: 30px;
+            color: white;
+            text-align: center;
+        }
+
+        .welcome-text {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .welcome-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+
+        /* ============================================
+           OVERFLOW & FIXED BOTTOM NAV
+        ============================================ */
+        html,
+        body,
+        .container,
+        .main,
+        .dashboard {
+            max-width: 100vw !important;
+            overflow-x: hidden !important;
+        }
+
+        .dashboard {
+            padding-bottom: 70px;
+        }
+
+        .bottom-nav {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            max-width: 100vw !important;
+            z-index: 1000 !important;
+            box-sizing: border-box !important;
+        }
+
+        /* ================= ADD BOOKING FORM ================= */
+
+        .add-booking-form {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            width: 100%;
+        }
+
+        .form-card {
+            background: #fff;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 7px 25px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .form-card h3 {
+            margin-bottom: 15px;
+            color: purple;
+            font-size: 1.2rem;
+        }
+
+        .form-group {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            font-size: 0.95rem;
+            width: 100%;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 90px;
+        }
+
+        .items-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .item-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .item-name {
+            flex: 1 1 200px;
+            min-width: 150px;
+            padding: 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            outline: none;
+        }
+
+        .item-qty,
+        .item-price {
+            flex: 0 1 80px;
+            padding: 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            outline: none;
+        }
+
+        .item-row button {
+            flex: 0 0 40px;
+            height: 40px;
+            background: #fed7d7;
+            color: #742a2a;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .add-item-btn {
+            margin-top: 10px;
+            width: fit-content;
+        }
+
+        .form-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        #notes::placeholder {
+            font-weight: 900;
+        }
+
+        /* ============================================
+           RESPONSIVE
+        ============================================ */
+        @media (max-width: 991px) {
+            .navigation {
+                left: -280px;
+            }
+
+            #brand-name-mobile {
+                visibility: hidden;
+            }
+
+            .navigation.active {
+                width: 280px;
+                left: 0;
+            }
+
+            .main {
+                width: 100%;
+                left: 0;
+            }
+
+            .main.active {
+                left: 280px;
+            }
+
+            .topbar {
+                left: 0;
+                width: 100%;
+            }
+
+            .main.active .topbar {
+                left: 280px;
+                width: calc(100% - 280px);
+            }
+
+            .dashboard {
+                padding: 0 25px 25px 25px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .topbar {
+                left: 0;
+                width: 100%;
+            }
+
+            .main.active .topbar {
+                left: 0;
+                width: 100%;
+            }
+
+            .page-title {
+                display: none;
+            }
+
+            .mobile-brand {
+                display: flex;
+            }
+
+            .navigation {
+                width: 100%;
+                left: -100%;
+                z-index: 1000;
+            }
+
+            .navigation.active {
+                width: 100%;
+                left: 0;
+            }
+
+            .toggle {
+                display: none;
+            }
+
+            .main.active .toggle {
+                color: white;
+                position: fixed;
+                right: 0;
+                left: initial;
+            }
+
+            .dashboard {
+                padding: 0 20px 80px 20px;
+            }
+
+            .welcome-section {
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+
+            .add-booking-form {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .form-card {
+                padding: 18px;
+            }
+
+            .welcome-text {
+                font-size: 1.5rem;
+            }
+
+            .welcome-subtitle {
+                font-size: 1rem;
+            }
+
+            .bottom-nav {
+                display: block !important;
+            }
+
+            .item-name {
+                flex: 1 1 100%;
+                min-width: 100px;
+            }
+
+            .item-qty,
+            .item-price {
+                flex: 1 1 40%;
+                min-width: 60px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .card .numbers {
+                font-size: 1.8rem;
+            }
+
+            .card .cardName {
+                font-size: 0.9rem;
+            }
+
+            .welcome-text {
+                font-size: 1.3rem;
+            }
+
+            .welcome-subtitle {
+                font-size: 0.95rem;
+            }
+
+            .welcome-section {
+                padding: 15px;
+            }
+
+            .bottom-nav ul li a .title {
+                font-size: 0.65rem;
+            }
+
+            .dashboard {
+                padding: 0 15px 75px 15px;
+            }
+
+            .form-card {
+                padding: 14px;
+            }
+
+            .form-card h3 {
+                font-size: 1rem;
+            }
+
+            .form-group input,
+            .form-group select {
+                padding: 10px;
+                font-size: 0.85rem;
+            }
+
+            .item-name {
+                min-width: 80px;
+                padding: 6px;
+                font-size: 0.85rem;
+            }
+
+            .item-qty,
+            .item-price {
+                flex: 1 1 35%;
+                min-width: 50px;
+                padding: 6px;
+                font-size: 0.85rem;
+            }
+
+            .item-row button {
+                flex: 0 0 32px;
+                height: 32px;
+                font-size: 0.8rem;
+            }
+
+            .fees-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            .mobile-brand {
+                font-size: 1.1rem;
+            }
+
+            .mobile-brand .logo {
+                font-size: 1.3rem;
+            }
+
+            .form-actions .btn {
+                width: 100%;
+                text-align: center;
+            }
+
+            #receiptPreviewBox {
+                padding: 12px;
+            }
+
+            #receiptPreviewBox pre {
+                font-size: 0.65rem;
+            }
+        }
+
+        /* ============================================
+           BOTTOM NAV
+        ============================================ */
+        .bottom-nav {
+            display: none;
+            background: white;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            padding: 10px 0;
+        }
+
+        .bottom-nav ul {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .bottom-nav ul li {
+            flex: 1;
+            text-align: center;
+        }
+
+        .bottom-nav ul li a {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            color: #718096;
+            text-decoration: none;
+            padding: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .bottom-nav ul li a .icon {
+            font-size: 1.5rem;
+            min-width: auto;
+            height: auto;
+            line-height: 1;
+        }
+
+        .bottom-nav ul li a .title {
+            font-size: 0.7rem;
+            font-weight: 500;
+            white-space: nowrap;
+            padding: 0;
+            height: auto;
+            line-height: 1;
+        }
+
+        .bottom-nav ul li.active a {
+            color: purple;
+        }
+
+        @media (max-width: 768px) {
+            .bottom-nav {
+                display: block !important;
+            }
+        }
+        /* ============================================
+   SAVE BOOKING BUTTON
+============================================ */
+
+.btn {
+    position: relative;
+    padding: 8px 15px;
+    background: purple;
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.btn:hover {
+    background: #6b21a5;
+    transform: translateY(-2px);
+}
+
+/* Specific styles for the Save Booking button in form actions */
+.form-actions .btn {
+    padding: 14px 40px;
+    background: purple;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(128, 0, 128, 0.3);
+}
+
+.form-actions .btn:hover {
+    background: #6b21a5;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(128, 0, 128, 0.4);
+}
+    </style>
+    <style>
+        @view-transition {
+            navigation: auto;
+        }
+    </style>
+    <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+</head>
+
+<body>
+
+    <!-- =============== Navigation ================ -->
+    <div class="container">
+        <div class="navigation">
+            <ul>
+                <li><a href="dashboard.html">
+                        <span class="icon">
+                            <div class="logo">
+                                <img src="assets/imgs/logo.png" alt="Tracknrent" style="width: 74px; height: 50px; object-fit: contain; margin-right: 4px;" />
+                            </div>
+                        </span>
+                        <span class="brand">Tracknrent</span>
+                    </a></li>
+                <li><a href="dashboard.html">
+                        <span class="icon"><span class="material-symbols-outlined">home</span></span>
+                        <span class="title">Dashboard</span>
+                    </a></li>
+                <li><a href="bookings.html">
+                        <span class="icon"><span class="material-symbols-outlined">calendar_today</span></span>
+                        <span class="title">Bookings</span>
+                    </a></li>
+                <li class="hovered"><a href="add.html">
+                        <span class="icon"><span class="material-symbols-outlined">add_circle</span></span>
+                        <span class="title">Add</span>
+                    </a></li>
+                <li><a href="inventory.html">
+                        <span class="icon"><span class="material-symbols-outlined">inventory_2</span></span>
+                        <span class="title">Inventory</span>
+                    </a></li>
+                <li><a href="public.html">
+                        <span class="icon"><span class="material-symbols-outlined">Public</span></span>
+                        <span class="title">Public Profile</span>
+                    </a></li>
+            </ul>
+        </div>
+
+        <!-- ========================= Main ==================== -->
+        <div class="main">
+            <div class="topbar">
+                <div class="toggle"><span class="material-symbols-outlined">menu</span></div>
+                <div class="page-title">
+                    <h2 class="page-name" id="brand-name-mobile"></h2>
+                </div>
+                <div class="mobile-brand">
+                    <h1 style="color: black;">Track<span style="color: purple;">nrent</span></h1>
+                    <span id="brand-name-mobile">Loading...</span>
+                </div>
+
+                <div class="user">
+                    <div id="user-avatar" style="width: 100%; height: 100%; border-radius: 50%; background: purple; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.2rem; text-transform: uppercase;">
+                        ?
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ======================= Dashboard Content ========================= -->
+            <section class="dashboard">
+
+                <div class="welcome-section">
+                    <h1 class="welcome-text">Add Booking</h1>
+                    <p class="welcome-subtitle">Enter full booking details</p>
+                </div>
+
+                <form id="addBookingForm" class="add-booking-form">
+
+                    <!-- LEFT COLUMN -->
+                    <div class="form-card">
+
+                        <h3>Client Details</h3>
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input id="clientName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Phone</label>
+                            <input id="clientPhone" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input id="clientEmail">
+                        </div>
+
+                        <h3>Event Details</h3>
+                        <div class="form-group">
+                            <label>Event Type</label>
+                            <input id="eventType" list="eventTypeOptions" placeholder="Select or type event type" class="p-3 border rounded-xl w-full" />
+                            <datalist id="eventTypeOptions">
+                                <option value="Wedding">
+                                <option value="Birthday">
+                                <option value="Burial">
+                                <option value="Conference">
+                            </datalist>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Event Date</label>
+                            <input type="date" id="eventDate" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Delivery Date & Time</label>
+                            <input type="datetime-local" id="deliveryDate">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Return Date</label>
+                            <input type="datetime-local" id="returnDate" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Location</label>
+                            <input id="eventLocation" placeholder="e.g Near New Heaven">
+                        </div>
+
+                    </div>
+
+                    <!-- RIGHT COLUMN -->
+                    <div class="form-card">
+
+                        <h3>Items</h3>
+                        <div id="itemsContainer" class="items-list"></div>
+
+                        <button type="button" class="btn add-item-btn" onclick="addItemRow()">
+                            + Add Item
+                        </button>
+
+                        <h3 style="margin-top:20px;">Additional Fees</h3>
+                        <div class="fees-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px;">
+                            <div class="form-group">
+                                <label>Caution Fee (₦)</label>
+                                <input type="text" id="cautionFee" inputmode="numeric" placeholder="0" style="padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
+                            </div>
+                            <div class="form-group">
+                                <label>Logistics (₦)</label>
+                                <input type="text" id="transportationFee" inputmode="numeric" placeholder="0" style="padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
+                            </div>
+                            <div class="form-group">
+                                <label>Other Fees (₦)</label>
+                                <input type="text" id="otherFees" inputmode="numeric" placeholder="0" style="padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
+                            </div>
+                        </div>
+
+                        <h3 style="margin-top:20px;">Payment</h3>
+                        <div class="form-group">
+                            <label>Total Amount (₦)</label>
+                            <input type="text" id="totalAmount" inputmode="numeric" style="background:#f7fafc; font-weight:700; color:purple; padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
+                            <p style="font-size:11px; color:#9ca3af; margin-top:2px;">Auto-calculated from items + fees.</p>
+                        </div>
+                        <div class="form-group">
+                            <label>Amount Paid (₦)</label>
+                            <input type="text" id="amountPaid" inputmode="numeric" placeholder="0" style="background:#f7fafc; font-weight:700; color:purple; padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
+                        </div>
+                        <div class="form-group">
+                            <label>Payment Method</label>
+                            <select id="paymentMethod" style="padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%;">
+                                <option>Cash</option>
+                                <option>Transfer</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <div id="receiptPreviewBox" class="mt-6 p-4 border-2 border-dashed border-purple-200 rounded-2xl bg-purple-50/50">
+                                <h3 class="text-xs font-bold text-purple-400 uppercase mb-2 flex items-center gap-2">
+                                    <span class="material-symbols-outlined">visibility</span> Live Receipt Preview
+                                </h3>
+                                <pre id="liveReceiptText" class="text-sm font-mono whitespace-pre-wrap text-gray-700 leading-relaxed"></pre>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label><h3>Receipt Image (optional)</h3></label>
+                            <div class="receipt-upload-container" style="border: 2px dashed #e2e8f0; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s ease;" onclick="document.getElementById('receiptImage').click()">
+                                <input type="file" id="receiptImage" accept="image/*" capture="environment" style="display: none;">
+                                <div id="receiptPreview" style="display: none; margin-bottom: 10px;">
+                                    <img id="receiptThumbnail" style="max-width: 200px; max-height: 150px; border-radius: 8px; object-fit: contain;">
+                                </div>
+                                <span class="material-symbols-outlined" style="font-size: 2rem; color: #718096;">photo_camera</span>
+                                <p id="receiptText" style="color: #718096; font-size: 0.9rem; margin-top: 8px;">Tap to add receipt photo</p>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label><h3>Notes (Optional)</h3></label>
+                            <textarea id="notes" placeholder="e.g Go to Vendor's House and collect items"></textarea>
+                        </div>
+
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn" type="submit">Save Booking</button>
+                    </div>
+
+                </form>
+            </section>
+
+        </div>
+
+        <!-- =============== Bottom Navigation (Mobile) ================ -->
+        <nav class="bottom-nav">
+            <ul>
+                <li><a href="dashboard.html">
+                        <span class="icon"><span class="material-symbols-outlined">home</span></span>
+                        <span class="title">Dashboard</span>
+                    </a></li>
+                <li><a href="bookings.html">
+                        <span class="icon"><span class="material-symbols-outlined">calendar_today</span></span>
+                        <span class="title">Bookings</span>
+                    </a></li>
+                <li class="active"><a href="add.html">
+                        <span class="icon"><span class="material-symbols-outlined">add_circle</span></span>
+                        <span class="title">Add</span>
+                    </a></li>
+                <li><a href="inventory.html">
+                        <span class="icon"><span class="material-symbols-outlined">inventory_2</span></span>
+                        <span class="title">Inventory</span>
+                    </a></li>
+                <li><a href="public.html">
+                        <span class="icon"><span class="material-symbols-outlined">Public</span></span>
+                        <span class="title">Profile</span>
+                    </a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- =========== Scripts =========  -->
+    <script>
+        // Menu Toggle
+        let toggle = document.querySelector(".toggle");
+        let navigation = document.querySelector(".navigation");
+        let main = document.querySelector(".main");
+
+        toggle.onclick = function() {
+            navigation.classList.toggle("active");
+            main.classList.toggle("active");
+        };
+
+        // Add hovered class on selected list item
+        let list = document.querySelectorAll(".navigation li");
+
+        function activeLink() {
+            list.forEach((item) => {
+                item.classList.remove("hovered");
+            });
+            this.classList.add("hovered");
+        }
+
+        list.forEach((item) => item.addEventListener("mouseover", activeLink));
+
+        // Bottom Nav Active State
+        let bottomNavItems = document.querySelectorAll(".bottom-nav li");
+
+        function activeBottomLink() {
+            bottomNavItems.forEach((item) => {
+                item.classList.remove("active");
+            });
+            this.classList.add("active");
+        }
+
+        bottomNavItems.forEach((item) => item.addEventListener("click", activeBottomLink));
+
+        // Edit Panel Integration
+        const defaultConfig = {
+            brand_name: "Tracknrent",
+            welcome_text: "Welcome back, Admin! 👋",
+            welcome_subtitle: "Here's what's happening with your rental business today",
+            properties_label: "Total Properties",
+            tenants_label: "Active Tenants",
+            revenue_label: "Monthly Revenue",
+            tickets_label: "Open Tickets"
+        };
+
+        async function onConfigChange(config) {
+            const brandNameEl = document.getElementById('brand-name');
+            const brandNameMobileEl = document.getElementById('brand-name-mobile');
+            const welcomeTextEl = document.getElementById('welcome-text');
+            const welcomeSubtitleEl = document.getElementById('welcome-subtitle');
+            const propertiesLabelEl = document.getElementById('properties-label');
+            const tenantsLabelEl = document.getElementById('tenants-label');
+            const revenueLabelEl = document.getElementById('revenue-label');
+            const ticketsLabelEl = document.getElementById('tickets-label');
+
+            if (brandNameEl) brandNameEl.textContent = config.brand_name || defaultConfig.brand_name;
+            if (brandNameMobileEl) brandNameMobileEl.textContent = config.brand_name || defaultConfig.brand_name;
+            if (welcomeTextEl) welcomeTextEl.textContent = config.welcome_text || defaultConfig.welcome_text;
+            if (welcomeSubtitleEl) welcomeSubtitleEl.textContent = config.welcome_subtitle || defaultConfig.welcome_subtitle;
+            if (propertiesLabelEl) propertiesLabelEl.textContent = config.properties_label || defaultConfig.properties_label;
+            if (tenantsLabelEl) tenantsLabelEl.textContent = config.tenants_label || defaultConfig.tenants_label;
+            if (revenueLabelEl) revenueLabelEl.textContent = config.revenue_label || defaultConfig.revenue_label;
+            if (ticketsLabelEl) ticketsLabelEl.textContent = config.tickets_label || defaultConfig.tickets_label;
+        }
+
+        function mapToCapabilities(config) {
+            return {
+                recolorables: [],
+                borderables: [],
+                fontEditable: undefined,
+                fontSizeable: undefined
+            };
+        }
+
+        function mapToEditPanelValues(config) {
+            return new Map([
+                ["brand_name", config.brand_name || defaultConfig.brand_name],
+                ["welcome_text", config.welcome_text || defaultConfig.welcome_text],
+                ["welcome_subtitle", config.welcome_subtitle || defaultConfig.welcome_subtitle],
+                ["properties_label", config.properties_label || defaultConfig.properties_label],
+                ["tenants_label", config.tenants_label || defaultConfig.tenants_label],
+                ["revenue_label", config.revenue_label || defaultConfig.revenue_label],
+                ["tickets_label", config.tickets_label || defaultConfig.tickets_label]
+            ]);
+        }
+
+        if (window.elementSdk) {
+            window.elementSdk.init({
+                defaultConfig,
+                onConfigChange,
+                mapToCapabilities,
+                mapToEditPanelValues
+            });
+        }
+
+    </script>
+
+    <script type="module" src="assets/js/avatar.js"></script>
+    <script type="module" src="assets/js/firebase.js"></script>
+    <script type="module" src="assets/js/add.js"></script>
+    <script src="assets/js/pwa.js"></script>
+
+</body>
+
+</html>

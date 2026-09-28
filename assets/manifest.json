@@ -1,0 +1,94 @@
+{
+    "name": "Tracknrent - Event Rental Management System",
+    "short_name": "Tracknrent",
+    "description": "Event Rental Management Software",
+    "start_url": "/dashboard.html",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#800080",
+    "orientation": "portrait-primary",
+    "scope": "/",
+    "lang": "en",
+    "categories": [
+        "business",
+        "productivity",
+        "event rentals",
+        "utilities"
+    ],
+    "icons": [
+        {
+            "src": "assets/app.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "assets/app.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "assets/app.png",
+            "sizes": "144x144",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "assets/dashboard.png",
+            "sizes": "1280x720",
+            "type": "image/png",
+            "form_factor": "wide",
+            "label": "Dashboard view"
+        },
+        {
+            "src": "assets/dashboard.png",
+            "sizes": "390x844",
+            "type": "image/png",
+            "form_factor": "narrow",
+            "label": "Mobile dashboard"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Add Booking",
+            "short_name": "Add",
+            "description": "Quickly add a new booking",
+            "url": "/add.html",
+            "icons": [
+                {
+                    "src": "assets/app.png",
+                    "sizes": "96x96"
+                }
+            ]
+        },
+        {
+            "name": "View Bookings",
+            "short_name": "Bookings",
+            "description": "View all bookings",
+            "url": "/bookings.html",
+            "icons": [
+                {
+                    "src": "assets/app.png",
+                    "sizes": "96x96"
+                }
+            ]
+        },
+        {
+            "name": "Inventory",
+            "short_name": "Inventory",
+            "description": "Manage inventory",
+            "url": "/inventory.html",
+            "icons": [
+                {
+                    "src": "assets/app.png",
+                    "sizes": "96x96"
+                }
+            ]
+        }
+    ],
+    "related_applications": [],
+    "prefer_related_applications": false
+}

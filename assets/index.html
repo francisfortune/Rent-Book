@@ -1,0 +1,1190 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tracknrent – Event Rental Management &amp; Booking System </title>
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="favicon.png">
+
+    <meta name="description"
+        content="Tracknrent helps event rental businesses track chairs, tables, tents and canopies in real time. Prevent double-bookings, send WhatsApp receipts, and know exactly what's free for any date. Built in Nigeria.">
+    <meta name="keywords"
+        content="rental management, chair and table rental software, tent rental, inventory tracking, Tracknrent, booking system, Nigerian rental software, prevent double booking">
+
+    <!-- Open Graph (Facebook, WhatsApp, LinkedIn, Telegram) -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Tracknrent">
+    <meta property="og:title" content="Tracknrent – Track Chairs, Tables & Tents in Real Time">
+    <meta property="og:description"
+        content="Stop double-booking chairs and tables. Know what's free for any date. Send WhatsApp receipts in one tap. Built in Nigeria, for Nigerian rental businesses.">
+    <meta property="og:url" content="https://tracknrent.vercel.app/">
+    <meta property="og:image" content="https://tracknrent.vercel.app/favicon.png">
+    <meta property="og:image:secure_url" content="https://tracknrent.vercel.app/favicon.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+    <meta property="og:image:alt" content="Tracknrent logo">
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Tracknrent – Track Chairs, Tables & Tents in Real Time">
+    <meta name="twitter:description"
+        content="Stop double-booking chairs and tables. Know what's free for any date. Send WhatsApp receipts in one tap.">
+    <meta name="twitter:image" content="https://tracknrent.vercel.app/favicon.png">
+    <meta name="twitter:image:alt" content="Tracknrent logo">
+
+    <!-- WhatsApp explicit fallbacks -->
+    <meta property="whatsapp:title" content="Tracknrent – Track Chairs, Tables & Tents in Real Time">
+    <meta property="whatsapp:description"
+        content="Stop double-booking chairs and tables. Know what's free for any date. Send WhatsApp receipts in one tap.">
+    <meta property="whatsapp:image" content="https://tracknrent.vercel.app/favicon.png">
+
+    <link rel="canonical" href="https://tracknrent.vercel.app/"><script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Tracknrent",
+  "url": "https://tracknrent.vercel.app/"
+}
+</script>
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#800080">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Tracknrent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="assets/imgs/logo2.png">
+
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-H4V84QQ8WJ"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-H4V84QQ8WJ');
+    </script>
+
+    <!-- FAVICON -->
+
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="shortcut icon" href="favicon.ico">
+
+
+
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap");
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            color: #1a202c;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+        }
+
+        /* =============== Navigation ================ */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            z-index: 1000;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav__container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav__logo {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #1a202c;
+        }
+
+        .nav__logo span {
+            color: purple;
+        }
+
+        .nav__btn {
+            background: purple;
+            color: white;
+            padding: 12px 28px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .nav__btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        /* =============== Hero Section ================ */
+        .hero {
+            padding: 140px 30px 80px;
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+            min-height: 90vh;
+        }
+
+        .hero__content h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 24px;
+            color: #1a202c;
+        }
+
+        .hero__content h1 span {
+            background: purple;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero__content p {
+            font-size: 1.2rem;
+            color: #4a5568;
+            margin-bottom: 32px;
+            line-height: 1.8;
+        }
+
+        .hero__buttons {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            background: purple;
+            color: white;
+            padding: 16px 36px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: purple;
+            padding: 16px 36px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            border: 2px solid purple;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: purple;
+            color: white;
+            transform: translateY(-3px);
+        }
+
+        .hero__image {
+            position: relative;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        /* =============== Features Section ================ */
+        .features {
+            background: #f7fafc;
+            padding: 100px 30px;
+        }
+
+        .features__container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+        }
+
+        .feature {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .feature:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature i {
+            font-size: 3.5rem;
+            background: purple;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .feature h4 {
+            font-size: 1.5rem;
+            margin-bottom: 12px;
+            color: #1a202c;
+        }
+
+        .feature p {
+            color: #4a5568;
+            font-size: 1.05rem;
+            line-height: 1.7;
+        }
+
+        /* =============== Video Section ================ */
+        .video {
+            padding: 100px 30px;
+            max-width: 1000px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .video h2 {
+            font-size: 2.8rem;
+            margin-bottom: 16px;
+            color: #1a202c;
+        }
+
+        .video>p {
+            font-size: 1.2rem;
+            color: #4a5568;
+            margin-bottom: 50px;
+        }
+
+        .video__box {
+            position: relative;
+            background: purple;
+            border-radius: 20px;
+            overflow: hidden;
+           box-shadow: 0 20px 60px  rgba(102, 126, 234, 0.3);
+            height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .video__box:hover {
+            transform: scale(1.02);
+            box-shadow: 0 25px 70px rgba(102, 126, 234, 0.4);
+        }
+
+        .video__placeholder {
+            text-align: center;
+            color: white;
+        }
+
+        .play-button {
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            transition: all 0.3s ease;
+        }
+
+        .video__box:hover .play-button {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.1);
+        }
+
+        .play-button::after {
+            content: '';
+            width: 0;
+            height: 0;
+            border-left: 25px solid white;
+            border-top: 15px solid transparent;
+            border-bottom: 15px solid transparent;
+            margin-left: 8px;
+        }
+
+        .video__placeholder h3 {
+            font-size: 1.8rem;
+            margin-bottom: 12px;
+        }
+
+        .video__placeholder p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* =============== Benefits Section ================ */
+        .benefits {
+            background: #f7fafc;
+            padding: 100px 30px;
+        }
+
+        .benefits__container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .benefits__header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .benefits__header h2 {
+            font-size: 2.8rem;
+            margin-bottom: 16px;
+            color: #1a202c;
+        }
+
+        .benefits__header p {
+            font-size: 1.2rem;
+            color: #4a5568;
+        }
+
+        .benefits__grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 50px;
+            align-items: center;
+        }
+
+        .benefit__item {
+            display: flex;
+            gap: 20px;
+            padding: 30px;
+            background: white;
+            border-radius: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .benefit__item:hover {
+            transform: translateX(10px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        .benefit__icon {
+            width: 60px;
+            height: 60px;
+            background: purple;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .benefit__icon i {
+            font-size: 1.8rem;
+            color: white;
+        }
+
+        .benefit__text h4 {
+            font-size: 1.3rem;
+            margin-bottom: 8px;
+            color: #1a202c;
+        }
+
+        .benefit__text p {
+            color: #4a5568;
+            line-height: 1.7;
+        }
+
+        .benefit__image {
+            text-align: center;
+        }
+
+        .benefit__visual {
+            width: 100%;
+            max-width: 500px;
+            height: 500px;
+            background: purple;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 4rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        /* =============== CTA Section ================ */
+        .cta {
+            background: purple;
+            padding: 100px 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .cta h2 {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        .cta p {
+            font-size: 1.3rem;
+            margin-bottom: 40px;
+            opacity: 0.95;
+        }
+
+        .cta .btn-primary {
+            background: white;
+            color: purple;
+            font-size: 1.2rem;
+        }
+
+        .cta .btn-primary:hover {
+            background: #f7fafc;
+        }
+
+        /* =============== Footer ================ */
+        footer {
+            background: white;
+            color: purple;
+            text-align: center;
+            padding: 40px 30px;
+            font-size: 1rem;
+        }
+
+        /* =============== Responsive Design ================ */
+        @media (max-width: 991px) {
+            .hero {
+                grid-template-columns: 1fr;
+                padding: 130px 25px 60px;
+                gap: 40px;
+                background-image: url(assets/header.png);
+                background-repeat: no-repeat;
+                background-size: cover;
+
+            }
+
+            .hero__image {
+                display: none;
+            }
+
+            .hero__content h1 {
+                font-size: 2.8rem;
+            }
+
+            .features__container {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+
+            .benefits__grid {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+
+            .benefit__image {
+                order: -1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav__container {
+                padding: 15px 20px;
+            }
+
+            .nav__logo {
+                font-size: 1.5rem;
+            }
+
+            .hero {
+                padding: 150px 20px 50px;
+            }
+
+            .hero__content h1 {
+                font-size: 2.4rem;
+            }
+
+            .hero__content p {
+                font-size: 1.05rem;
+            }
+
+            .hero__buttons {
+                flex-direction: column;
+            }
+
+            .btn-primary,
+            .btn-secondary {
+                width: 100%;
+                text-align: center;
+            }
+
+            .features {
+                padding: 60px 20px;
+            }
+
+            .video {
+                padding: 60px 20px;
+            }
+
+            .video h2 {
+                font-size: 2rem;
+            }
+
+            .video__box {
+                height: 350px;
+            }
+
+            .benefits {
+                padding: 60px 20px;
+            }
+
+            .benefits__header h2 {
+                font-size: 2rem;
+            }
+
+            .benefit__visual {
+                height: 650px;
+                font-size: 3rem;
+            }
+
+            .cta {
+                padding: 60px 20px;
+            }
+
+            .cta h2 {
+                font-size: 2rem;
+            }
+
+            .cta p {
+                font-size: 1.1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero__content h1 {
+                font-size: 1.8rem;
+            }
+
+            .mockup-stat h3 {
+                font-size: 1.5rem;
+            }
+
+            .feature {
+                padding: 30px 20px;
+            }
+
+            .feature i {
+                font-size: 2.5rem;
+            }
+
+            .video__box {
+                height: 250px;
+            }
+
+            .play-button {
+                width: 70px;
+                height: 70px;
+            }
+
+            .play-button::after {
+                border-left-width: 18px;
+                border-top-width: 11px;
+                border-bottom-width: 11px;
+            }
+        }
+
+        .download-popup {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .download-popup.hidden {
+            display: none;
+        }
+
+        .popup-card {
+            background: #ffffff;
+            width: 90%;
+            max-width: 360px;
+            padding: 25px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+            animation: popIn 0.3s ease;
+        }
+
+        .popup-card h3 {
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+        }
+
+        .popup-card p {
+            font-size: 0.95rem;
+            color: #555;
+            margin-bottom: 20px;
+        }
+
+        .popup-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .download-btn {
+            background: purple;
+            color: white;
+            padding: 10px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: #e5e7eb;
+            color: #333;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+/* ===== INSTALL POPUP ===== */
+.install-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.install-overlay.hidden {
+  display: none;
+}
+
+.install-card {
+  background: #ffffff;
+  width: 90%;
+  max-width: 380px;
+  padding: 28px;
+  border-radius: 18px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  animation: scaleIn 0.3s ease;
+}
+
+.install-card h3 {
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+}
+
+.install-card p {
+  font-size: 1rem;
+  color: #555;
+  margin-bottom: 22px;
+}
+
+.install-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.install-btn {
+  background: purple;
+  color: white;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+.close-btn {
+  background: #e5e7eb;
+  color: #333;
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+
+    </style>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        @view-transition {
+            navigation: auto;
+        }
+    </style>
+    
+    <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+</head>
+<body>
+    <nav>
+        <div class="nav__container">
+            <div class="nav__logo">
+                Track<span>nrent</span>
+            </div>
+            <a href="signup.html" class="nav__btn">Get Started</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero__content">
+            <h1>Manage Rentals &amp; Inventory<br><span>Without Stress</span></h1>
+            <p>Tracknrent helps Event rentals track their items , bookings, customers, Staff and availability in real time — all from one simple dashboard.</p>
+            <div class="hero__buttons">
+                <a href="signup.html" class="btn-primary">Start</a>
+                <a href="#" id="openDemo" class="btn-secondary">Watch Demo</a>
+                <p class="text-gray-500 mt-2 italic">Join <strong>500+ rental businesses</strong> already using Tracknrent.</p>
+            </div>
+        </div>
+        <div class="hero__image">
+            <img src="assets/header.png" alt="">
+        </div>
+    </section>
+
+    <section class="py-20 px-6 bg-white">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold" style="color: purple;">From Chaos to Control</h2>
+                <p class="text-gray-600 mt-4">See how Tracknrent transforms your daily rental struggles</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div class="bg-red-50 border border-red-100 p-8 rounded-2xl shadow-sm">
+                    <h3 class="text-3xl font-bold text-red-600 mb-6">WITHOUT TRACKNRENT</h3>
+                    <ul class="space-y-4 text-gray-700">
+                        <li>❌ Counting items manually before every event</li>
+                        <li>❌ Forgetting who owes you and how much</li>
+                        <li>❌ Double-booking items you don't even have</li>
+                        <li>❌ Losing customers because of disorganisation</li>
+                        <li>❌ Using notebooks and WhatsApp chats to "manage"</li>
+                    </ul>
+                </div>
+
+                <div class="bg-purple-50 border border-purple-100 p-8 rounded-2xl shadow-sm">
+                    <h3 class="text-3xl font-bold text-purple-700 mb-6">WITH TRACKNRENT</h3>
+                    <ul class="space-y-4 text-gray-700">
+                        <li>✅ Live inventory that updates automatically</li>
+                        <li>✅ Every booking organised with payment tracking</li>
+                        <li>✅ Overbooking alerts before they happen</li>
+                        <li>✅ Receipts sent directly via WhatsApp</li>
+                        <li>✅ Real-time notifications for everything</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="benefits">
+        <div class="benefits__container">
+            <div class="benefits__header">
+                <h2>Why Choose Tracknrent?</h2>
+                <p>Everything you need to run your rental business smoothly</p>
+            </div>
+            <div class="benefits__grid">
+                <div>
+                    <div class="benefit__item">
+                        <div class="benefit__icon"><i class="ri-dashboard-line"></i></div>
+                        <div class="benefit__text">
+                            <h4>Real-Time Dashboard</h4>
+                            <p>Monitor all your rentals, inventory, and revenue from one beautiful dashboard.</p>
+                        </div>
+                    </div>
+                    <div class="benefit__item">
+                        <div class="benefit__icon"><i class="ri-notification-line"></i></div>
+                        <div class="benefit__text">
+                            <h4>Smart Notifications</h4>
+                            <p>Get alerts for upcoming returns, overdue items, and booking requests.</p>
+                        </div>
+                    </div>
+                    <div class="benefit__item">
+                        <div class="benefit__icon"><i class="ri-team-line"></i></div>
+                        <div class="benefit__text">
+                            <h4>Customer Management</h4>
+                            <p>Keep detailed records of customers, rental history, and payment status.</p>
+                        </div>
+                    </div>
+                    <div class="benefit__item">
+                        <div class="benefit__icon"><i class="ri-bar-chart-line"></i></div>
+                        <div class="benefit__text">
+                            <h4>Insights &amp; Reports</h4>
+                            <p>Track revenue, popular items, and business trends with detailed analytics.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="benefit__image">
+                    <div class="benefit__visual" style="background: transparent;">
+                        <img src="assets/imgs/dash.png" alt="">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-20 px-6 bg-white">
+    <div class="max-w-7xl mx-auto">
+        <div class="max-w-5xl mx-auto text-center">
+            <h2 class="text-4xl md:text-4xl font-bold mb-4">Everything You Need to run Your Rental business.</h2>
+            <p class="text-gray-600 text-lg mb-12">One system to replace notebooks, spreadsheets, and guesswork.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left">
+                <div class="p-6 bg-white rounded-2xl shadow-md border hover:-translate-y-2 transition">
+                    <div class="bg-purple text-white-600 text-3xl mb-4" style="color: purple;"><i class="ri-archive-line"></i></div>
+                    <h4 class="text-xl font-bold mb-2">Inventory Tracking</h4>
+                    <p class="text-gray-600">Know exactly what you have. Stock reduces on booking and restores on return — automatically.</p>
+                </div>
+
+                <div class="p-6 bg-white rounded-2xl shadow-md border hover:-translate-y-2 transition">
+                    <div class="bg-purple text-white-600 text-3xl mb-4" style="color: purple;"><i class="ri-calendar-check-line"></i></div>
+                    <h4 class="text-xl font-bold mb-2">Booking Management</h4>
+                    <p class="text-gray-600">Create, edit, update, and track every booking. Mark items returned with one tap.</p>
+                </div>
+
+                <div class="p-6 bg-white rounded-2xl shadow-md border hover:-translate-y-2 transition">
+                    <div class="bg-purple text-white-600 text-3xl mb-4" style="color: purple;"><i class="ri-error-warning-line"></i></div>
+                    <h4 class="text-xl font-bold mb-2">Overbooking Prevention</h4>
+                    <p class="text-gray-600">Get warned before you book what you don't have. Track borrowed vendor items too.</p>
+                </div>
+
+                <div class="p-6 bg-white rounded-2xl shadow-md border hover:-translate-y-2 transition">
+                    <div class="text-3xl mb-4" style="color: purple;"><i class="ri-bank-card-line"></i></div>
+                    <h4 class="text-xl font-bold mb-2">Payment Tracking</h4>
+                    <p class="text-gray-600">See total cost, paid amount, and balance instantly. Know who owes you.</p>
+                </div>
+
+                <div class="p-6 bg-white rounded-2xl shadow-md border hover:-translate-y-2 transition">
+                    <div class="text-purple-600 text-3xl mb-4" style="color: purple;"><i class="ri-whatsapp-line"></i></div>
+                    <h4 class="text-xl font-bold mb-2">WhatsApp Receipts</h4>
+                    <p class="text-gray-600">Generate clean receipts and send them directly via WhatsApp to customers.</p>
+                </div>
+
+                <div class="p-6 bg-white rounded-2xl shadow-md border hover:-translate-y-2 transition">
+                    <div class="text-white-600 text-3xl mb-4" style="color: purple;"><i class="ri-notification-3-line"></i></div>
+                    <h4 class="text-xl font-bold mb-2">Real-Time Alerts</h4>
+                    <p class="text-gray-600">Instant notifications for bookings, returns, updates, and system activity.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+    <section class="video">
+        <h2>How Tracknrent Works</h2>
+        <p>Watch how to manage your rentals in minutes</p>
+        <div id="videoBox" class="video__box cursor-pointer">
+            <div class="video__placeholder">
+                <div class="play-button"></div>
+                <h3>Product Demo Video</h3>
+                <p>Click to watch the full walkthrough</p>
+            </div>
+        </div>
+    </section>
+
+
+
+<section id="pricing" class="py-24 bg-white text-gray-900">
+    <div class="max-w-3xl mx-auto px-6 text-center">
+        <h2 class="text-4xl font-extrabold mb-6" style="color: purple; text-transform: capitalize;">One lost booking costs more than Tracknrent</h2>
+        <p class="text-gray-600 text-lg mb-12">Designed to prevent the mistakes that already cost you money every month.</p>
+
+        <div class="bg-purple-50 p-10 rounded-3xl border border-purple-100 shadow-xl relative overflow-hidden" style="box-shadow: 0 20px 60px  rgba(102, 126, 234, 0.3);">
+            <div class="absolute top-0 right-0 px-4 py-1 text-xs font-bold uppercase tracking-widest text-white" style="background-color: purple;">
+                Best Value
+            </div>
+            <div class="text-5xl font-bold mb-2" style="color: purple;">
+                ₦6,000<span class="text-xl text-gray-500 font-normal"> / 4 months</span>
+            </div>
+            <p class="text-gray-600 mb-8 font-medium">Everything you need to run your rental business without stress</p>
+
+            <ul class="text-left space-y-4 mb-10 mx-auto max-w-xs">
+                <li class="flex items-center"><span class="mr-3" style="color: purple;">✔</span> Unlimited bookings & inventory</li>
+                <li class="flex items-center"><span class="mr-3" style="color: purple;">✔</span> Automatic conflict prevention</li>
+                <li class="flex items-center"><span class="mr-3" style="color: purple;">✔</span> Real-time availability calendar</li>
+                <li class="flex items-center"><span class="mr-3" style="color: purple;">✔</span> Full customer & history tracking</li>
+                <li class="flex items-center"><span class="mr-3" style="color: purple;">✔</span> WhatsApp receipts & alerts</li>
+                <li class="flex items-center"><span class="mr-3" style="color: purple;">✔</span> Payment tracking dashboard</li>
+            </ul>
+
+            <a href="signup.html">
+                <button class="w-full py-4 rounded-xl font-bold text-lg text-white hover:transition shadow-lg" style="background-color: purple;">
+                Start Free
+            </button>
+            </a>
+            <p class="mt-6 text-gray-500 text-sm italic">Start free, upgrade when your business grows.</p>
+        </div>
+    </div>
+</section>
+    <section id="contact" class="max-w-7xl mx-auto py-20 px-6">
+        <div class="text-center mb-12">
+            <h2 class="text-3xl md:text-4xl font-bold">Get in Touch</h2>
+            <p class="text-gray-600 mt-4">Have questions? Our support team is here to help.</p>
+        </div>
+        <form class="max-w-3xl mx-auto grid grid-cols-1 gap-6" action="https://formspree.io/f/xkonpgdy">
+            <input type="text" placeholder="Your Name" name="Name" class="p-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-600 focus:outline-none">
+            <input type="email" placeholder="Your Email" name="email" class="p-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-600 focus:outline-none">
+            <textarea placeholder="Your Message" rows="5" name="message" class="p-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-600 focus:outline-none"></textarea>
+            <button type="submit" style="background-color: purple;" class="text-white px-6 py-3 rounded-full shadow-md hover:shadow-lg hover:-translate-y-1 transition font-semibold">
+                Send Message
+            </button>
+        </form>
+    </section>
+
+    <section class="py-20 px-6 text-center text-white" style="background-color: purple;">
+        <h2 class="text-4xl md:text-5xl font-bold mb-6">Ready to Simplify Your Rentals?</h2>
+        <p class="text-lg md:text-xl mb-8">Create your account today and start saving time & money.</p>
+        <a href="signup.html" class="bg-white px-8 py-4 rounded-full font-bold shadow-lg hover:shadow-xl hover:-translate-y-1 transition text-lg md:text-xl" style="color: purple;">Create Account</a>
+    </section>
+
+    <div id="demoModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden">
+        <div class="relative w-full max-w-4xl mx-4">
+            <button id="closeModal" class="absolute top-2 right-2 text-white text-3xl font-bold">&times;</button>
+            <div class="aspect-w-16 aspect-h-9">
+                <video id="demoVideo" class="w-full h-full rounded-lg shadow-lg" controls preload="metadata">
+                    <source src="assets/imgs/Neon New Articles Fashion Gradient Video (1).mp4" type="video/mp4">
+                </video>
+            </div>
+        </div>
+    </div>
+
+    <footer style="padding: 20px; text-align: center;">
+        © 2025 Tracknrent. All rights reserved.
+    </footer>
+
+    <div id="installPopup" class="install-overlay hidden">
+        <div class="install-card">
+            <h3>Install Tracknrent App</h3>
+            <p>Add Tracknrent to your home screen for faster access and an app-like experience.</p>
+            <div class="install-actions">
+                <button id="installConfirm" class="install-btn">Install App</button>
+                <button id="installClose" class="close-btn">Maybe later</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+let deferredPrompt = null;
+
+const popup = document.getElementById('installPopup');
+const installBtn = document.getElementById('installConfirm');
+const closeBtn = document.getElementById('installClose');
+
+// ✅ Robust install detection
+function isInstalled() {
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  );
+}
+
+// Capture install prompt
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+});
+
+// 🔥 Main logic
+window.addEventListener('load', () => {
+  // If already installed → destroy popup completely
+  if (isInstalled()) {
+    popup.remove();
+    return;
+  }
+
+  // Not installed → show popup after 1s
+  setTimeout(() => {
+    popup.classList.remove('hidden');
+  }, 1000);
+});
+
+// Install click
+installBtn.addEventListener('click', async () => {
+  if (!deferredPrompt) {
+    alert('Installation not available yet. Try again');
+    return;
+  }
+
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+
+  if (outcome === 'accepted') {
+    popup.remove(); // 🔥 remove from DOM
+  }
+
+  deferredPrompt = null;
+});
+
+// Close popup (but keep asking next reload)
+closeBtn.addEventListener('click', () => {
+  popup.classList.add('hidden');
+});
+
+// Click outside modal
+popup.addEventListener('click', (e) => {
+  if (e.target === popup) popup.classList.add('hidden');
+});
+
+// App installed event
+window.addEventListener('appinstalled', () => {
+  popup.remove(); // 🔥 permanently gone
+});
+
+        const openBtn = document.getElementById('openDemo');
+        const videoBox = document.getElementById('videoBox');
+        const modal = document.getElementById('demoModal');
+        const iframe = document.getElementById('demoVideo');
+
+function openModal() {
+    modal.classList.remove('hidden');
+    iframe.play();
+}
+
+function closeModal() {
+    modal.classList.add('hidden');
+    iframe.pause();
+    iframe.currentTime = 0;
+}
+        openBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal();
+        });
+
+        videoBox.addEventListener('click', openModal);
+        closeBtn.addEventListener('click', closeModal);
+
+        // Close modal when clicking outside the video
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        tailwind.config = {
+            theme: {
+                extend: {},
+            },
+            plugins: [
+                function ({ addUtilities }) {
+                    addUtilities({
+                        '.aspect-w-16': { 'aspect-ratio': '16/9' },
+                        '.aspect-h-9': { 'aspect-ratio': '16/9' },
+                    })
+                }
+            ]
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const popup = document.getElementById("download-popup");
+            const closeBtn = document.getElementById("close-popup");
+
+            // show only once per user
+            const hasSeenPopup = localStorage.getItem("rentbook_download_popup");
+
+            if (!hasSeenPopup) {
+                setTimeout(() => {
+                    popup.classList.remove("hidden");
+                }, 2000); // 2 seconds
+            }
+
+            closeBtn.addEventListener("click", () => {
+                popup.classList.add("hidden");
+                localStorage.setItem("rentbook_download_popup", "true");
+            });
+        });
+
+    </script>
+
+    <script src="assets/js/pwa.js"></script>
+
+
+</body>
+
+
+
+</html>
+
+

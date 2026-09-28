@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Assistant | Tracknrent</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Raleway+Dots&family=Roboto:wght@300;400;500;700&family=Be+Vietnam+Pro:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+  
+  <!-- FAVICON -->
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="shortcut icon" href="favicon.ico">
+
+  <style>
+    :root {
+      --primary: purple;
+      --primary-dark: purple;
+      --bg: #f9fafb;
+      --text: #1f2937;
+      --sidebar-bg: purple;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Be Vietnam Pro', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      height: 100vh;
+      display: flex;
+    }
+
+    .container {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    /* ================ Navigation ================ */
+    .navigation {
+      position: fixed;
+      width: 280px;
+      height: 100%;
+      background: purple;
+      border-left: 10px solid purple;
+      transition: 0.5s;
+      overflow: hidden;
+      z-index: 100;
+    }
+
+    .navigation.active {
+      width: 80px;
+    }
+
+    .navigation ul {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+    }
+
+    .navigation ul li {
+      position: relative;
+      width: 100%;
+      list-style: none;
+      border-top-left-radius: 30px;
+      border-bottom-left-radius: 30px;
+    }
+
+    .navigation ul li:hover,
+    .navigation ul li.hovered {
+      background-color: white;
+    }
+
+    .navigation ul li:nth-child(1) {
+      margin-bottom: 35px;
+      pointer-events: none;
+    }
+
+    .navigation ul li a {
+      position: relative;
+      display: block;
+      width: 100%;
+      display: flex;
+      text-decoration: none;
+      color: white;
+      margin: 20px;
+      font-size: 23px;
+    }
+
+    .navigation ul li:hover a,
+    .navigation ul li.hovered a {
+      color: purple;
+    }
+
+    .navigation ul li a .icon {
+      position: relative;
+      display: block;
+      min-width: 60px;
+      height: 60px;
+      line-height: 75px;
+      text-align: center;
+    }
+
+    .navigation ul li a .title {
+      position: relative;
+      display: block;
+      padding: 0 10px;
+      padding-top: 5.5px;
+      height: 60px;
+      line-height: 60px;
+      text-align: start;
+      white-space: nowrap;
+      font-weight: 500;
+    }
+
+    .logo {
+      width: 75px;
+      height: 65px;
+      margin-top: 5px;
+    }
+
+    .brand {
+      position: relative;
+      display: block;
+      padding: 0 3px;
+      height: 60px;
+      line-height: 60px;
+      text-align: start;
+      white-space: nowrap;
+      font-weight: 800;
+      font-size: 1.5rem;
+      font-family: "Ubuntu", sans-serif;
+    }
+
+    /* ================ Main Workspace ================ */
+    .main {
+      position: absolute;
+      width: calc(100% - 280px);
+      left: 280px;
+      height: 100%;
+      background: white;
+      transition: 0.5s;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .main.active {
+      width: calc(100% - 80px);
+      left: 80px;
+    }
+
+    .topbar {
+      height: 60px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 20px;
+      background: white;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+      z-index: 100;
+    }
+
+    .toggle {
+      font-size: 2rem;
+      cursor: pointer;
+      color: var(--primary);
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .page-title {
+      font-family: 'Raleway Dots', cursive;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .user {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .user img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* ================ Chat Layout ================ */
+    .chat-container {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      height: calc(100vh - 60px);
+      max-width: 1000px;
+      margin: 0 auto;
+      width: 100%;
+      position: relative;
+    }
+
+    /* ================ COMING SOON OVERLAY ================ */
+    .coming-soon-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      border-radius: 24px;
+      padding: 30px;
+      animation: fadeInOverlay 0.6s ease-out;
+    }
+
+    @keyframes fadeInOverlay {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .coming-soon-icon {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: purple;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 30px;
+      box-shadow: 0 20px 60px rgba(124, 58, 237, 0.3);
+      animation: pulseIcon 2s ease-in-out infinite;
+    }
+
+    @keyframes pulseIcon {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 20px 60px rgba(124, 58, 237, 0.3);
+      }
+      50% {
+        transform: scale(1.05);
+        box-shadow: 0 30px 80px rgba(124, 58, 237, 0.4);
+      }
+    }
+
+    .coming-soon-icon .material-symbols-outlined {
+      font-size: 4rem;
+      color: white;
+    }
+
+    .coming-soon-title {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: #1f2937;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .coming-soon-title span {
+      background: purple;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .coming-soon-subtitle {
+      font-size: 1.05rem;
+      color: #6b7280;
+      text-align: center;
+      max-width: 480px;
+      line-height: 1.6;
+      margin-bottom: 30px;
+    }
+
+    .coming-soon-features {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 35px;
+    }
+
+    .coming-soon-feature {
+      background: #f3f4f6;
+      padding: 10px 18px;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #4b5563;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid #e5e7eb;
+      transition: 0.2s;
+    }
+
+    .coming-soon-feature:hover {
+      background: #ede9fe;
+      border-color: #c4b5fd;
+      color: purple;
+    }
+
+    .coming-soon-feature .material-symbols-outlined {
+      font-size: 1.1rem;
+      color: purple;
+    }
+
+    .coming-soon-progress {
+      width: 100%;
+      max-width: 400px;
+      margin-bottom: 25px;
+    }
+
+    .coming-soon-progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+
+    .coming-soon-progress-bar {
+      width: 100%;
+      height: 6px;
+      background: #e5e7eb;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .coming-soon-progress-bar .fill {
+      height: 100%;
+      width: 75%;
+      background: purple;
+      border-radius: 99px;
+      animation: progressPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes progressPulse {
+      0%, 100% { width: 75%; }
+      50% { width: 80%; }
+    }
+
+    .coming-soon-notify {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .coming-soon-notify input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: 0.2s;
+    }
+
+    .coming-soon-notify input:focus {
+      border-color: purple;
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    }
+
+    .coming-soon-notify button {
+      padding: 12px 24px;
+      background: purple;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: 0.2s;
+      white-space: nowrap;
+    }
+
+    .coming-soon-notify button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(124, 58, 237, 0.3);
+    }
+
+    .coming-soon-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      color: #9ca3af;
+      cursor: pointer;
+      transition: 0.2s;
+      padding: 8px;
+      border-radius: 50%;
+    }
+
+    .coming-soon-close:hover {
+      color: #4b5563;
+      background: #f3f4f6;
+    }
+
+    /* ================ API Key Banner ================ */
+    .apikey-banner {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      padding: 12px 18px;
+      border-radius: 16px;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      opacity: 0.4;
+      pointer-events: none;
+      filter: grayscale(0.8);
+    }
+
+    .apikey-banner p {
+      font-size: 0.85rem;
+      color: #4b5563;
+      flex-grow: 1;
+    }
+
+    .apikey-input-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .apikey-input-group input {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      font-size: 0.85rem;
+      width: 220px;
+      outline: none;
+      background: #f9fafb;
+    }
+
+    .apikey-input-group button {
+      padding: 8px 14px;
+      border-radius: 8px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    /* ================ Chat Messages ================ */
+    .chat-messages {
+      flex-grow: 1;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      border: 1px solid #f3f4f6;
+      border-radius: 20px;
+      background: #fafafa;
+      margin-bottom: 20px;
+      max-height: calc(100% - 150px);
+      scrollbar-width: thin;
+      opacity: 0.3;
+      pointer-events: none;
+      filter: blur(2px);
+    }
+
+    .message {
+      max-width: 80%;
+      padding: 12px 18px;
+      border-radius: 18px;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: var(--primary);
+      color: white;
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 4px 10px rgba(124, 58, 237, 0.2);
+    }
+
+    .message.ai {
+      align-self: flex-start;
+      background: white;
+      color: var(--text);
+      border: 1px solid #e5e7eb;
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    }
+
+    /* ================ Input Dock ================ */
+    .input-dock {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      background: white;
+      border: 1px solid #e5e7eb;
+      padding: 8px 12px;
+      border-radius: 24px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      opacity: 0.3;
+      pointer-events: none;
+      filter: blur(2px);
+    }
+
+    .input-dock input {
+      flex-grow: 1;
+      border: none;
+      outline: none;
+      padding: 10px;
+      font-size: 0.95rem;
+      background: transparent;
+    }
+
+    .input-dock button {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: 0.2s;
+      opacity: 0.5;
+    }
+
+    /* ================ Bottom Nav ================ */
+    .bottom-nav {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      padding: 10px 0;
+    }
+
+    .bottom-nav ul {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .bottom-nav ul li {
+      flex: 1;
+      text-align: center;
+    }
+
+    .bottom-nav ul li a {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      color: #718096;
+      text-decoration: none;
+      padding: 5px;
+      transition: all 0.3s ease;
+    }
+
+    .bottom-nav ul li a .icon {
+      font-size: 1.5rem;
+    }
+
+    .bottom-nav ul li a .title {
+      font-size: 0.7rem;
+      font-weight: 500;
+    }
+
+    .bottom-nav ul li.active a {
+      color: purple;
+    }
+
+    /* ================ Responsive ================ */
+    @media (max-width: 768px) {
+      .navigation {
+        display: none;
+      }
+      .bottom-nav {
+        display: block;
+      }
+      .main {
+        width: 100%;
+        left: 0;
+        padding-bottom: 70px;
+      }
+      .main.active {
+        left: 0;
+      }
+      .topbar {
+        left: 0;
+        width: 100%;
+      }
+      .toggle {
+        display: none;
+      }
+      .chat-container {
+        padding: 12px;
+      }
+      .coming-soon-title {
+        font-size: 1.8rem;
+      }
+      .coming-soon-features {
+        gap: 10px;
+      }
+      .coming-soon-feature {
+        font-size: 0.75rem;
+        padding: 8px 14px;
+      }
+      .coming-soon-notify {
+        flex-direction: column;
+      }
+      .coming-soon-notify input {
+        width: 100%;
+      }
+      .coming-soon-notify button {
+        width: 100%;
+        justify-content: center;
+      }
+      .coming-soon-icon {
+        width: 80px;
+        height: 80px;
+      }
+      .coming-soon-icon .material-symbols-outlined {
+        font-size: 2.5rem;
+      }
+      .apikey-input-group {
+        flex-wrap: wrap;
+        width: 100%;
+      }
+      .apikey-input-group input {
+        flex: 1;
+        min-width: 120px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .coming-soon-title {
+        font-size: 1.4rem;
+      }
+      .coming-soon-subtitle {
+        font-size: 0.9rem;
+      }
+      .coming-soon-feature {
+        font-size: 0.7rem;
+        padding: 6px 12px;
+      }
+    }
+
+
+/* Modern Backdrop Overlay */
+.coming-soon-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Glassmorphism Card */
+.coming-soon-card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-radius: 24px;
+  padding: 32px;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.coming-soon-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(128, 0, 128, 0.1);
+  color: purple;
+  font-weight: 600;
+  font-size: 0.8rem;
+  border-radius: 20px;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.coming-soon-card h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.coming-soon-card p {
+  color: #4b5563;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.coming-soon-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn-dismiss {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #374151;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-dismiss:hover {
+  background: #f3f4f6;
+}
+
+.btn-primary {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: none;
+  background: purple;
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  background: purple;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+
+    /* Material Symbols */
+    @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined");
+    @import url("https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap");
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- =============== Navigation ================ -->
+    <div class="navigation">
+      <ul>
+        <li><a href="dashboard.html">
+          <span class="icon">
+            <div class="logo">
+              <img src="assets/imgs/logo.png" alt="Tracknrent" style="width: 74px; height: 50px; object-fit: contain; margin-right: 4px;" />
+            </div>
+          </span>
+          <span class="brand">Tracknrent</span>
+        </a></li>
+        <li><a href="dashboard.html">
+          <span class="icon"><span class="material-symbols-outlined">home</span></span>
+          <span class="title">Dashboard</span>
+        </a></li>
+        <li><a href="bookings.html">
+          <span class="icon"><span class="material-symbols-outlined">calendar_today</span></span>
+          <span class="title">Bookings</span>
+        </a></li>
+        <li><a href="add.html">
+          <span class="icon"><span class="material-symbols-outlined">add_circle</span></span>
+          <span class="title">Add</span>
+        </a></li>
+        <li><a href="inventory.html">
+          <span class="icon"><span class="material-symbols-outlined">inventory_2</span></span>
+          <span class="title">Inventory</span>
+        </a></li>
+        <li><a href="public.html">
+          <span class="icon"><span class="material-symbols-outlined">Public</span></span>
+          <span class="title">Public Profile</span>
+        </a></li>
+      </ul>
+    </div>
+
+    <!-- ========================= Main ==================== -->
+    <div class="main">
+      <div class="topbar">
+        <div class="toggle"><span class="material-symbols-outlined">menu</span></div>
+        <h2 class="page-title">AI Assistant</h2>
+        <div class="user">
+          <div id="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: purple; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">?</div>
+        </div>
+      </div>
+
+      <!-- Chat Viewport -->
+      <div class="chat-container">
+        
+        <!-- ========== COMING SOON OVERLAY ========== -->
+        <div class="coming-soon-overlay" id="comingSoonOverlay">
+          <button class="coming-soon-close" id="closeOverlayBtn" aria-label="Close overlay">
+            <span class="material-symbols-outlined" style="color: purple;">close</span>
+          </button>
+
+          <div class="coming-soon-icon">
+            <span class="material-symbols-outlined">smart_toy</span>
+          </div>
+
+          <h1 class="coming-soon-title">
+            AI Assistant <span>Coming Soon</span>
+          </h1>
+
+          <p class="coming-soon-subtitle">
+            We're building an intelligent AI assistant that will help you manage inventory, bookings, and analytics — all through natural conversation.
+          </p>
+
+          <div class="coming-soon-features">
+            <span class="coming-soon-feature">
+              <span class="material-symbols-outlined">inventory_2</span> Inventory Management
+            </span>
+            <span class="coming-soon-feature">
+              <span class="material-symbols-outlined">calendar_today</span> Booking Insights
+            </span>
+            <span class="coming-soon-feature">
+              <span class="material-symbols-outlined">analytics</span> Smart Analytics
+            </span>
+            <span class="coming-soon-feature">
+              <span class="material-symbols-outlined">auto_awesome</span> Automation
+            </span>
+          </div>
+
+          <div class="coming-soon-progress">
+            <div class="coming-soon-progress-label">
+              <span>Development progress</span>
+              <span>75%</span>
+            </div>
+            <div class="coming-soon-progress-bar">
+              <div class="fill"></div>
+            </div>
+          </div>
+
+          <div class="coming-soon-notify">
+            <input type="email" placeholder="Enter your email for early access" id="notifyEmail">
+            <button id="notifyBtn">Notify Me</button>
+          </div>
+        </div>
+
+        <!-- API KEY SETTINGS BANNER -->
+        <div class="apikey-banner" id="apiKeyBanner">
+          <p>Provide your <strong>OpenRouter API Key</strong> to enable function tools (adjust inventory, fetch bookings, etc.). Keys are saved locally in your browser cache.</p>
+          <div class="apikey-input-group">
+            <input type="password" id="apiKeyInput" placeholder="Enter OpenRouter API Key...">
+            <button id="saveKeyBtn">Save</button>
+          </div>
+        </div>
+
+        <!-- Messages Box -->
+        <div class="chat-messages" id="chatMessages">
+          <div class="message ai">
+            Hello! I am your AI Business Assistant. How can I help you manage your inventory or bookings today?<br><br>
+            <em>Example: "Adjust Canopy count by -2", "List all current inventory items", or "Show my recent bookings"</em>
+          </div>
+        </div>
+
+        <!-- Input Box Dock -->
+        <div class="input-dock">
+          <input type="text" id="userInput" placeholder="Ask AI assistant to run tools...">
+          <button id="sendBtn">
+            <span class="material-symbols-outlined">send</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- =============== Bottom Navigation (Mobile) ================ -->
+    <nav class="bottom-nav">
+      <ul>
+        <li><a href="dashboard.html">
+          <span class="icon"><span class="material-symbols-outlined">home</span></span>
+          <span class="title">Dashboard</span>
+        </a></li>
+        <li><a href="bookings.html">
+          <span class="icon"><span class="material-symbols-outlined">calendar_today</span></span>
+          <span class="title">Bookings</span>
+        </a></li>
+        <li><a href="add.html">
+          <span class="icon"><span class="material-symbols-outlined">add_circle</span></span>
+          <span class="title">Add</span>
+        </a></li>
+        <li><a href="inventory.html">
+          <span class="icon"><span class="material-symbols-outlined">inventory_2</span></span>
+          <span class="title">Inventory</span>
+        </a></li>
+        <li class="active"><a href="public.html">
+          <span class="icon"><span class="material-symbols-outlined">Public</span></span>
+          <span class="title">Profile</span>
+        </a></li>
+      </ul>
+    </nav>
+  </div>
+
+  <!-- =========== Scripts ========= -->
+  <script>
+    // Menu Sidebar toggle
+    let toggle = document.querySelector(".toggle");
+    let navigation = document.querySelector(".navigation");
+    let main = document.querySelector(".main");
+
+    if (toggle) {
+      toggle.onclick = function () {
+        navigation.classList.toggle("active");
+        main.classList.toggle("active");
+      };
+    }
+
+    // ========== COMING SOON OVERLAY CONTROLS ==========
+    document.addEventListener('DOMContentLoaded', function() {
+      const overlay = document.getElementById('comingSoonOverlay');
+      const closeBtn = document.getElementById('closeOverlayBtn');
+      const notifyBtn = document.getElementById('notifyBtn');
+      const notifyEmail = document.getElementById('notifyEmail');
+
+  
+
+
+      // Notify Me button
+      if (notifyBtn) {
+        notifyBtn.addEventListener('click', function() {
+          const email = notifyEmail.value.trim();
+          if (!email) {
+            notifyEmail.style.borderColor = '#ef4444';
+            notifyEmail.placeholder = 'Please enter your email';
+            setTimeout(function() {
+              notifyEmail.style.borderColor = '#e5e7eb';
+            }, 2000);
+            return;
+          }
+          if (!email.includes('@') || !email.includes('.')) {
+            notifyEmail.style.borderColor = '#ef4444';
+            notifyEmail.value = '';
+            notifyEmail.placeholder = 'Please enter a valid email';
+            setTimeout(function() {
+              notifyEmail.style.borderColor = '#e5e7eb';
+            }, 2000);
+            return;
+          }
+          // Success
+          notifyBtn.textContent = '✅ Subscribed!';
+          notifyBtn.style.background = '#10b981';
+          notifyBtn.style.pointerEvents = 'none';
+          notifyEmail.value = '';
+          notifyEmail.placeholder = 'You\'ll be notified when ready!';
+          setTimeout(function() {
+            notifyBtn.textContent = 'Notify Me';
+            notifyBtn.style.background = '';
+            notifyBtn.style.pointerEvents = '';
+          }, 3000);
+        });
+      }
+
+      // Enter key on email input
+      if (notifyEmail) {
+        notifyEmail.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            notifyBtn.click();
+          }
+        });
+      }
+    });
+  </script>
+  <script type="module" src="assets/js/avatar.js"></script>
+  <script type="module" src="assets/js/firebase.js"></script>
+  <script src="assets/js/pwa.js"></script>
+</body>
+</html>
