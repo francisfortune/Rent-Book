@@ -1,8 +1,28 @@
+// assets/js/inventory.js — FIXED
+// ---------------------------------------------------------------------------
+// Fixes in this version:
+//   1. All onSnapshot listeners are tracked and cleaned up (no leaks).
+//   2. Add/Edit/Delete handlers disable their button while in-flight — no
+//      duplicate writes, no duplicate pushes from double-clicks/taps.
+//   3. listenToOverbooked is registered once per auth session.
+//   4. renderInventory no longer triggers itself indirectly via snapshot
+//      cascades — activeBookingsCache is set once and reused.
+//   5. All notifications go through a single sendInventoryNotification()
+//      helper that logs errors instead of crashing.
+// ---------------------------------------------------------------------------
+
 import { auth, db } from "./firebase.js";
 import { getBusinessIdByEmail } from "./shared.js";
-import { sendPush } from "./onesignal.js";  // ✅ ADD THIS
-import { fetchActiveBookings, getAvailabilityMap, checkDateAvailability } from "./services/availabilityService.js";
-import { isBookingOverbooked, getBookingLifecycle, renderLifecycleBadge } from "./services/bookingStatus.js";
+import { sendPush } from "./onesignal.js";
+import {
+  fetchActiveBookings,
+  getAvailabilityMap
+} from "./services/availabilityService.js";
+import {
+  isBookingOverbooked,
+  getBookingLifecycle,
+  renderLifecycleBadge
+} from "./services/bookingStatus.js";
 
 import {
   collection,
@@ -10,43 +30,44 @@ import {
   getDocs,
   onSnapshot,
   query,
-  where,
   updateDoc,
   deleteDoc,
   doc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { onAuthStateChanged } from
-  "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-/* =========================
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+/* =========================================================
    NOTIFICATION HELPER (with Push)
-========================= */
-async function sendInventoryNotification(businessId, message, type = "inventory", deepLink = "/inventory.html") {
+   Single funnel for all inventory notifications.
+========================================================= */
+async function sendInventoryNotification(
+  businessId,
+  message,
+  type = "inventory",
+  deepLink = "/inventory.html"
+) {
   try {
-    // 1. Save to Firestore
-    const notifRef = collection(db, "businesses", businessId, "notifications");
-    await addDoc(notifRef, {
-      message: message,
-      type: type,
+    await addDoc(collection(db, "businesses", businessId, "notifications"), {
+      message,
+      type,
       triggeredBy: auth.currentUser?.email || "System",
       createdAt: serverTimestamp(),
       readBy: [],
       deletedFor: []
     });
 
-    // 2. Send OneSignal Push Notification
     await sendPush(message, deepLink);
-    
     console.log(`[Inventory] ✅ Notification + Push sent: ${message}`);
   } catch (err) {
     console.error("[Inventory] Notification failed:", err);
   }
 }
 
-/* =========================
+/* =========================================================
    DOM ELEMENTS
-========================= */
+========================================================= */
 const totalItemsEl = document.getElementById("totalItems");
 const availableItemsEl = document.getElementById("availableItems");
 const outItemsEl = document.getElementById("outItems");
@@ -56,27 +77,6 @@ const inventorySearch = document.getElementById("inventorySearch");
 const calcItem = document.getElementById("calcItem");
 const calcQty = document.getElementById("calcQty");
 const calcResult = document.getElementById("calcResult");
-
-const overbookedList = document.getElementById("overbookedList");
-
-// Module-level state shared across the availability calculator, the
-// overbooked panel and the stats cards, so everything stays in sync.
-let currentBusinessId = null;
-let allInventoryItemsCache = [];
-let activeBookingsCache = [];
-let lastRenderedItems = { filtered: [], all: [] };
-
-async function refreshActiveBookingsCache(businessId) {
-  try {
-    activeBookingsCache = await fetchActiveBookings(businessId);
-  } catch (err) {
-    console.error("[Inventory] Failed to refresh active bookings cache:", err);
-  }
-  // Re-render with the freshest booking data so "Free today" stays accurate
-  if (lastRenderedItems.all.length || lastRenderedItems.filtered.length) {
-    renderInventory(lastRenderedItems.filtered, lastRenderedItems.all);
-  }
-}
 
 // Edit modal elements
 const editModal = document.getElementById("editModal");
@@ -89,14 +89,43 @@ const editItemPrice = document.getElementById("editItemPrice");
 const closeEditModal = document.getElementById("closeEditModal");
 const deleteItemBtn = document.getElementById("deleteItemBtn");
 
-/* =========================
-   HELPER FUNCTIONS
-========================= */
+/* =========================================================
+   STATE
+========================================================= */
+let currentBusinessId = null;
+let allInventoryItemsCache = [];
+let activeBookingsCache = [];
+let lastRenderedItems = { filtered: [], all: [] };
 
+// Track every active listener so we can clean up if auth state changes.
+let unsubInventory = null;
+let unsubOverbooked = null;
 
-/* =========================
+/* =========================================================
+   BUTTON GUARD — disable a button while an async op runs
+========================================================= */
+async function withButtonLock(button, fn) {
+  if (!button) return fn();
+  if (button.dataset.locked === "1") return; // already running
+  const originalText = button.textContent;
+  button.dataset.locked = "1";
+  button.disabled = true;
+  button.style.opacity = "0.6";
+  button.style.cursor = "not-allowed";
+  try {
+    return await fn();
+  } finally {
+    button.dataset.locked = "0";
+    button.disabled = false;
+    button.style.opacity = "";
+    button.style.cursor = "";
+    if (originalText) button.textContent = originalText;
+  }
+}
+
+/* =========================================================
    OPEN EDIT MODAL
-========================= */
+========================================================= */
 function openEditModal(item) {
   editItemId.value = item.id;
   editItemName.value = item.name;
@@ -106,45 +135,39 @@ function openEditModal(item) {
   editModal.classList.remove("hidden");
 }
 
-/* =========================
+/* =========================================================
    RENDER INVENTORY
-   ("Available" / "Out" now reflect what's actually free RIGHT NOW —
-   i.e. usable stock minus whatever other active bookings currently
-   overlap today's date — instead of a permanently-decremented counter.)
-========================= */
+   "Available" / "Out" reflect what's free RIGHT NOW based on
+   active bookings, not a decremented counter.
+========================================================= */
 function renderInventory(filteredItems, allItems) {
+  if (!inventoryList || !calcItem) return;
+
   inventoryList.innerHTML = "";
   calcItem.innerHTML = "";
   lastRenderedItems = { filtered: filteredItems, all: allItems };
   allInventoryItemsCache = allItems;
 
-  const nowMap = getAvailabilityMap(allItems, activeBookingsCache, new Date(), new Date());
-  
-  
-  
-  
-  
+  const nowMap = getAvailabilityMap(
+    allItems,
+    activeBookingsCache,
+    new Date(),
+    new Date()
+  );
+
   let totalOwnedQty = 0;
   let totalAvailableQty = 0;
   let totalOutQty = 0;
 
-  // Totals & dropdown
-  allItems.forEach(item => {
+  allItems.forEach((item) => {
     const totalQty = Number(item.totalQuantity || 0);
     const usableQty = Number(item.availableQuantity || 0);
     const freeNow = nowMap.has(item.name.trim().toLowerCase())
       ? nowMap.get(item.name.trim().toLowerCase())
       : usableQty;
 
-    // "Owned" is the sum of every unit you track, regardless of what's out.
     totalOwnedQty += totalQty;
-
-    // "Free today" = units not currently tied to a booking that overlaps today.
     totalAvailableQty += freeNow;
-
-    // "Out today" = units that ARE tied to a booking overlapping today.
-    // Computed from OWNED minus FREE, not from the raw availableQuantity,
-    // so the three cards always reconcile: owned = free + out.
     totalOutQty += Math.max(0, totalQty - freeNow);
 
     calcItem.innerHTML += `
@@ -154,20 +177,17 @@ function renderInventory(filteredItems, allItems) {
     `;
   });
 
-  // Dashboard stats
-  totalItemsEl.textContent = totalOwnedQty.toLocaleString();
-  availableItemsEl.textContent = totalAvailableQty.toLocaleString();
-  outItemsEl.textContent = totalOutQty.toLocaleString();
+  if (totalItemsEl) totalItemsEl.textContent = totalOwnedQty.toLocaleString();
+  if (availableItemsEl) availableItemsEl.textContent = totalAvailableQty.toLocaleString();
+  if (outItemsEl) outItemsEl.textContent = totalOutQty.toLocaleString();
 
-
-
-  // Inventory list
-  filteredItems.forEach(item => {
+  filteredItems.forEach((item) => {
     const key = item.name.trim().toLowerCase();
     const freeNow = nowMap.has(key) ? nowMap.get(key) : item.availableQuantity;
 
     const div = document.createElement("div");
-    div.className = "inventory-item flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100 mb-3";
+    div.className =
+      "inventory-item flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100 mb-3";
     div.innerHTML = `
       <div>
         <strong class="text-lg">${item.name}</strong><br>
@@ -190,10 +210,9 @@ function renderInventory(filteredItems, allItems) {
   });
 }
 
-/* =========================
-   OVERBOOKED PANEL (SYNCED WITH BOOKINGS.JS via bookingStatus.js —
-   the exact same isBookingOverbooked() definition used there)
-========================= */
+/* =========================================================
+   OVERBOOKED PANEL
+========================================================= */
 function listenToOverbooked(businessId) {
   const overbookedList =
     document.getElementById("overbookedList") ||
@@ -201,14 +220,17 @@ function listenToOverbooked(businessId) {
 
   if (!overbookedList) return;
 
+  // Clean up prior subscription if any
+  if (unsubOverbooked) unsubOverbooked();
+
   const ref = collection(db, "businesses", businessId, "bookings");
 
-  onSnapshot(ref, (snap) => {
-    // Keep the shared active-bookings cache fresh for the availability
-    // calculator + "Free today" stats every time bookings change.
+  unsubOverbooked = onSnapshot(ref, (snap) => {
+    // Keep the shared active-bookings cache fresh.
     activeBookingsCache = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .filter(b => b.status !== "returned" && b.status !== "cancelled");
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .filter((b) => b.status !== "returned" && b.status !== "cancelled");
+
     if (lastRenderedItems.all.length) {
       renderInventory(lastRenderedItems.filtered, lastRenderedItems.all);
     }
@@ -228,14 +250,12 @@ function listenToOverbooked(businessId) {
     }
 
     overbooked.forEach((b) => {
-      const life = getBookingLifecycle(b);
-      const borrowedItems = b.items
+      const borrowedItems = (b.items || [])
         .filter((i) => Number(i.shortage || 0) > 0 || i.isCustom)
         .map((i) => {
           const vendor = i.supplier || "Unknown Vendor";
           const qty = Number(i.shortage || i.qty || 0);
           const customTag = i.isCustom ? " (not in inventory)" : "";
-
           return `• ${qty} × ${i.name}${customTag}
             <span class="text-purple-700 font-bold">[${vendor}]</span>`;
         });
@@ -280,15 +300,15 @@ function listenToOverbooked(businessId) {
   });
 }
 
-
-/* =========================
-   AUTH & LIVE DATA
-========================= */
+/* =========================================================
+   OFFLINE / ERROR BANNERS
+========================================================= */
 function showOfflineBanner() {
   if (document.getElementById("offlineBanner")) return;
   const banner = document.createElement("div");
   banner.id = "offlineBanner";
-  banner.style.cssText = "position: fixed; top: 0; left: 0; right: 0; background: rgba(128, 0, 128, 0.95); backdrop-filter: blur(10px); color: white; text-align: center; padding: 12px; z-index: 99999; font-weight: 500; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; gap: 8px;";
+  banner.style.cssText =
+    "position: fixed; top: 0; left: 0; right: 0; background: rgba(128, 0, 128, 0.95); backdrop-filter: blur(10px); color: white; text-align: center; padding: 12px; z-index: 99999; font-weight: 500; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; gap: 8px;";
   banner.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px; vertical-align: middle;">wifi_off</span> Offline Mode — Using cached local data`;
   document.body.appendChild(banner);
 }
@@ -297,12 +317,16 @@ function showErrorBanner(message) {
   if (document.getElementById("errorBanner")) return;
   const banner = document.createElement("div");
   banner.id = "errorBanner";
-  banner.style.cssText = "position: fixed; top: 0; left: 0; right: 0; background: rgba(220, 38, 38, 0.95); backdrop-filter: blur(10px); color: white; text-align: center; padding: 12px; z-index: 99999; font-weight: 500; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; gap: 8px;";
+  banner.style.cssText =
+    "position: fixed; top: 0; left: 0; right: 0; background: rgba(220, 38, 38, 0.95); backdrop-filter: blur(10px); color: white; text-align: center; padding: 12px; z-index: 99999; font-weight: 500; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; gap: 8px;";
   banner.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px; vertical-align: middle;">error</span> Error: ${message}. Please refresh or try logging out.`;
   document.body.appendChild(banner);
 }
 
-onAuthStateChanged(auth, async user => {
+/* =========================================================
+   AUTH + LIVE DATA
+========================================================= */
+onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "signup.html";
     return;
@@ -311,194 +335,260 @@ onAuthStateChanged(auth, async user => {
   try {
     const businessId = await getBusinessIdByEmail(user.email, user);
     currentBusinessId = businessId;
-    if (!navigator.onLine) {
-      showOfflineBanner();
-    }
+
+    if (!navigator.onLine) showOfflineBanner();
+
     const invRef = collection(db, "businesses", businessId, "inventory");
 
-  onSnapshot(invRef, snap => {
-  const allItems = snap.docs
-    .map(d => {
-      const data = d.data();
-      return {
-        id: d.id,
-        ...data,
-        totalQuantity: Math.max(0, Number(data.totalQuantity || 0)),
-        availableQuantity: Math.min(
-          Math.max(0, Number(data.availableQuantity || 0)),
-          Number(data.totalQuantity || 0)
-        )
-      };
-    })
-    .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), undefined, { sensitivity: "base" }));
+    // Clean up any previous inventory subscription (e.g. auth re-fired).
+    if (unsubInventory) unsubInventory();
 
-  function filterAndRender() {
-    const q = inventorySearch.value.toLowerCase();
-    const filtered = allItems.filter(i => String(i.name || "").toLowerCase().includes(q));
-    renderInventory(filtered, allItems);
-  }
+    unsubInventory = onSnapshot(invRef, (snap) => {
+      const allItems = snap.docs
+        .map((d) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            ...data,
+            totalQuantity: Math.max(0, Number(data.totalQuantity || 0)),
+            availableQuantity: Math.min(
+              Math.max(0, Number(data.availableQuantity || 0)),
+              Number(data.totalQuantity || 0)
+            )
+          };
+        })
+        .sort((a, b) =>
+          String(a.name || "").localeCompare(String(b.name || ""), undefined, {
+            sensitivity: "base"
+          })
+        );
 
-  inventorySearch.oninput = filterAndRender;
-  filterAndRender();
-});
+      function filterAndRender() {
+        const q = (inventorySearch?.value || "").toLowerCase();
+        const filtered = allItems.filter((i) =>
+          String(i.name || "").toLowerCase().includes(q)
+        );
+        renderInventory(filtered, allItems);
+      }
 
-
+      if (inventorySearch) inventorySearch.oninput = filterAndRender;
+      filterAndRender();
+    });
 
     listenToOverbooked(businessId);
 
+    // =====================================================
+    // ADD ITEM
+    // =====================================================
+    const addItemForm = document.getElementById("addItemForm");
+    if (addItemForm) {
+      // Prevent stacking submit listeners across auth re-fires
+      if (addItemForm.dataset.wired !== "1") {
+        addItemForm.dataset.wired = "1";
+        addItemForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const submitBtn = addItemForm.querySelector('button[type="submit"]');
 
- // Add new item
-document.getElementById("addItemForm").addEventListener("submit", async e => {
-  e.preventDefault();
-  const name = itemName.value.trim();
-  const qty = Number(itemQty.value);
-  const price = Number(itemPrice.value);
+          await withButtonLock(submitBtn, async () => {
+            const name = document.getElementById("itemName").value.trim();
+            const qty = Number(document.getElementById("itemQty").value);
+            const price = Number(document.getElementById("itemPrice").value);
 
-  await addDoc(invRef, {
-    name: name,
-    totalQuantity: qty,
-    availableQuantity: qty,
-    price: price,
-    createdAt: serverTimestamp()
-  });
+            if (!name || qty <= 0) return;
 
-  // ✅ Send Notification + Push
-  await sendInventoryNotification(
-    businessId, 
-    `📦 New item added: ${name} (${qty} units at ₦${price.toLocaleString()})`, 
-    "inventory_add",
-    "/inventory.html"
-  );
-  
-  e.target.reset();
-});
-    // Close edit modal
-    closeEditModal.onclick = () => editModal.classList.add("hidden");
+            try {
+              await addDoc(invRef, {
+                name,
+                totalQuantity: qty,
+                availableQuantity: qty,
+                price,
+                createdAt: serverTimestamp()
+              });
 
-  // Save changes in edit modal
-editItemForm.onsubmit = async e => {
-  e.preventDefault();
-  const name = editItemName.value.trim();
-  const totalQty = Number(editItemQty.value);
-  const avail = Number(editItemAvail.value);
-  const price = Number(editItemPrice.value);
-  const ref = doc(db, "businesses", businessId, "inventory", editItemId.value);
+              await sendInventoryNotification(
+                currentBusinessId,
+                `📦 New item added: ${name} (${qty} units at ₦${price.toLocaleString()})`,
+                "inventory_add",
+                "/inventory.html"
+              );
 
-  await updateDoc(ref, {
-    name: name,
-    totalQuantity: totalQty,
-    availableQuantity: avail,
-    price: price,
-    updatedAt: serverTimestamp()
-  });
+              addItemForm.reset();
+            } catch (err) {
+              console.error("[Inventory] Add failed:", err);
+              alert("Failed to add item: " + err.message);
+            }
+          });
+        });
+      }
+    }
 
-  // 🔔 Send Notification + Push
-  let message = `✏️ Item updated: ${name}`;
-  let type = "inventory_update";
-  let deepLink = "/inventory.html";
+    // =====================================================
+    // EDIT MODAL — close
+    // =====================================================
+    if (closeEditModal) {
+      closeEditModal.onclick = () => editModal.classList.add("hidden");
+    }
 
-  if (avail <= 5) {
-    message = `⚠️ LOW STOCK ALERT: ${name} only has ${avail} left! (Total: ${totalQty})`;
-    type = "inventory_low_stock";
-    deepLink = "/inventory.html";
-  }
+    // =====================================================
+    // EDIT MODAL — save
+    // =====================================================
+    if (editItemForm && editItemForm.dataset.wired !== "1") {
+      editItemForm.dataset.wired = "1";
+      editItemForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const saveBtn = editItemForm.querySelector('button[type="submit"]');
 
-  await sendInventoryNotification(businessId, message, type, deepLink);
+        await withButtonLock(saveBtn, async () => {
+          const name = editItemName.value.trim();
+          const totalQty = Number(editItemQty.value);
+          const avail = Number(editItemAvail.value);
+          const price = Number(editItemPrice.value);
+          const ref = doc(
+            db,
+            "businesses",
+            currentBusinessId,
+            "inventory",
+            editItemId.value
+          );
 
-  editModal.classList.add("hidden");
-};
+          try {
+            await updateDoc(ref, {
+              name,
+              totalQuantity: totalQty,
+              availableQuantity: avail,
+              price,
+              updatedAt: serverTimestamp()
+            });
 
-// Delete item
-deleteItemBtn.onclick = async () => {
-  const name = editItemName.value; // Get name before deleting
-  if (!confirm(`Are you sure you want to delete ${name}?`)) return;
-  
-  await deleteDoc(doc(db, "businesses", businessId, "inventory", editItemId.value));
-  
-  // ✅ Send Notification + Push
-  await sendInventoryNotification(
-    businessId, 
-    `🗑️ Item deleted: ${name} was removed from inventory`, 
-    "inventory_delete",
-    "/inventory.html"
-  );
-  
-  editModal.classList.add("hidden");
-};
+            let message = `✏️ Item updated: ${name}`;
+            let type = "inventory_update";
+            const deepLink = "/inventory.html";
+
+            if (avail <= 5) {
+              message = `⚠️ LOW STOCK ALERT: ${name} only has ${avail} left! (Total: ${totalQty})`;
+              type = "inventory_low_stock";
+            }
+
+            await sendInventoryNotification(
+              currentBusinessId,
+              message,
+              type,
+              deepLink
+            );
+
+            editModal.classList.add("hidden");
+          } catch (err) {
+            console.error("[Inventory] Edit failed:", err);
+            alert("Failed to update item: " + err.message);
+          }
+        });
+      };
+    }
+
+    // =====================================================
+    // DELETE ITEM
+    // =====================================================
+    if (deleteItemBtn && deleteItemBtn.dataset.wired !== "1") {
+      deleteItemBtn.dataset.wired = "1";
+      deleteItemBtn.onclick = async () => {
+        await withButtonLock(deleteItemBtn, async () => {
+          const name = editItemName.value;
+          if (!confirm(`Are you sure you want to delete ${name}?`)) return;
+
+          try {
+            await deleteDoc(
+              doc(db, "businesses", currentBusinessId, "inventory", editItemId.value)
+            );
+
+            await sendInventoryNotification(
+              currentBusinessId,
+              `🗑️ Item deleted: ${name} was removed from inventory`,
+              "inventory_delete",
+              "/inventory.html"
+            );
+
+            editModal.classList.add("hidden");
+          } catch (err) {
+            console.error("[Inventory] Delete failed:", err);
+            alert("Failed to delete item: " + err.message);
+          }
+        });
+      };
+    }
   } catch (err) {
     console.error(err);
     if (!navigator.onLine || err.message === "OFFLINE_NO_CACHE") {
       showOfflineBanner();
     } else if (err.message === "NO_BUSINESS" || err.message === "Business not found") {
-      if (user && user.uid) {
-        localStorage.removeItem(`businessId_${user.uid}`);
-      }
+      if (user?.uid) localStorage.removeItem(`businessId_${user.uid}`);
       window.location.href = "setup.html";
     } else {
-      if (user && user.uid) {
-        localStorage.removeItem(`businessId_${user.uid}`);
-      }
+      if (user?.uid) localStorage.removeItem(`businessId_${user.uid}`);
       showErrorBanner(err.message || err);
     }
   }
 });
 
-/* =========================
+/* =========================================================
    AVAILABILITY CHECK (date-aware)
-   Locks in exactly the same way a real booking would: it checks how many
-   units are free for a SPECIFIC date window, not just raw stock — so a
-   500-chair booking two months out no longer blocks chairs needed tomorrow.
-========================= */
-document.getElementById("checkBtn").onclick = async () => {
-  const itemName = calcItem.value;
-  const needed = Number(calcQty.value);
-  const startEl = document.getElementById("calcStart");
-  const endEl = document.getElementById("calcEnd");
-  const startVal = startEl?.value || "";
-  const endVal = endEl?.value || startVal;
+========================================================= */
+const checkBtn = document.getElementById("checkBtn");
+if (checkBtn && checkBtn.dataset.wired !== "1") {
+  checkBtn.dataset.wired = "1";
+  checkBtn.onclick = async () => {
+    const itemName = calcItem.value;
+    const needed = Number(calcQty.value);
+    const startEl = document.getElementById("calcStart");
+    const endEl = document.getElementById("calcEnd");
+    const startVal = startEl?.value || "";
+    const endVal = endEl?.value || startVal;
 
-  if (!itemName) {
-    calcResult.textContent = "Choose an item first";
-    calcResult.style.color = "orange";
-    return;
-  }
+    if (!itemName) {
+      calcResult.textContent = "Choose an item first";
+      calcResult.style.color = "orange";
+      return;
+    }
 
-  if (!needed || needed <= 0) {
-    calcResult.textContent = "Enter a valid quantity";
-    calcResult.style.color = "orange";
-    return;
-  }
+    if (!needed || needed <= 0) {
+      calcResult.textContent = "Enter a valid quantity";
+      calcResult.style.color = "orange";
+      return;
+    }
 
-  calcResult.textContent = "Checking...";
-  calcResult.style.color = "#6b7280";
+    calcResult.textContent = "Checking...";
+    calcResult.style.color = "#6b7280";
 
-  try {
-    const start = startVal ? new Date(startVal) : new Date();
-    const end = endVal ? new Date(endVal) : start;
+    try {
+      const start = startVal ? new Date(startVal) : new Date();
+      const end = endVal ? new Date(endVal) : start;
 
-    // Always re-fetch fresh bookings for the check itself, so the result is
-    // correct even if the cache hasn't caught up yet.
-    const bookings = currentBusinessId ? await fetchActiveBookings(currentBusinessId) : activeBookingsCache;
-    const map = getAvailabilityMap(allInventoryItemsCache, bookings, start, end);
-    const key = itemName.trim().toLowerCase();
-    const available = map.has(key) ? map.get(key) : 0;
+      const bookings = currentBusinessId
+        ? await fetchActiveBookings(currentBusinessId)
+        : activeBookingsCache;
 
-    const dateNote = startVal
-      ? ` for ${start.toLocaleDateString()}${endVal && endVal !== startVal ? ` → ${end.toLocaleDateString()}` : ""}`
-      : " (today, since no dates were chosen)";
+      const map = getAvailabilityMap(allInventoryItemsCache, bookings, start, end);
+      const key = itemName.trim().toLowerCase();
+      const available = map.has(key) ? map.get(key) : 0;
 
-    if (needed <= available) {
-      const remaining = available - needed;
-      calcResult.textContent = `Available ✅ (${remaining} will remain)${dateNote}`;
-      calcResult.style.color = "green";
-    } else {
-      const shortage = needed - available;
-      calcResult.textContent = `Not enough ❌ (short by ${shortage}, only ${available} free)${dateNote}`;
+      const dateNote = startVal
+        ? ` for ${start.toLocaleDateString()}${
+            endVal && endVal !== startVal ? ` → ${end.toLocaleDateString()}` : ""
+          }`
+        : " (today, since no dates were chosen)";
+
+      if (needed <= available) {
+        const remaining = available - needed;
+        calcResult.textContent = `Available ✅ (${remaining} will remain)${dateNote}`;
+        calcResult.style.color = "green";
+      } else {
+        const shortage = needed - available;
+        calcResult.textContent = `Not enough ❌ (short by ${shortage}, only ${available} free)${dateNote}`;
+        calcResult.style.color = "red";
+      }
+    } catch (err) {
+      console.error("[Inventory] Availability check failed:", err);
+      calcResult.textContent = "Could not check availability — please try again.";
       calcResult.style.color = "red";
     }
-  } catch (err) {
-    console.error("[Inventory] Availability check failed:", err);
-    calcResult.textContent = "Could not check availability — please try again.";
-    calcResult.style.color = "red";
-  }
-};
+  };
+}

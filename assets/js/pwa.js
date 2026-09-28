@@ -1,16 +1,14 @@
-// PWA Registration Script — FIXED (no reload loop)
+// PWA Registration Script — FIXED (no reload loop, no repeating update banner)
 (function () {
     'use strict';
 
-    // Prevent multiple registrations
     if (window.__pwa_initialized) {
         console.log('[PWA] Already initialized, skipping');
         return;
     }
     window.__pwa_initialized = true;
 
-    // ✅ EMERGENCY KILL-SWITCH
-    // Visit yoursite.com/?killsw=1 once to unregister all SWs and clear caches.
+    // ✅ EMERGENCY KILL-SWITCH: visit yoursite.com/?killsw=1 once
     if (new URLSearchParams(location.search).has('killsw')) {
         (async () => {
             try {
@@ -28,7 +26,6 @@
         return;
     }
 
-    // ✅ Environment check
     const isLocalhost =
         window.location.hostname === 'localhost' ||
         window.location.hostname === '127.0.0.1' ||
@@ -43,9 +40,9 @@
                 navigator.serviceWorker
                     .register('/sw.js', { scope: '/' })
                     .then((registration) => {
-                        console.log('[PWA] ✅ Service Worker registered:', registration.scope);
+                        console.log('[PWA] ✅ SW registered:', registration.scope);
 
-                        // If there's already a waiting SW on page load, prompt immediately
+                        // If a SW is already waiting, prompt immediately
                         if (registration.waiting && navigator.serviceWorker.controller) {
                             showUpdateNotification(registration);
                         }
@@ -54,7 +51,7 @@
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
                             if (!newWorker) return;
-                            console.log('[PWA] New service worker found');
+                            console.log('[PWA] New SW found');
 
                             newWorker.addEventListener('statechange', () => {
                                 console.log('[PWA] SW state:', newWorker.state);
@@ -62,20 +59,19 @@
                                     newWorker.state === 'installed' &&
                                     navigator.serviceWorker.controller
                                 ) {
-                                    // New SW is waiting — show banner
                                     showUpdateNotification(registration);
                                 }
                             });
                         });
 
-                        // Optional: poll for updates every 30 minutes
+                        // Poll for updates every 30 minutes (silent)
                         setInterval(() => {
                             registration.update().catch(() => {});
                         }, 30 * 60 * 1000);
                     })
                     .catch((error) => {
                         if (isLocalhost) {
-                            console.log('[PWA] ⏭️ Service Worker skipped on localhost');
+                            console.log('[PWA] ⏭️ SW skipped on localhost');
                         } else {
                             console.warn('[PWA] SW registration failed:', error.message);
                         }
@@ -89,13 +85,12 @@
             if (refreshing) return;
             refreshing = true;
             console.log('[PWA] Controller changed (new SW active)');
-            // Intentionally do NOT reload here.
-            // The update button already reloads once after posting SKIP_WAITING.
+            // Do NOT reload here. The update button already reloads once.
         });
     }
 
     // ============================================
-    // UPDATE NOTIFICATION BANNER
+    // UPDATE BANNER — actually activates waiting SW
     // ============================================
     function showUpdateNotification(registration) {
         if (document.getElementById('pwa-update-banner')) return;
@@ -103,44 +98,25 @@
         const banner = document.createElement('div');
         banner.id = 'pwa-update-banner';
         banner.style.cssText = `
-            position: fixed;
-            bottom: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #1a202c;
-            color: white;
-            padding: 16px 24px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            z-index: 10001;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            max-width: 90%;
+            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+            background: #1a202c; color: white; padding: 16px 24px; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 10001;
+            display: flex; align-items: center; gap: 16px; max-width: 90%;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         `;
         banner.innerHTML = `
             <span>🚀 New version available</span>
             <button id="pwa-update-btn" style="
-                background: purple;
-                color: white;
-                border: none;
-                padding: 8px 20px;
-                border-radius: 8px;
-                font-weight: 600;
-                cursor: pointer;
+                background: purple; color: white; border: none;
+                padding: 8px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;
             ">Update</button>
             <button id="pwa-dismiss-btn" style="
-                background: transparent;
-                color: #a0aec0;
-                border: none;
-                cursor: pointer;
-                font-size: 1.2rem;
+                background: transparent; color: #a0aec0; border: none;
+                cursor: pointer; font-size: 1.2rem;
             ">✕</button>
         `;
         document.body.appendChild(banner);
 
-        // Update button — activates waiting SW then reloads ONCE
         document.getElementById('pwa-update-btn').addEventListener('click', async () => {
             const btn = document.getElementById('pwa-update-btn');
             btn.disabled = true;
@@ -151,21 +127,14 @@
                 if (!reg) reg = await navigator.serviceWorker.getRegistration();
 
                 if (reg && reg.waiting) {
-                    // Tell waiting SW to take over
                     reg.waiting.postMessage({ type: 'SKIP_WAITING' });
 
-                    // Wait briefly for controllerchange, then reload once
-                    const reloadOnce = () => {
-                        window.location.reload();
-                    };
+                    const reloadOnce = () => window.location.reload();
                     navigator.serviceWorker.addEventListener('controllerchange', reloadOnce, {
                         once: true,
                     });
-
-                    // Fallback if controllerchange doesn't fire
-                    setTimeout(reloadOnce, 1500);
+                    setTimeout(reloadOnce, 1500); // fallback
                 } else {
-                    // Nothing waiting — just reload
                     window.location.reload();
                 }
             } catch (e) {
@@ -174,7 +143,6 @@
             }
         });
 
-        // Dismiss button
         document.getElementById('pwa-dismiss-btn').addEventListener('click', () => {
             banner.remove();
         });
@@ -206,10 +174,8 @@
         console.log('[PWA] ✅ App installed');
         deferredPrompt = null;
         localStorage.setItem('pwa-installed', 'true');
-
         const installBtn = document.getElementById('pwa-install-btn');
         if (installBtn) installBtn.style.display = 'none';
-
         const installBanner = document.getElementById('pwa-install-banner');
         if (installBanner) installBanner.remove();
     });
@@ -233,43 +199,25 @@
         installBanner.innerHTML = `
             <style>
                 #pwa-install-banner {
-                    position: fixed;
-                    bottom: 80px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    background: white;
-                    padding: 20px 24px;
-                    border-radius: 16px;
+                    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+                    background: white; padding: 20px 24px; border-radius: 16px;
                     box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
-                    display: flex;
-                    align-items: center;
-                    gap: 16px;
-                    z-index: 10000;
-                    animation: slideUp 0.4s ease;
-                    max-width: 90vw;
+                    display: flex; align-items: center; gap: 16px; z-index: 10000;
+                    animation: slideUp 0.4s ease; max-width: 90vw;
                 }
                 #pwa-install-banner .icon { font-size: 2.5rem; }
                 #pwa-install-banner .content { flex: 1; }
                 #pwa-install-banner h4 { font-weight: 700; margin-bottom: 4px; color: #1a202c; }
                 #pwa-install-banner p { font-size: 0.9rem; color: #4a5568; }
                 #pwa-install-banner .install-btn {
-                    background: purple;
-                    color: white;
-                    border: none;
-                    padding: 12px 24px;
-                    border-radius: 10px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
+                    background: purple; color: white; border: none;
+                    padding: 12px 24px; border-radius: 10px; font-weight: 600;
+                    cursor: pointer; transition: all 0.2s ease;
                 }
                 #pwa-install-banner .install-btn:hover { transform: scale(1.05); }
                 #pwa-install-banner .close-btn {
-                    background: none;
-                    border: none;
-                    font-size: 1.5rem;
-                    color: #a0aec0;
-                    cursor: pointer;
-                    padding: 0 8px;
+                    background: none; border: none; font-size: 1.5rem;
+                    color: #a0aec0; cursor: pointer; padding: 0 8px;
                 }
                 @keyframes slideUp {
                     from { transform: translateX(-50%) translateY(100px); opacity: 0; }
@@ -311,17 +259,9 @@
             const indicator = document.createElement('div');
             indicator.id = 'connection-status';
             indicator.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                background: #e41515ff;
-                color: white;
-                text-align: center;
-                padding: 8px;
-                font-size: 0.9rem;
-                font-weight: 500;
-                z-index: 10001;
+                position: fixed; top: 0; left: 0; right: 0;
+                background: #e41515ff; color: white; text-align: center;
+                padding: 8px; font-size: 0.9rem; font-weight: 500; z-index: 10001;
             `;
             indicator.textContent = "📡 You're offline. Some features may be unavailable.";
             document.body.prepend(indicator);
