@@ -1,18 +1,65 @@
 // ============================================
-// ONESIGNAL - COMPLETE FIX
+// ONESIGNAL v16 — COMPLETE FIX
 // ============================================
 
 const ONESIGNAL_APP_ID = "539d08e3-cada-4b7e-88c3-f89af30ff7f9";
 
 // ✅ Detect if running on localhost
-const isLocalhost = window.location.hostname === 'localhost' || 
+const isLocalhost = window.location.hostname === 'localhost' ||
                     window.location.hostname === '127.0.0.1' ||
                     window.location.hostname === '';
 
-// ✅ Export sendPush at MODULE scope
-// ✅ Export sendPush at MODULE scope
+// ============================================
+// ✅ HELPER: Wait for OneSignal SDK to be ready
+// ============================================
+function waitForOneSignal(timeoutMs = 3000) {
+    return new Promise((resolve) => {
+        if (window.OneSignal && typeof window.OneSignal.User !== 'undefined') {
+            return resolve(true);
+        }
+
+        let elapsed = 0;
+        const interval = 100;
+
+        const timer = setInterval(() => {
+            elapsed += interval;
+
+            if (window.OneSignal && typeof window.OneSignal.User !== 'undefined') {
+                clearInterval(timer);
+                resolve(true);
+            } else if (elapsed >= timeoutMs) {
+                clearInterval(timer);
+                resolve(false);
+            }
+        }, interval);
+    });
+}
+
+// ============================================
+// ✅ HELPER: Normalize permission (string OR boolean)
+// ============================================
+function isPermissionGranted(perm) {
+    return perm === 'granted' || perm === true;
+}
+
+// ============================================
+// ✅ HELPER: Get OneSignal user ID (v16 property)
+// ============================================
+function getOneSignalUserId() {
+    try {
+        // v16: it's a property, not a method
+        return window.OneSignal?.User?.onesignalId || null;
+    } catch (err) {
+        console.warn('[OneSignal] Failed to get user ID:', err.message);
+        return null;
+    }
+}
+
+// ============================================
+// ✅ MAIN: sendPush — SDK first, then serverless
+// ============================================
 export async function sendPush(message, url = "/dashboard.html") {
-    // ✅ Skip push on localhost
+    // Skip on localhost
     if (isLocalhost) {
         console.log('[OneSignal] ⏭️ Skipping push on localhost');
         return { success: true, message: 'Skipped - localhost' };
@@ -20,21 +67,24 @@ export async function sendPush(message, url = "/dashboard.html") {
 
     console.log('[OneSignal] 📨 Sending push:', { message, url });
 
-    // ✅ STRATEGY 1: Try OneSignal SDK first (preferred — instant delivery)
+    // ============================================
+    // ✅ STRATEGY 1: Try OneSignal SDK (instant)
+    // ============================================
     try {
-        // Wait up to 3 seconds for SDK to become available
         const sdkReady = await waitForOneSignal(3000);
 
         if (sdkReady && window.OneSignal) {
             const OneSignal = window.OneSignal;
 
-            // Check we have permission
-            const permission = await OneSignal.Notifications.permission;
-            console.log('[OneSignal] SDK permission:', permission);
+            // ✅ v16: permission is a property (may be string or boolean)
+            const rawPermission = OneSignal.Notifications.permission;
+            const granted = isPermissionGranted(rawPermission);
 
-            if (permission === 'granted') {
-                // Get this device's user ID
-                const userId = await OneSignal.User.getOnesignalId();
+            console.log('[OneSignal] SDK permission:', rawPermission, '(granted:', granted + ')');
+
+            if (granted) {
+                // ✅ v16: use property, not method
+                const userId = getOneSignalUserId();
                 console.log('[OneSignal] SDK user ID:', userId);
 
                 if (userId) {
@@ -42,22 +92,28 @@ export async function sendPush(message, url = "/dashboard.html") {
                         contents: { en: message },
                         data: { url: url },
                         targetUserId: userId,
-                        web_url: url.startsWith('http') 
-                            ? url 
+                        web_url: url.startsWith('http')
+                            ? url
                             : `https://tracknrent.vercel.app${url}`
                     });
                     console.log('[OneSignal] ✅ Push sent via SDK (instant)');
                     return { success: true, method: 'sdk' };
+                } else {
+                    console.log('[OneSignal] ⚠️ No user ID yet — falling back to serverless');
                 }
             } else {
-                console.log('[OneSignal] ⚠️ SDK permission not granted, using fallback');
+                console.log('[OneSignal] ⚠️ Permission not granted — falling back to serverless');
             }
+        } else {
+            console.log('[OneSignal] ⚠️ SDK not ready — falling back to serverless');
         }
     } catch (sdkError) {
         console.warn('[OneSignal] ⚠️ SDK send failed:', sdkError.message);
     }
 
+    // ============================================
     // ✅ STRATEGY 2: Fallback to serverless API
+    // ============================================
     console.log('[OneSignal] 🔄 Trying serverless fallback...');
     try {
         const response = await fetch("/api/send-push", {
@@ -85,49 +141,22 @@ export async function sendPush(message, url = "/dashboard.html") {
     }
 }
 
-/**
- * ✅ Wait for window.OneSignal to become available (with timeout)
- * Handles the async nature of the SDK loader.
- */
-function waitForOneSignal(timeoutMs = 3000) {
-    return new Promise((resolve) => {
-        // If already available, resolve immediately
-        if (window.OneSignal && typeof window.OneSignal.User !== 'undefined') {
-            return resolve(true);
-        }
-
-        let elapsed = 0;
-        const interval = 100; // check every 100ms
-
-        const timer = setInterval(() => {
-            elapsed += interval;
-
-            if (window.OneSignal && typeof window.OneSignal.User !== 'undefined') {
-                clearInterval(timer);
-                resolve(true);
-            } else if (elapsed >= timeoutMs) {
-                clearInterval(timer);
-                resolve(false);
-            }
-        }, interval);
-    });
-}
-// ✅ Expose to window
+// ✅ Expose to window for non-module use
 window.sendPush = sendPush;
 
 // ============================================
-// ✅ COMPLETELY SKIP ONESIGNAL ON LOCALHOST
+// ✅ LOCALHOST — COMPLETE MOCK
 // ============================================
 if (isLocalhost) {
     console.log('[OneSignal] ⏭️ Skipping initialization on localhost');
-    
-    // ✅ Mock OneSignal completely to prevent any errors
+
     window.OneSignal = {
         Notifications: {
             permission: 'default',
             add: async () => ({ success: true })
         },
         User: {
+            onesignalId: null,
             getOnesignalId: async () => null
         },
         init: async () => {},
@@ -136,20 +165,18 @@ if (isLocalhost) {
         off: () => {},
         once: () => {}
     };
-    
-    // ✅ Prevent OneSignalDeferred from running
+
     window.OneSignalDeferred = [];
-    
-    // ✅ Also mock the global OneSignal SDK
+
     if (window.OneSignalSDK) {
         window.OneSignalSDK = null;
     }
-    
+
     console.log('[OneSignal] ✅ Localhost mock applied');
-    
+
 } else {
     // ============================================
-    // ✅ PRODUCTION - Initialize OneSignal
+    // ✅ PRODUCTION — INITIALIZE ONESIGNAL
     // ============================================
     (function() {
         'use strict';
@@ -160,7 +187,6 @@ if (isLocalhost) {
         }
         window.__onesignal_initialized = true;
 
-        // ✅ Wait for DOM to be ready
         const initOneSignal = () => {
             window.OneSignalDeferred = window.OneSignalDeferred || [];
 
@@ -177,12 +203,15 @@ if (isLocalhost) {
                         }
                     });
 
-                    const permission = await OneSignal.Notifications.permission;
-                    console.log('[OneSignal] Permission:', permission);
+                    // ✅ v16: property, may be string or boolean
+                    const rawPermission = OneSignal.Notifications.permission;
+                    const granted = isPermissionGranted(rawPermission);
+                    console.log('[OneSignal] Permission:', rawPermission, '(granted:', granted + ')');
 
-                    if (permission === 'granted') {
-                        const userId = await OneSignal.User.getOnesignalId();
-                        console.log('[OneSignal] User ID:', userId);
+                    if (granted) {
+                        // ✅ v16: property, not method
+                        const userId = OneSignal.User.onesignalId;
+                        console.log('[OneSignal] User ID:', userId || '(not yet assigned)');
                     }
 
                     console.log('[OneSignal] ✅ Initialized successfully');
@@ -194,7 +223,6 @@ if (isLocalhost) {
             console.log('[OneSignal] ✅ Module loaded for production');
         };
 
-        // ✅ Wait for page load
         if (document.readyState === 'complete') {
             initOneSignal();
         } else {
