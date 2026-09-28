@@ -6,12 +6,11 @@
 // RULES:
 // - "returned"  -> booking.status === "returned"
 // - "overdue"   -> not returned AND now is past the return date
-// - "upcoming"  -> not returned/overdue AND the event/delivery date is 3+
-//                  days away. Badge shows how far away: "10 days left",
+// - "upcoming"  -> not returned/overdue AND the event/delivery date is
+//                  1+ days away. Badge shows how far away: "10 days left",
 //                  "1 month left", etc.
-// - "active"    -> everything else (today, or 1-2 days away — badge then
-//                  reads "Active • 1 day left" / "Active • 2 days left").
-//                  Zero days away (today) shows plain "Active" with no count.
+// - "active"    -> event/delivery is TODAY, OR already past (but not yet
+//                  past the return date). No count shown — it's in progress.
 
 function startOfDay(d) {
   const copy = new Date(d);
@@ -43,11 +42,15 @@ export function formatDaysLeft(days) {
  *          }}
  */
 export function getBookingLifecycle(booking) {
+  // 1) RETURNED — always wins
   if (booking?.status === "returned") {
     return { key: "returned", label: "RETURNED", daysLeft: null, daysText: null };
   }
 
   const now = new Date();
+  const today = startOfDay(now);
+
+  // 2) OVERDUE — return date has passed and not returned yet
   const returnRaw = booking?.event?.returnDate || booking?.returnDate || null;
   if (returnRaw) {
     const returnDate = new Date(returnRaw);
@@ -56,6 +59,7 @@ export function getBookingLifecycle(booking) {
     }
   }
 
+  // 3) Figure out the reference date (delivery first, then event date)
   const refRaw =
     booking?.event?.deliveryDate ||
     booking?.event?.date ||
@@ -71,9 +75,12 @@ export function getBookingLifecycle(booking) {
     return { key: "active", label: "ACTIVE", daysLeft: null, daysText: null };
   }
 
-  const daysLeft = Math.round((startOfDay(refDate) - startOfDay(now)) / 86400000);
+  // 4) Days between today and the event/delivery date
+  //    Positive = future, 0 = today, negative = already past
+  const daysLeft = Math.round((startOfDay(refDate) - today) / 86400000);
 
-  if (daysLeft >= 3) {
+  // 5) UPCOMING — 1 or more days away
+  if (daysLeft >= 1) {
     return {
       key: "upcoming",
       label: "UPCOMING",
@@ -82,18 +89,10 @@ export function getBookingLifecycle(booking) {
     };
   }
 
-  if (daysLeft === 1 || daysLeft === 2) {
-    return {
-      key: "active",
-      label: "ACTIVE",
-      daysLeft,
-      daysText: formatDaysLeft(daysLeft)
-    };
-  }
-
-  // Today, or somehow already past the event date but not yet past the
-  // return date — plain Active, no count shown.
-  return { key: "active", label: "ACTIVE", daysLeft: daysLeft, daysText: null };
+  // 6) ACTIVE — event is today, OR event already started/passed
+  //    (but return date hasn't been reached, and not marked returned)
+  //    No count shown — it's in progress right now.
+  return { key: "active", label: "ACTIVE", daysLeft: 0, daysText: null };
 }
 
 /**
