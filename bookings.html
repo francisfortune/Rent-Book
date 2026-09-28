@@ -1,19 +1,86 @@
 <!doctype html>
 <html lang="en">
- <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard | Rent Book</title>
-  
-  <!-- FAVICON -->
-<link rel="icon" href="public/favicon.ico" sizes="any">
-<link rel="icon" type="image/png" href="public/favicon.png">
-<link rel="shortcut icon" href="public/favicon.ico">
 
-  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-  <script type="module" src="assets/js/onesignal.js"></script>
-  <style>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking | Tracknrent</title>
+<link rel="canonical" href="https://tracknrent.vercel.app/bookings.html" />
+    <meta name="description"
+        content="Manage rental bookings, schedule durations, returns, and track customer reservations with our  SaaS dashboard.">
+    <meta name="keywords"
+        content=" Tracknrent bookings, rental scheduling, SaaS booking system, inventory reservations">
+
+    <meta property="og:title" content="Bookings –  Tracknrent SaaS">
+    <meta property="og:description"
+        content="Manage rental bookings, schedule durations, returns, and track customer reservations with our  SaaS dashboard.">
+    <meta property="twitter:title" content="Bookings –  Tracknrent SaaS">
+    <meta property="twitter:description"
+        content="Manage rental bookings, schedule durations, returns, and track customer reservations with our  SaaS dashboard.">
+
+        <!-- ✅ MUST BE FIRST — Loads OneSignal SDK -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+
+<!-- ✅ Then your module -->
+<script type="module" src="assets/js/onesignal.js" defer></script>
+
+
+<script type="importmap">
+{
+  "imports": {
+    "@babel/runtime/helpers/typeof": "https://esm.sh/@babel/runtime/helpers/typeof"
+  }
+}
+</script>
+
+<!-- Place this high up inside your <head> tag -->
+<script type="importmap">
+{
+  "imports": {
+    "fflate": "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js"
+  }
+}
+</script>
+
+
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js"></script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Tracknrent",
+  "url": "https://tracknrent.vercel.app/"
+}
+</script>
+
+
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#800080">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Tracknrent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="assets/imgs/logo.png">
+
+    
+    <!-- FAVICON -->
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="shortcut icon" href="favicon.ico">
+
+
+
+
+<style>
+
+ @import url("https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap");
         @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined");
+
+
         * {
             margin: 0;
             padding: 0;
@@ -27,7 +94,8 @@
             overflow-x: hidden;
         }
 
-        html, body {
+        html,
+        body {
             height: 100%;
             width: 100%;
         }
@@ -37,6 +105,8 @@
             width: 100%;
             height: 100%;
         }
+
+        /* =============== Navigation ================ */
 
         /* =============== Navigation ================ */
         .navigation {
@@ -74,7 +144,7 @@
         }
 
         .navigation ul li:nth-child(1) {
-            margin-bottom: 40px;
+            margin-bottom: 35px;
             pointer-events: none;
         }
 
@@ -85,8 +155,8 @@
             display: flex;
             text-decoration: none;
             color: white;
-        margin: 20px;
-        font-size: 20px;
+            margin: 20px;
+            font-size: 23px;
         }
 
         .navigation ul li:hover a,
@@ -111,7 +181,8 @@
         .navigation ul li a .title {
             position: relative;
             display: block;
-            padding: 0 10px;
+               padding: 0 10px;
+            padding-top: 5.5px;
             height: 60px;
             line-height: 60px;
             text-align: start;
@@ -120,51 +191,62 @@
         }
 
         .logo {
-            width: 45px;
-            height: 45px;
-            margin-top: 8px;
+            width: 75px;
+            height: 65px;
+            margin-top: 5px;
         }
 
         .brand {
-            font-weight: 700;
+                       position: relative;
+            display: block;
+            padding: 0 3px;
+            height: 60px;
+            line-height: 60px;
+            text-align: start;
+            white-space: nowrap;
+            font-weight: 800;
             font-size: 1.5rem;
+            font-family: "Ubuntu", sans-serif;
         }
+
 
         /* ================ Main ================ */
-        .main {
-            position: absolute;
-            width: calc(100% - 280px);
-            left: 280px;
-            min-height: 100%;
-            background: white;
-            transition: 0.5s;
-        }
+       .main {
+    position: absolute;
+    width: calc(100% - 280px);
+    left: 280px;
+    min-height: 100%;
+    background: white;
+    transition: 0.5s;
+}
 
-        .main.active {
-            width: calc(100% - 80px);
-            left: 80px;
-        }
+.main.active {
+    width: calc(100% - 80px);
+    left: 80px;
+}
 
-        .topbar {
-            position: fixed;
-            top: 0;
-            left: 280px;
-            width: calc(100% - 280px);
-            height: 60px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 20px;
-            background: white;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-            z-index: 100;
-            transition: 0.5s;
-        }
+/* Full Width Topbar */
+.topbar {
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    background: white;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    z-index: 100;
+    gap: 10px;
+}
 
-        .main.active .topbar {
-            left: 80px;
-            width: calc(100% - 80px);
-        }
+/* Override active state adjustments for topbar so it stays full-width */
+.main.active .topbar {
+    left: 0;
+    width: 100%;
+}
 
         .toggle {
             position: relative;
@@ -227,21 +309,22 @@
         }
 
         /* ================ Dashboard Content ================ */
-        .dashboard {
-            padding: 30px;
-            /* padding-top: 90px; */
-            overflow-y: auto;
-            height: 100%;
-        }
+/* ================ Dashboard Content Fixes ================ */
+.dashboard {
+    padding: 0 30px 45px 30px; /* Top padding removed */
+    overflow-y: visible;
+    height: auto;
+}
 
-        .welcome-section {
-            background: purple;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            color: white;
-            text-align: center;
-        }
+.welcome-section {
+    background: purple;
+    padding: 30px;
+    border-radius: 0 0 15px 15px; /* Optional: Rounded bottom corners to blend flush with topbar */
+    margin-top: 0;               /* Removes margin above welcome section */
+    margin-bottom: 30px;
+    color: white;
+    text-align: center;
+}
 
         .welcome-text {
             font-size: 2rem;
@@ -444,6 +527,10 @@
         @media (max-width: 991px) {
             .navigation {
                 left: -280px;
+            }
+
+            #brand-name-mobile {
+                visibility: hidden;
             }
 
             .navigation.active {
@@ -708,59 +795,405 @@
                 font-size: 1.3rem;
             }
         }
+
+
+        .inventory-wrapper {
+            max-width: 1100px;
+            margin: auto;
+            padding: 80px;
+            display: grid;
+            gap: 25px;
+        }
+
+        .inventory-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+        }
+
+        .inv-card {
+            background: white;
+            padding: 20px;
+            border-radius: 14px;
+            text-align: center;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, .08);
+        }
+
+        .inv-card h3 {
+            font-size: 2rem;
+            color: purple;
+        }
+
+        .inventory-box {
+            background: white;
+            padding: 20px;
+            border-radius: 14px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, .08);
+        }
+
+        .inventory-form {
+            display: grid;
+            gap: 12px;
+        }
+
+        .inventory-form input,
+        .inventory-box select {
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .inventory-form button,
+        .inventory-box button {
+            padding: 12px;
+            background: purple;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .inventory-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .inventory-item {
+            padding: 15px;
+            border-radius: 10px;
+            background: #f7f7fb;
+        }
+
+        .calc-result {
+            margin-top: 10px;
+            font-weight: 600;
+        }
+
+        #calcQty,
+        #calcItem,
+        #checkBtn {
+            width: 100%;
+        }
+
+        #calcQty {
+            margin: 16px 0;
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            background: white;
+        }
+
+
+        #calcQty,
+        #calcItem {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        @media (max-width: 600px) {
+            section {
+                padding-top: 80px;
+            }
+        }
+
+@media (max-width: 768px) {
+    .inventory-wrapper {
+        padding-bottom: 20px;
+    }
+
+    .dashboard {
+        padding-bottom: 90px; /* only for bottom-nav */
+    }
+}
+
+/* REMOVE LEFT & RIGHT PADDING ON SMALL SCREENS */
+@media (max-width: 768px) {
+    .inventory-wrapper {
+        padding-left: 20px;
+        padding-right: 20px;
+        padding-top: 80px;   /* keeps spacing below topbar */
+        padding-bottom: 20px;
+        margin: 0;
+        max-width: 100%;
+    }
+
+    .inventory-box,
+    .inv-card {
+        border-radius: 20px; /* optional: edge-to-edge feel */
+    }
+}
+
+@media (max-width: 768px) {
+    .inventory-summary {
+        display: block;
+    }
+
+    .inventory-summary .inv-card {
+        margin-bottom: 15px; /* spacing between cards */
+    }
+}
+
+        /* FULL WIDTH BOOKINGS */
+        section {
+            margin: auto;
+        }
+
+        .details {
+            grid-template-columns: 1fr;
+        }
+
+        .recentOrders {
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filters select,
+        .filters input {
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 600px) {
+            .filters {
+                flex-direction: column;
+            }
+        }
+
+/* FIXED OVERLAY */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 2000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 16px;
+}
+/* FIXED MODAL CARD */
+.modal-card {
+  background: white;
+  width: 100%;
+  max-width: 520px;
+
+  max-height: 90vh;        /* 👈 prevents overflow */
+  display: flex;
+  flex-direction: column; /* 👈 allows header + body layout */
+
+  border-radius: 16px;
+  overflow: hidden;       /* 👈 prevents header from disappearing */
+}
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            background: purple;
+            color: white;
+        }
+
+        .modal-header button {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            color: white;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 15px;
+            font-size: .95rem;
+        }
+
+        .modal-body ul {
+            padding-left: 20px;
+        }
+
+        @media (max-width: 480px) {
+            .modal-card {
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+        }
+      .modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 2000;
+
+  display: none;               /* 👈 hidden by default */
+  align-items: center;
+  justify-content: center;
+
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* Modal Box */
+.modal {
+  background: white;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;          /* 👈 critical */
+  overflow-y: auto;          /* 👈 THIS is what you asked for */
+  border-radius: 16px;
+  padding: 20px;
+  position: fixed;
+}
+/* SCROLLABLE MODAL BODY */
+.modal-body {
+  padding: 16px;
+  overflow-y: auto;       /* 👈 THIS fixes long notes */
+  flex: 1;                /* 👈 fills remaining space */
+}
+.modal-header {
+  flex-shrink: 0;         /* 👈 header never scrolls away */
+}
+
+
+
+
+
+/* ================= OVERFLOW & FIXED BOTTOM NAV ================= */
+
+/* Lock the entire page layout from horizontal overflow */
+html,
+body,
+.container,
+.main,
+.dashboard {
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+}
+
+/* Ensure padding at the bottom of the main dashboard so content doesn't get covered by the nav */
+.dashboard {
+    padding-bottom: 70px; /* Adjust height based on your bottom nav height */
+}
+
+/* Restrict horizontal scrolling ONLY to the recentOrders table card */
+.recentOrders {
+    width: 100%;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Keep table columns aligned during scroll */
+table {
+    width: 100%;
+    min-width: 500px; /* Forces scroll container to take over on smaller screens */
+}
+
+table tr td,
+table tr th {
+    white-space: nowrap;
+}
+
+/* Fix bottom navigation to the bottom of the viewport */
+.bottom-nav {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    z-index: 1000 !important;
+    box-sizing: border-box !important;
+}
+
+
+
+@media (max-width: 991px) {
+    .dashboard {
+        padding: 0 25px 25px 25px; /* Top padding set to 0 */
+    }
+}
+
+@media (max-width: 768px) {
+    .topbar {
+        left: 0;
+        width: 100%;
+    }
+
+    .dashboard {
+        padding: 0 20px 80px 20px; /* Top padding set to 0 */
+    }
+}
+
+
     </style>
-  <style>@view-transition { navigation: auto; }</style>
-  
-  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
- </head>
- <body><!-- =============== Navigation ================ -->
-  <div class="container">
-   <div class="navigation">
-    <ul>
-     <li><a href="dashboard.html"> <span class="icon">
-        <div class="logo">
-         
-        </div></span> <span class="title brand" id="brand-name">Rent Book</span> </a></li>
-     <li class="hovered"><a href="dashboard.html"> <span class="icon">
-        <span class="material-symbols-outlined" >home</span> </span> <span class="title">Dashboard</span> </a></li>
-     <li><a href="bookings.html"> <span class="icon">
-        <span class="material-symbols-outlined" >calendar_today</span> </span> <span class="title">Bookings</span> </a></li>
-     <li><a href="add.html"> <span class="icon">
-        <span class="material-symbols-outlined" >add_circle</span> </span> <span class="title">Add</span> </a></li>
-     <li><a href="inventory.html"> <span class="icon">
-        <span class="material-symbols-outlined" >inventory_2</span> </span> <span class="title">Inventory</span> </a></li>
+    <style>
+        @view-transition {
+            navigation: auto;
+        }
+    </style>
+    
+    <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+</head>
 
-    </ul>
-   </div><!-- ========================= Main ==================== -->
-   <div class="main">
-    <div class="topbar">
-     <div class="toggle"><span class="material-symbols-outlined" >menu</span>
-     </div>
-     <div class="page-title"><span class="material-symbols-outlined" >home</span>
-      <h2 class="page-name">Dashboard</h2>
-     </div>
-<div class="mobile-brand">
-  <img 
-    src="assets/logo.ico"
-    alt="RentBook"
-    style="
-      width: 34px;
-      height: 34px;
+<body><!-- =============== Navigation ================ -->
+    <div class="container">
+        <div class="navigation">
+            <ul>
+                <li><a href="dashboard.html"> <span class="icon">
+                            <div class="logo">
+                                <img src="assets/imgs/logo.png" alt="Tracknrent" style="
+      width: 74px;
+      height: 50px;
       object-fit: contain;
-      margin-right: 8px;
-    "
-  />
-  <span id="brand-name-mobile">Loading...</span>
-</div>
+      margin-right: 4px;
+    " />
+    
+                            </div>
+                               </span> <span class="brand"> Tracknrent</span> </a></li>
+                <li><a href="dashboard.html"> <span class="icon">
+                            <span class="material-symbols-outlined icon" >home</span> </span> <span class="title">Dashboard</span> </a>
+                </li>
+                <li class="hovered"><a href="bookings.html"> <span class="icon">
+                            <span class="material-symbols-outlined icon" >calendar_today</span> </span> <span class="title">Bookings</span>
+                    </a></li>
+                <li><a href="add.html"> <span class="icon">
+                            <span class="material-symbols-outlined icon" >add_circle</span> </span> <span class="title">Add</span> </a>
+                </li>
+                <li><a href="inventory.html"> <span class="icon">
+                            <span class="material-symbols-outlined icon" >inventory_2</span> </span> <span class="title">Inventory</span> </a>
+                </li>
+                <li><a href="public.html"> <span class="icon">
+                            <span class="material-symbols-outlined icon" > Public</span> </span> <span class="title">Public Profile</span> </a>
+                </li>
+            </ul>
 
-<div class="user">
-  <div
-    id="user-avatar"
-    style="
+        </div><!-- ========================= Main ==================== -->
+        <div class="main">
+            <div class="topbar">
+                <div class="toggle"><span class="material-symbols-outlined" >menu</span>
+                </div>
+                <div class="page-title">
+                    <h2 class="page-name" id="brand-name"></h2>
+                </div>
+                <div class="mobile-brand">
+                    <h1 style="color: black;">Track<span style="color: purple;">nrent</span></h1>
+                </div>
+
+                <div class="user">
+                    <div id="user-avatar" style="
       width: 100%;
       height: 100%;
       border-radius: 50%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: purple;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -768,86 +1201,116 @@
       font-weight: 700;
       font-size: 1.2rem;
       text-transform: uppercase;
-    "
-  >
-    ?
-  </div>
-</div>
+    ">
+                        ?
+                    </div>
+                </div>
 
-     </div><!-- ======================= Dashboard Content ========================= -->
-<section class="dashboard">
 
-  <!-- Page Header -->
-  <div class="welcome-section">
-    <h1 class="welcome-text">Bookings</h1>
-    <p class="welcome-subtitle">
-      View, add, and manage all bookings
-    </p>
+            </div><!-- ======================= Dashboard Content ========================= -->
+            <section class="dashboard">
 
-    <a href="add-booking.html" class="btn">
-      + Add Booking
-    </a>
-  </div>
+                <!-- Page Header -->
+                <div class="welcome-section">
+                    <h1 class="welcome-text">Bookings</h1>
+                    <p class="welcome-subtitle" style="margin-bottom: 20px;">
+                        View, add, and manage all bookings
+                    </p>
 
-  <!-- Filters -->
-  <div class="filters">
-    <select id="filterStatus">
-      <option value="">All Status</option>
-      <option value="active">Active</option>
-      <option value="done">Returned</option>
-    </select>
+                    <a href="add.html" class="btn">
+                        + Add Booking
+                    </a>
+                </div>
 
-    <input type="date" id="filterDate">
-  </div>
+                <!-- Filters -->
+                <div class="filters">
+                    <select id="filterStatus">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+<option value="upcoming">Upcoming</option>
+<option value="returned">Returned</option>
+<option value="overdue">Overdue</option>
+<option value="overbooked">Overbooked</option>
+                        </select>
 
-  <!-- Bookings Table -->
-  <div class="details">
-    <div class="recentOrders">
-      <div class="cardHeader">
-        <h2>All Bookings</h2>
-      </div>
+                    <input type="date" id="filterDate">
+                    <input type="text" id="searchInput" placeholder="Search client name..." class="flex-grow" style="border: purple;">
 
-      <table>
-        <thead>
-          <tr>
-            <td>Client</td>
-            <td>Date</td>
-            <td>Items</td>
-            <td>Status</td>
-            <td>Action</td>
-          </tr>
-        </thead>
+                    <button id="exportBookingsBtn" class="btn">
+  Export Bookings
+</button>
 
-        <tbody id="bookingsTable">
-          <tr>
-            <td colspan="5" style="text-align:center;">
-              Loading bookings...
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+                    </div>
 
-</section>
+                <!-- Bookings Table -->
+                <div class="details">
+                    <div class="recentOrders">
+                        <div class="cardHeader">
+                            <h2>All Bookings</h2>
+                        </div>
 
-   </div><!-- =============== Bottom Navigation (Mobile) ================ -->
-   <nav class="bottom-nav">
-    <ul>
-     <li class="active"><a href="dashboard.html"> <span class="icon">
-        <span class="material-symbols-outlined" >home</span> </span> <span class="title">Dashboard</span> </a></li>
-     <li><a href="booking.html"> <span class="icon">
-        <span class="material-symbols-outlined" >calendar_today</span> </span> <span class="title">Bookings</span> </a></li>
-     <li><a href="add.html"> <span class="icon">
-        <span class="material-symbols-outlined" >add_circle</span> </span> <span class="title">Add</span> </a></li>
-     <li><a href="inventory.html"> <span class="icon">
-        <span class="material-symbols-outlined" >inventory_2</span> </span> <span class="title">Inventory</span> </a></li>
-    </ul>
-   </nav>
-  </div><!-- =========== Scripts =========  -->
-  
-  
-  <script>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <td>Client</td>
+                                    <td>Date</td>
+                                    <td>Status</td>
+                                    <td>Action</td>
+                                </tr>
+                            </thead>
+
+                            <tbody id="bookingsTable">
+                                <tr>
+                                    <td colspan="5" style="text-align:center;">
+                                        Loading bookings...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </section>
+
+            <div class="modal-overlay" id="bookingModal">
+                <div class="modal-card" style="margin-top: 70px;">
+
+                    <div class="modal-header">
+                        <h3 id="modalTitle">Booking</h3>
+                        <button onclick="closeModal()">✕</button>
+                    </div>
+
+                    <div id="modalContent" class="modal-body"></div>
+
+                </div>
+            </div>
+
+
+
+        </div><!-- =============== Bottom Navigation (Mobile) ================ -->
+        <nav class="bottom-nav">
+            <ul>
+                <li><a href="dashboard.html"> <span class="icon">
+                            <span class="material-symbols-outlined" >home</span> </span> <span class="title">Dashboard</span> </a>
+                </li>
+                <li class="active"><a href="bookings.html"> <span class="icon">
+                            <span class="material-symbols-outlined" >calendar_today</span> </span> <span class="title">Bookings</span>
+                    </a></li>
+                <li><a href="add.html"> <span class="icon">
+                            <span class="material-symbols-outlined" >add_circle</span> </span> <span class="title">Add</span> </a>
+                </li>
+                <li><a href="inventory.html"> <span class="icon">
+                            <span class="material-symbols-outlined" >inventory_2</span> </span> <span class="title">Inventory</span> </a>
+                </li>
+                <li><a href="public.html"> <span class="icon">
+                            <span class="material-symbols-outlined" > Public</span> </span> <span class="title">Profile</span> </a>
+                </li>
+            </ul>
+        </nav>
+    </div><!-- =========== Scripts =========  -->
+    
+    
+    <script>
         // Menu Toggle
         let toggle = document.querySelector(".toggle");
         let navigation = document.querySelector(".navigation");
@@ -884,7 +1347,7 @@
 
         // Edit Panel Integration
         const defaultConfig = {
-            brand_name: "Rent Book",
+            brand_name: "Tracknrent",
             welcome_text: "Welcome back, Admin! 👋",
             welcome_subtitle: "Here's what's happening with your rental business today",
             properties_label: "Total Properties",
@@ -943,9 +1406,11 @@
             });
         }
     </script>
-    <script type="module" src="assets/js/firebase.js"></script>
     <script type="module" src="assets/js/avatar.js"></script>
+    <script type="module" src="assets/js/firebase.js"></script>
     <script type="module" src="assets/js/bookings.js"></script>
-    <script src="assets/js/pwa.js"></script>
+    <script src="assets/js/pwa.js"></script>  
+
 </body>
+
 </html>
