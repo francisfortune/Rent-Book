@@ -1,6 +1,9 @@
 // ============================================
-// ONESIGNAL v16 — COMPLETE FIX
+// ONESIGNAL v16 — HELPERS + sendPush (SDK-first)
 // ============================================
+// NOTE: OneSignal.init() is now handled by an inline <script> in each
+// HTML page's <head>, immediately after the SDK script tag. Do NOT
+// re-add init() here — it runs too late and the SDK bootstrap ignores it.
 
 const ONESIGNAL_APP_ID = "539d08e3-cada-4b7e-88c3-f89af30ff7f9";
 
@@ -10,21 +13,20 @@ const isLocalhost = window.location.hostname === 'localhost' ||
                     window.location.hostname === '';
 
 // ============================================
-// ✅ HELPER: Wait for OneSignal SDK to be ready
+// ✅ HELPER: Wait for the REAL OneSignal SDK (not the stub)
 // ============================================
 function waitForOneSignal(timeoutMs = 3000) {
     return new Promise((resolve) => {
-        if (window.OneSignal && typeof window.OneSignal.User !== 'undefined') {
-            return resolve(true);
-        }
+        // The stub does NOT have SDK_VERSION. The real SDK does.
+        const isReal = () => !!(window.OneSignal && window.OneSignal.SDK_VERSION);
+        if (isReal()) return resolve(true);
 
         let elapsed = 0;
         const interval = 100;
 
         const timer = setInterval(() => {
             elapsed += interval;
-
-            if (window.OneSignal && typeof window.OneSignal.User !== 'undefined') {
+            if (isReal()) {
                 clearInterval(timer);
                 resolve(true);
             } else if (elapsed >= timeoutMs) {
@@ -47,7 +49,6 @@ function isPermissionGranted(perm) {
 // ============================================
 function getOneSignalUserId() {
     try {
-        // v16: it's a property, not a method
         return window.OneSignal?.User?.onesignalId || null;
     } catch (err) {
         console.warn('[OneSignal] Failed to get user ID:', err.message);
@@ -76,14 +77,12 @@ export async function sendPush(message, url = "/dashboard.html") {
         if (sdkReady && window.OneSignal) {
             const OneSignal = window.OneSignal;
 
-            // ✅ v16: permission is a property (may be string or boolean)
             const rawPermission = OneSignal.Notifications.permission;
             const granted = isPermissionGranted(rawPermission);
 
             console.log('[OneSignal] SDK permission:', rawPermission, '(granted:', granted + ')');
 
             if (granted) {
-                // ✅ v16: use property, not method
                 const userId = getOneSignalUserId();
                 console.log('[OneSignal] SDK user ID:', userId);
 
@@ -173,61 +172,7 @@ if (isLocalhost) {
     }
 
     console.log('[OneSignal] ✅ Localhost mock applied');
-
-} else {
-    // ============================================
-    // ✅ PRODUCTION — INITIALIZE ONESIGNAL
-    // ============================================
-    (function() {
-        'use strict';
-
-        if (window.__onesignal_initialized) {
-            console.log('[OneSignal] Already initialized, skipping');
-            return;
-        }
-        window.__onesignal_initialized = true;
-
-        const initOneSignal = () => {
-            window.OneSignalDeferred = window.OneSignalDeferred || [];
-
-            window.OneSignalDeferred.push(async function(OneSignal) {
-                try {
-                    console.log('[OneSignal] 🚀 Initializing...');
-                    await OneSignal.init({
-                        appId: ONESIGNAL_APP_ID,
-                        serviceWorkerPath: "/sw.js",
-                        serviceWorkerParam: { scope: "/" },
-                        allowLocalhostAsSecureOrigin: false,
-                        notifyButton: {
-                            enable: false
-                        }
-                    });
-
-                    // ✅ v16: property, may be string or boolean
-                    const rawPermission = OneSignal.Notifications.permission;
-                    const granted = isPermissionGranted(rawPermission);
-                    console.log('[OneSignal] Permission:', rawPermission, '(granted:', granted + ')');
-
-                    if (granted) {
-                        // ✅ v16: property, not method
-                        const userId = OneSignal.User.onesignalId;
-                        console.log('[OneSignal] User ID:', userId || '(not yet assigned)');
-                    }
-
-                    console.log('[OneSignal] ✅ Initialized successfully');
-                } catch (error) {
-                    console.warn('[OneSignal] ⚠️ Init error:', error.message);
-                }
-            });
-
-            console.log('[OneSignal] ✅ Module loaded for production');
-        };
-
-        if (document.readyState === 'complete') {
-            initOneSignal();
-        } else {
-            window.addEventListener('load', initOneSignal);
-        }
-
-    })();
 }
+
+// Production init lives in an inline <script> in each HTML <head>.
+// Do not add it back here.
