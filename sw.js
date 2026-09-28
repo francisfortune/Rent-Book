@@ -15,7 +15,7 @@ self.addEventListener('message', (event) => {
 // Prevent multiple installs
 let isInstalling = false;
 
-const CACHE_NAME = 'Tracknrent-v1.0.6'; // ⬆️ bumped from v1.0.5
+const CACHE_NAME = 'Tracknrent-v1.0.6'; // ⬆️ bump this when you want to force-update
 const DYNAMIC_CACHE = 'Tracknrent-dynamic-v1';
 
 const STATIC_ASSETS = [
@@ -109,7 +109,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const { request } = event;
 
-    // Only GET
     if (request.method !== 'GET') return;
 
     let url;
@@ -131,7 +130,6 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Only handle http/https
     if (!url.protocol.startsWith('http')) return;
 
     event.respondWith(
@@ -177,7 +175,6 @@ self.addEventListener('sync', (event) => {
 });
 
 async function syncBookings() {
-    // Implement sync logic if needed
     return [];
 }
 
