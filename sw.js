@@ -2,20 +2,31 @@
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 
 // ============================================
-// ✅ MESSAGE HANDLER — top level, handles SKIP_WAITING
+// MESSAGE HANDLER — must be at top level.
+// The browser warns if handlers are added via setTimeout, and
+// OneSignal's own SDK does that internally. Our handler here is
+// synchronous and registered on first evaluation, which is fine.
 // ============================================
 self.addEventListener('message', (event) => {
-    console.log('[SW] Message received:', event.data);
-    if (event.data && event.data.type === 'SKIP_WAITING') {
-        console.log('[SW] Skipping waiting…');
+    const data = event.data;
+    // Silent: Firebase's IndexedDB sync chats a lot. Don't log it.
+    if (data && data.eventType === 'keyChanged') return;
+
+    // Silent: OneSignal internal messages.
+    if (data && data.fromOneSignal) return;
+
+    if (data && data.type === 'SKIP_WAITING') {
         self.skipWaiting();
+        return;
     }
+    // Anything else — log it, but quietly.
+    console.log('[SW] Message:', data);
 });
 
 // Prevent multiple installs
 let isInstalling = false;
 
-const CACHE_NAME = 'Tracknrent-v1.0.6'; // ⬆️ bump this when you want to force-update
+const CACHE_NAME = 'Tracknrent-v1.0.7'; // ⬆️ bump this on each deploy
 const DYNAMIC_CACHE = 'Tracknrent-dynamic-v1';
 
 const STATIC_ASSETS = [
@@ -48,7 +59,9 @@ const STATIC_ASSETS = [
 ];
 
 // ============================================
-// INSTALL — NO skipWaiting here (user controls update)
+// INSTALL — cache assets AND activate immediately.
+// skipWaiting() here is what stops the "update available" banner
+// from showing on every load. New SWs take over silently.
 // ============================================
 self.addEventListener('install', (event) => {
     if (isInstalling) {
@@ -58,6 +71,7 @@ self.addEventListener('install', (event) => {
     isInstalling = true;
 
     console.log('[ServiceWorker] Installing…');
+
     event.waitUntil(
         caches
             .open(CACHE_NAME)
@@ -73,10 +87,9 @@ self.addEventListener('install', (event) => {
                 );
             })
             .then(() => {
-                console.log('[ServiceWorker] Installation complete — waiting for user');
-                // ❌ NO self.skipWaiting() here.
-                // The new SW stays in "waiting" state until the page
-                // sends SKIP_WAITING via postMessage.
+                console.log('[ServiceWorker] Installation complete — activating now');
+                // ✅ Take over immediately.
+                return self.skipWaiting();
             })
             .finally(() => {
                 isInstalling = false;
@@ -85,7 +98,9 @@ self.addEventListener('install', (event) => {
 });
 
 // ============================================
-// ACTIVATE — clean old caches, claim clients
+// ACTIVATE — clean old caches, claim clients.
+// clients.claim() means the new SW starts controlling the page
+// without needing a hard refresh.
 // ============================================
 self.addEventListener('activate', (event) => {
     console.log('[ServiceWorker] Activating…');
