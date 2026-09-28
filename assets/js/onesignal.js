@@ -10,6 +10,7 @@ const isLocalhost = window.location.hostname === 'localhost' ||
                     window.location.hostname === '';
 
 // ✅ Export sendPush at MODULE scope
+// ✅ Export sendPush at MODULE scope
 export async function sendPush(message, url = "/dashboard.html") {
     // ✅ Skip push on localhost
     if (isLocalhost) {
@@ -19,42 +20,53 @@ export async function sendPush(message, url = "/dashboard.html") {
 
     console.log('[OneSignal] 📨 Sending push:', { message, url });
 
+    // ✅ STRATEGY 1: Try OneSignal SDK first (preferred — instant delivery)
     try {
-        // Try OneSignal SDK first
-        if (window.OneSignal && typeof window.OneSignal.Notifications !== 'undefined') {
-            try {
-                const OneSignal = window.OneSignal;
+        // Wait up to 3 seconds for SDK to become available
+        const sdkReady = await waitForOneSignal(3000);
+
+        if (sdkReady && window.OneSignal) {
+            const OneSignal = window.OneSignal;
+
+            // Check we have permission
+            const permission = await OneSignal.Notifications.permission;
+            console.log('[OneSignal] SDK permission:', permission);
+
+            if (permission === 'granted') {
+                // Get this device's user ID
                 const userId = await OneSignal.User.getOnesignalId();
-                
+                console.log('[OneSignal] SDK user ID:', userId);
+
                 if (userId) {
                     await OneSignal.Notifications.add({
                         contents: { en: message },
                         data: { url: url },
                         targetUserId: userId,
-                        web_url: url
+                        web_url: url.startsWith('http') 
+                            ? url 
+                            : `https://tracknrent.vercel.app${url}`
                     });
-                    console.log('[OneSignal] ✅ Push sent via SDK');
-                    return { success: true };
-                } else {
-                    console.log('[OneSignal] ⚠️ No user ID found, falling back to serverless');
+                    console.log('[OneSignal] ✅ Push sent via SDK (instant)');
+                    return { success: true, method: 'sdk' };
                 }
-            } catch (sdkError) {
-                console.warn('[OneSignal] ⚠️ SDK send failed:', sdkError.message);
+            } else {
+                console.log('[OneSignal] ⚠️ SDK permission not granted, using fallback');
             }
         }
+    } catch (sdkError) {
+        console.warn('[OneSignal] ⚠️ SDK send failed:', sdkError.message);
+    }
 
-        // Fallback: Serverless API
-        console.log('[OneSignal] 🔄 Trying serverless fallback...');
+    // ✅ STRATEGY 2: Fallback to serverless API
+    console.log('[OneSignal] 🔄 Trying serverless fallback...');
+    try {
         const response = await fetch("/api/send-push", {
             method: "POST",
-            headers: { 
+            headers: {
                 "Content-Type": "application/json",
                 "Accept": "application/json"
             },
-            body: JSON.stringify({ 
-                message: message,
-                url: url
-            })
+            body: JSON.stringify({ message, url })
         });
 
         const data = await response.json();
@@ -65,7 +77,7 @@ export async function sendPush(message, url = "/dashboard.html") {
         }
 
         console.log('[OneSignal] ✅ Push sent via serverless:', data);
-        return { success: true, data };
+        return { success: true, method: 'serverless', data };
 
     } catch (err) {
         console.error('[OneSignal] ❌ Push network error:', err);
@@ -73,6 +85,33 @@ export async function sendPush(message, url = "/dashboard.html") {
     }
 }
 
+/**
+ * ✅ Wait for window.OneSignal to become available (with timeout)
+ * Handles the async nature of the SDK loader.
+ */
+function waitForOneSignal(timeoutMs = 3000) {
+    return new Promise((resolve) => {
+        // If already available, resolve immediately
+        if (window.OneSignal && typeof window.OneSignal.User !== 'undefined') {
+            return resolve(true);
+        }
+
+        let elapsed = 0;
+        const interval = 100; // check every 100ms
+
+        const timer = setInterval(() => {
+            elapsed += interval;
+
+            if (window.OneSignal && typeof window.OneSignal.User !== 'undefined') {
+                clearInterval(timer);
+                resolve(true);
+            } else if (elapsed >= timeoutMs) {
+                clearInterval(timer);
+                resolve(false);
+            }
+        }, interval);
+    });
+}
 // ✅ Expose to window
 window.sendPush = sendPush;
 
