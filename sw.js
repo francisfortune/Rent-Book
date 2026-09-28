@@ -1,11 +1,12 @@
 // MUST BE LINE 1: Import OneSignal ServiceWorker SDK
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+
 // ============================================
 // ✅ MESSAGE HANDLER - MUST BE AT TOP LEVEL
 // ============================================
 self.addEventListener('message', (event) => {
     console.log('[SW] Message received:', event.data);
-    
+
     if (event.data && event.data.type === 'SKIP_WAITING') {
         console.log('[SW] Skipping waiting...');
         self.skipWaiting();
@@ -14,7 +15,6 @@ self.addEventListener('message', (event) => {
 
 // Prevent multiple installations
 let isInstalling = false;
-
 
 const CACHE_NAME = 'Tracknrent-v1.0.5';
 const DYNAMIC_CACHE = 'Tracknrent-dynamic-v1';
@@ -48,14 +48,14 @@ const STATIC_ASSETS = [
     '/manifest.json'
 ];
 
-// Install event with lock to prevent loops
+// Install event
 self.addEventListener('install', (event) => {
     if (isInstalling) {
         event.waitUntil(Promise.resolve());
         return;
     }
     isInstalling = true;
-    
+
     console.log('[ServiceWorker] Installing...');
     event.waitUntil(
         caches.open(CACHE_NAME)
@@ -94,24 +94,35 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Fetch event with network-first strategy
+// Fetch event — network-first, with OneSignal/firebase bailouts
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
     if (request.method !== 'GET') return;
 
-    // Skip Firebase, Google APIs, OneSignal
+    // 🔴 CRITICAL: Never respondWith on OneSignal's own endpoints.
+    // OneSignal's SW (imported at the top of this file) needs to handle
+    // /sw.js, /manifest.json and its own CDN/api hosts. If we call
+    // event.respondWith here, we race OneSignal's SW and break device
+    // registration — which is why onesignalId was always null.
+    if (url.hostname.includes('onesignal.com') ||
+        url.pathname.startsWith('/OneSignalSDK') ||
+        url.pathname === '/sw.js' ||
+        url.pathname === '/manifest.json') {
+        return;
+    }
+
+    // Skip Firebase, Google APIs
     if (url.hostname.includes('firebaseapp.com') ||
         url.hostname.includes('googleapis.com') ||
         url.hostname.includes('gstatic.com') ||
         url.hostname.includes('firebase.google.com') ||
-        url.hostname.includes('firebaseio.com') ||
-        url.hostname.includes('onesignal.com')) {
+        url.hostname.includes('firebaseio.com')) {
         return;
     }
 
-    // Network-first for all requests
+    // Network-first for everything else
     event.respondWith(
         fetch(request)
             .then(response => {
@@ -141,7 +152,6 @@ self.addEventListener('sync', (event) => {
 });
 
 async function syncBookings() {
-    // Implement sync logic if needed
     return [];
 }
 
