@@ -129,7 +129,7 @@ async function claimPendingInvite(user) {
         await addDoc(
           collection(db, "businesses", data.businessId, "notifications"),
           {
-            message: `🎉 Welcome! ${user.email || user.phoneNumber} has accepted the invite and joined the team.`,
+            message: `Welcome! ${user.email || user.phoneNumber} has accepted the invite and joined the team.`,
             type: "invite_accepted",
             triggeredBy: user.email || user.phoneNumber || user.uid,
             createdAt: serverTimestamp(),

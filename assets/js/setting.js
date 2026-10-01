@@ -291,11 +291,19 @@ document.getElementById("shareReferralBtn")?.addEventListener("click", async () 
     return;
   }
 
-  const shareData = {
-    title: "Join me on Tracknrent",
-    text: "I use Tracknrent to manage my rental business — bookings, inventory, WhatsApp receipts, all in one place. Sign up with my link:",
-    url
-  };
+const shareData = {
+  title: "Tracknrent — you need to see this",
+  text:
+    "Omo, I finally found something that fixed my rental business stress 😅\n\n" +
+    "You know how we're always writing bookings in a notebook, then one customer is calling, " +
+    "another one is asking where their chairs are, and you're just there confused?\n\n" +
+    "There's this app called Tracknrent. Bookings, inventory, WhatsApp receipts, payments — " +
+    "everything is just there. No more \"who still has my canopy?\" wahala.\n\n" +
+    "I've been using it and honestly it's a game changer. Just sign up with my link, " +
+    "you'll thank me later 🙏",
+  url
+};
+
 
   try {
     if (navigator.share) {
@@ -496,14 +504,14 @@ document.getElementById("savePartnerChanges").onclick = async () => {
     const businessId = await getBusinessIdByEmail(auth.currentUser.email, auth.currentUser);
 
     await addDoc(collection(db, "businesses", businessId, "notifications"), {
-      message: `⚙️ Team member updated: ${displayId} is now a ${role}`,
+      message: `Team member updated: ${displayId} is now a ${role}`,
       type: "member_updated",
       triggeredBy: currentInviter,
       createdAt: serverTimestamp(),
       readBy: []
     });
 
-    await sendPush(`⚙️ Team member updated: ${displayId} is now a ${role}`, "/settings.html");
+    await sendPush(`Team member updated: ${displayId} is now a ${role}`, "/settings.html");
 
     document.getElementById("editPartnerModal").classList.add("hidden");
   } catch (err) {
@@ -538,14 +546,14 @@ document.getElementById("confirmDeletePartner").onclick = async () => {
     await deleteDoc(doc(db, "businessMembers", selectedPartnerId));
 
     await addDoc(collection(db, "businesses", businessId, "notifications"), {
-      message: `🚫 Member Removed: ${selectedPartnerEmail} was removed from the business.`,
+      message: `Member Removed: ${selectedPartnerEmail} was removed from the business.`,
       type: "member_removed",
       triggeredBy: currentInviter,
       createdAt: serverTimestamp(),
       readBy: []
     });
 
-    await sendPush(`🚫 Member Removed: ${selectedPartnerEmail} was removed from the business.`, "/settings.html");
+    await sendPush(`Member Removed: ${selectedPartnerEmail} was removed from the business.`, "/settings.html");
 
     document.getElementById("deletePartnerModal").classList.add("hidden");
   } catch (err) {
@@ -735,14 +743,14 @@ onAuthStateChanged(auth, async (user) => {
         }
 
         await addDoc(collection(db, "businesses", businessId, "notifications"), {
-          message: `🎉 Welcome! ${data.email} has accepted the invite and joined the team.`,
+          message: `Welcome! ${data.email} has accepted the invite and joined the team.`,
           type: "invite_accepted",
           triggeredBy: data.email,
           createdAt: serverTimestamp(),
           readBy: []
         });
 
-        await sendPush(`🎉 ${data.email} has joined your business!`, "/settings.html");
+        await sendPush(`${data.email} has joined your business!`, "/settings.html");
       });
     });
 
@@ -761,7 +769,7 @@ onAuthStateChanged(auth, async (user) => {
         await updateDoc(businessRef, { name: newName, updatedAt: serverTimestamp() });
 
         await addDoc(collection(db, "businesses", businessId, "notifications"), {
-          message: `📝 Business name updated to: "${newName}"`,
+          message: `Business name updated to: "${newName}"`,
           type: "settings_change",
           triggeredBy: auth.currentUser.email,
           createdAt: serverTimestamp(),
@@ -848,10 +856,10 @@ onAuthStateChanged(auth, async (user) => {
           readBy: []
         });
 
-        await sendPush(`✉️ Invite Sent: ${displayId} has been invited as a ${role}.`, "/settings.html");
+        await sendPush(`Invite Sent: ${displayId} has been invited as a ${role}.`, "/settings.html");
 
         inviteForm.reset();
-        alert(`Invite sent to ${displayId} ✅`);
+        alert(`Invite sent to ${displayId} `);
       });
     }
 

@@ -307,6 +307,7 @@ function recalcTotal() {
     `*BOOKING CONFIRMATION - ${currentBusinessName.toUpperCase()}*\n\n` +
     `Hi ${document.getElementById("clientName")?.value || "Customer"}, your booking is confirmed! ✅\n\n` +
     `Event Date: ${document.getElementById("eventDate")?.value || "Date"}\n` +
+       `Delivery Date: ${document.getElementById("deliveryDate")?.value || "Date"}\n` +
     `Return Date: ${document.getElementById("returnDate")?.value || "Date"}\n` +
     `Location: ${document.getElementById("eventLocation")?.value || "Not specified"}\n\n` +
     `Items Ordered: \n${itemsSummary}\n` +
@@ -319,6 +320,8 @@ function recalcTotal() {
     `_Powered by Tracknrent_ \n` + 
     `👉 https://tracknrent.vercel.app`;
   
+
+
   const previewBox = document.getElementById("liveReceiptText");
   if (previewBox) {
     previewBox.innerText = previewText;
@@ -462,7 +465,7 @@ window.addItemRow = function () {
     <div class="vendor-container hidden w-full mt-2 p-3 border border-purple-200 bg-purple-50 rounded-lg">
         <label class="block text-[10px] font-bold text-purple-700 uppercase mb-1">Vendor Name (To borrow from):</label>
         <input class="vendor-name w-full p-2 border border-purple-300 rounded-md text-sm outline-none" 
-               placeholder="e.g. John Rentals" title='Vendor to borrow shortage from'>
+               placeholder="e.g. Demo Rentals" title='Vendor to borrow shortage from'>
     </div>
     
     

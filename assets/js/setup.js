@@ -1,5 +1,7 @@
 // assets/js/setup.js
+// assets/js/setup.js
 import { auth, db } from "./firebase.js";
+import { sendPush } from "./onesignal.js";
 
 import {
   collection,
@@ -15,6 +17,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
 
 /* =========================
    GUARD: ENSURE USER HAS NO BUSINESS
@@ -154,89 +157,112 @@ async function processReferral(user, newBusinessId) {
       createdAt: serverTimestamp()
     });
 
-    // ✅ NEW: Calculate new referral count
+    // Calculate new referral count
     const newCount = (referrerData.referralCount || 0) + 1;
     const updates = { referralCount: newCount };
-    
+
     // ============================================
     // 🏆 TIERED REWARDS SYSTEM
+    // Only tier 4 (10 referrals) uses "badge/unlocked" language.
+    // Earlier tiers are momentum nudges to push them toward 10.
     // ============================================
-    
-    // ✅ Tier 1: 1 Referral = Verified Badge
+
+    // ─────────────────────────────────────────
+    // TIER 1 — first referral: momentum nudge.
+    // ─────────────────────────────────────────
     if (newCount >= 1 && !referrerData.marketplace?.verified) {
       updates["marketplace.verified"] = true;
       updates["verification.verifiedAt"] = serverTimestamp();
-      
+
+      const msg = `You just brought your first business to Tracknrent. That's how it starts — now keep going. 9 more and you unlock the Featured spot on the Marketplace.`;
       await addDoc(collection(db, "businesses", referrerBusinessId, "notifications"), {
-        message: `✅ Verified Badge Unlocked! You've earned your first referral. Customers will now see the Verified badge on your storefront.`,
+        message: msg,
         type: "referral_milestone",
         triggeredBy: "Tracknrent",
         createdAt: serverTimestamp(),
         readBy: [],
         deletedFor: []
       });
+      await sendPush(msg, "/settings.html");
     }
-    
-    // ✅ Tier 2: 3 Referrals = High Volume Badge
+
+    // ─────────────────────────────────────────
+    // TIER 2 — 3 referrals: reinforce + countdown.
+    // ─────────────────────────────────────────
     if (newCount >= 3) {
       updates["marketplace.highVolume"] = true;
-      
+
+      const msg = `3 referrals and counting. Other rental owners are clearly listening to you. ${10 - newCount} more to Featured.`;
       await addDoc(collection(db, "businesses", referrerBusinessId, "notifications"), {
-        message: `📈 High Volume Badge Unlocked! ${newCount} businesses have joined through you. You're building a strong network!`,
+        message: msg,
         type: "referral_milestone",
         triggeredBy: "Tracknrent",
         createdAt: serverTimestamp(),
         readBy: [],
         deletedFor: []
       });
+      await sendPush(msg, "/settings.html");
     }
-    
-    // ✅ Tier 3: 5 Referrals = Trusted Partner
+
+    // ─────────────────────────────────────────
+    // TIER 3 — 5 referrals: halfway, social proof.
+    // ─────────────────────────────────────────
     if (newCount >= 5) {
       updates["marketplace.trustedPartner"] = true;
-      
+
+      const msg = `Halfway there — ${newCount} businesses joined through you. Your name is already trusted in the rental community. Keep pushing — Featured is ${10 - newCount} away.`;
       await addDoc(collection(db, "businesses", referrerBusinessId, "notifications"), {
-        message: `🤝 Trusted Partner Status! ${newCount} businesses trust you enough to join through your referral. You're now a Tracknrent Trusted Partner!`,
+        message: msg,
         type: "referral_milestone",
         triggeredBy: "Tracknrent",
         createdAt: serverTimestamp(),
         readBy: [],
         deletedFor: []
       });
+      await sendPush(msg, "/settings.html");
     }
-    
-    // ✅ Tier 4: 10 Referrals = Featured + Verified (Keep existing)
+
+    // ─────────────────────────────────────────
+    // TIER 4 — 10 referrals: THE badge moment.
+    // Only message with "badge / unlocked" language.
+    // ─────────────────────────────────────────
     if (newCount >= 10) {
       updates["marketplace.featured"] = true;
       updates["marketplace.verified"] = true;
       updates["features.marketplace"] = true;
-      
+
+      const msg = `🏆 Featured Badge Unlocked. You brought ${newCount} businesses onto Tracknrent. Your business now appears in the Featured row on the Marketplace — where new customers look first. This is the one that matters.`;
       await addDoc(collection(db, "businesses", referrerBusinessId, "notifications"), {
-        message: `🏆 FEATURED STATUS UNLOCKED! ${newCount} businesses have joined through you. Your business is now FEATURED on the Tracknrent Marketplace!`,
+        message: msg,
         type: "referral_milestone",
         triggeredBy: "Tracknrent",
         createdAt: serverTimestamp(),
         readBy: [],
         deletedFor: []
       });
+      await sendPush(msg, "/settings.html");
     }
-    
-    // ✅ Bonus: Every 5 referrals after 10
-    if (newCount >= 10 && newCount % 5 === 0) {
+
+    // ─────────────────────────────────────────
+    // AFTER 10 — anniversary kudos, no badge language.
+    // ─────────────────────────────────────────
+    if (newCount > 10 && newCount % 5 === 0) {
+      const msg = `${newCount} referrals now — that's not a fluke, that's a reputation. Thanks for putting Tracknrent in front of the right people.`;
       await addDoc(collection(db, "businesses", referrerBusinessId, "notifications"), {
-        message: `🌟 Amazing! You've reached ${newCount} referrals. Keep sharing and growing your network!`,
+        message: msg,
         type: "referral_milestone",
         triggeredBy: "Tracknrent",
         createdAt: serverTimestamp(),
         readBy: [],
         deletedFor: []
       });
+      await sendPush(msg, "/settings.html");
     }
 
     // Update the referrer business
     await updateDoc(doc(db, "businesses", referrerDoc.id), updates);
 
-    // ✅ NEW: Add referral analytics tracking
+    // Referral analytics tracking
     await addDoc(collection(db, "businesses", referrerBusinessId, "referralAnalytics"), {
       referredBusinessId: newBusinessId,
       referredBusinessName: referredBizName,
@@ -245,19 +271,21 @@ async function processReferral(user, newBusinessId) {
       createdAt: serverTimestamp()
     });
 
-    // Send referral notification to referrer
+    // "Someone joined using your link" — informational, not a milestone.
+    const joinedMsg = `${referredBizName} just completed setup using your referral! (${newCount}/10 referrals)`;
     await addDoc(collection(db, "businesses", referrerDoc.id, "notifications"), {
-      message: `🤝 ${referredBizName} just completed setup using your referral! (${newCount}/10 referrals)`,
+      message: joinedMsg,
       type: "referral",
       triggeredBy: "Tracknrent",
       createdAt: serverTimestamp(),
       readBy: [],
       deletedFor: []
     });
+    await sendPush(joinedMsg, "/settings.html");
 
-    // ✅ NEW: Send welcome notification to referred business
+    // Welcome notification to the referred business (no push — they just signed up, don't spam).
     await addDoc(collection(db, "businesses", newBusinessId, "notifications"), {
-      message: `👋 Welcome ${referredBizName}! You were referred by ${referrerData.name || "another Tracknrent business"}. Welcome to the community!`,
+      message: `Welcome ${referredBizName}! You were referred by ${referrerData.name || "another Tracknrent business"}. Welcome to the community!`,
       type: "welcome_referral",
       triggeredBy: "Tracknrent",
       createdAt: serverTimestamp(),
@@ -269,8 +297,6 @@ async function processReferral(user, newBusinessId) {
     console.error("Referral processing failed:", err);
   }
 }
-
-
 
 /* =========================
    SETUP SUBMIT
@@ -392,7 +418,7 @@ onAuthStateChanged(auth, async (user) => {
 async function sendWelcomeNotification(businessId, businessName) {
   try {
     await addDoc(collection(db, "businesses", businessId, "notifications"), {
-      message: `Welcome ${businessName}! 🎉 To get started, go to the Inventory tab to manage your items, or use the Bookings tab to schedule your first client event. We're here to help you grow!`,
+      message: `Welcome ${businessName}! To get started, go to the Inventory tab to manage your items, or use the Bookings tab to schedule your first client event. We're here to help you grow!`,
       type: "welcome",
       triggeredBy: "Tracknrent",
       createdAt: serverTimestamp(),

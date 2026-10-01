@@ -223,7 +223,7 @@ export async function generateAlerts(businessId) {
                     type: "upcoming_booking",
                     severity: "info",
                     title: "Upcoming Event",
-                    message: `${booking.eventName} for ${booking.clientName} on ${booking.eventDate}`,
+                    message: `${booking.clientName} Has an Event on ${booking.eventDate}`,
                     bookingId: booking.id
                 });
             }
@@ -341,7 +341,7 @@ export async function autoGenerateBookingReminders(businessId) {
                 await createReminder(businessId, {
                     type: "booking",
                     title: "Upcoming Event Reminder",
-                    message: `Prepare items for ${booking.eventName} - ${booking.clientName}`,
+                    message: `Prepare items for ${booking.clientName}`,
                     dueDate: reminderDateStr,
                     priority: "high",
                     relatedId: booking.id
@@ -543,7 +543,7 @@ export async function runAutomatedChecks(businessId) {
                     });
                     await notifyAll({
                         businessId,
-                        message: `Delivery tomorrow — ${clientName}`,
+                        message: `Delivery tomorrow For ${clientName} on ${deliveryDateStr} \n Do Remember?`,
                         type: "delivery_reminder",
                         bookingId,
                         deepLink: `/bookings.html?highlight=${bookingId}`,
@@ -566,7 +566,7 @@ export async function runAutomatedChecks(businessId) {
                     });
                     await notifyAll({
                         businessId,
-                        message: `Delivery in 2 hours — ${clientName}`,
+                        message: `Delivery in 2 hours for ${clientName} \n Are you Ready?`,
                         type: "delivery_reminder",
                         bookingId,
                         deepLink: `/bookings.html?highlight=${bookingId}`,

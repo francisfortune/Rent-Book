@@ -9,6 +9,8 @@
 //      cascades — activeBookingsCache is set once and reused.
 //   5. All notifications go through a single sendInventoryNotification()
 //      helper that logs errors instead of crashing.
+//   6. Overbooked panel now shows ANY booking with borrowed / not-in-inventory
+//      items (matching the booking modal's "Vendor / Borrowed Items" block).
 // ---------------------------------------------------------------------------
 
 import { auth, db } from "./firebase.js";
@@ -100,6 +102,39 @@ let lastRenderedItems = { filtered: [], all: [] };
 // Track every active listener so we can clean up if auth state changes.
 let unsubInventory = null;
 let unsubOverbooked = null;
+
+/* =========================================================
+   HELPERS
+========================================================= */
+/**
+ * A booking is "borrow-relevant" if it has any item that is:
+ *   - short (shortage > 0), OR
+ *   - supplied by a vendor (supplier non-empty), OR
+ *   - a custom / not-in-inventory item.
+ * This is the same rule used in bookings.js openBooking().
+ */
+function hasBorrowedOrCustomItems(booking) {
+  if (isBookingOverbooked(booking)) return true;
+  return (booking.items || []).some(
+    (i) =>
+      Number(i.shortage || 0) > 0 ||
+      (i.supplier && String(i.supplier).trim() !== "") ||
+      i.isCustom
+  );
+}
+
+/**
+ * Returns the list of borrowed / not-in-inventory items for a booking.
+ * Same filter used to render the "Vendor / Borrowed Items" panel below.
+ */
+function getBorrowedItems(booking) {
+  return (booking.items || []).filter(
+    (i) =>
+      Number(i.shortage || 0) > 0 ||
+      (i.supplier && String(i.supplier).trim() !== "") ||
+      i.isCustom
+  );
+}
 
 /* =========================================================
    BUTTON GUARD — disable a button while an async op runs
@@ -212,6 +247,9 @@ function renderInventory(filteredItems, allItems) {
 
 /* =========================================================
    OVERBOOKED PANEL
+   Shows ANY booking that has borrowed or not-in-inventory items,
+   whether or not isBookingOverbooked() flags it. This matches what
+   the booking modal displays in its "Vendor / Borrowed Items" block.
 ========================================================= */
 function listenToOverbooked(businessId) {
   const overbookedList =
@@ -237,10 +275,14 @@ function listenToOverbooked(businessId) {
 
     overbookedList.innerHTML = "";
 
-    const allBookings = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    const overbooked = allBookings.filter(isBookingOverbooked);
+    const allBookings = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .filter((b) => b.status !== "returned" && b.status !== "cancelled");
 
-    if (!overbooked.length) {
+    // Broadened: any booking with borrowed OR not-in-inventory items.
+    const relevant = allBookings.filter(hasBorrowedOrCustomItems);
+
+    if (!relevant.length) {
       overbookedList.innerHTML = `
         <p class="text-center text-gray-400 py-6 italic text-sm">
           No overbooked items 🎉
@@ -249,16 +291,14 @@ function listenToOverbooked(businessId) {
       return;
     }
 
-    overbooked.forEach((b) => {
-      const borrowedItems = (b.items || [])
-        .filter((i) => Number(i.shortage || 0) > 0 || i.isCustom)
-        .map((i) => {
-          const vendor = i.supplier || "Unknown Vendor";
-          const qty = Number(i.shortage || i.qty || 0);
-          const customTag = i.isCustom ? " (not in inventory)" : "";
-          return `• ${qty} × ${i.name}${customTag}
-            <span class="text-purple-700 font-bold">[${vendor}]</span>`;
-        });
+    relevant.forEach((b) => {
+      const borrowedItems = getBorrowedItems(b).map((i) => {
+        const vendor = i.supplier || "Unknown Vendor";
+        const qty = Number(i.shortage || i.qty || 0);
+        const customTag = i.isCustom ? " (not in inventory)" : "";
+        return `• ${qty} × ${i.name}${customTag}
+          <span class="text-purple-700 font-bold">[${vendor}]</span>`;
+      });
 
       const div = document.createElement("div");
       div.className =
@@ -407,7 +447,7 @@ onAuthStateChanged(auth, async (user) => {
 
               await sendInventoryNotification(
                 currentBusinessId,
-                `📦 New item added: ${name} (${qty} units at ₦${price.toLocaleString()})`,
+                `New item added: ${name} (${qty} units at ₦${price.toLocaleString()})`,
                 "inventory_add",
                 "/inventory.html"
               );
@@ -460,12 +500,12 @@ onAuthStateChanged(auth, async (user) => {
               updatedAt: serverTimestamp()
             });
 
-            let message = `✏️ Item updated: ${name}`;
+            let message = `Item updated: ${name}`;
             let type = "inventory_update";
             const deepLink = "/inventory.html";
 
             if (avail <= 5) {
-              message = `⚠️ LOW STOCK ALERT: ${name} only has ${avail} left! (Total: ${totalQty})`;
+              message = `LOW STOCK ALERT: ${name} only has ${avail} left! (Total: ${totalQty})`;
               type = "inventory_low_stock";
             }
 
@@ -502,7 +542,7 @@ onAuthStateChanged(auth, async (user) => {
 
             await sendInventoryNotification(
               currentBusinessId,
-              `🗑️ Item deleted: ${name} was removed from inventory`,
+              `Item deleted: ${name} was removed from inventory`,
               "inventory_delete",
               "/inventory.html"
             );

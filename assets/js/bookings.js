@@ -624,9 +624,15 @@ window.openBooking = function(booking, id, businessId) {
     fees.otherFees ? `Other Fees: ₦${Number(fees.otherFees).toLocaleString()}` : null
   ].filter(Boolean);
 
-  const borrowedItems = booking.items?.filter(i => (i.shortage > 0 || i.supplier) && i.supplier !== "")?.map(i =>
-    `• ${i.name}${i.isCustom ? " (not in inventory)" : ""} ${i.shortage > 0 ? `(Borrowed: ${i.shortage})` : ''} from ${i.supplier || "Unknown vendor"}`
-  ) || [];
+  // Broadened filter: anything borrowed OR not in inventory OR custom shows here.
+  const borrowedItems = (booking.items || [])
+    .filter(i => Number(i.shortage || 0) > 0 || (i.supplier && i.supplier.trim() !== "") || i.isCustom)
+    .map(i => {
+      const qty = Number(i.shortage || i.qty || 0);
+      const vendor = i.supplier || "Unknown vendor";
+      const customTag = i.isCustom ? " (not in inventory)" : "";
+      return `• ${i.name}${customTag} — Borrowed: ${qty} from ${vendor}`;
+    });
 
   const vendorBlock = borrowedItems.length
     ? `<div class="bg-purple-50 border border-purple-200 rounded-xl p-4"><p class="text-xs font-bold text-purple-700 uppercase">Vendor / Borrowed Items</p><p class="text-sm text-gray-700 mt-1">${borrowedItems.join("<br>")}</p></div>`
@@ -676,7 +682,7 @@ window.openBooking = function(booking, id, businessId) {
         <p class="text-[10px] uppercase text-gray-500 font-black tracking-wider">Event Date</p>
         <div class="flex items-center gap-2 mt-1">
           <span class="material-symbols-outlined text-purple-600">calendar_today</span>
-          <p class="font-black text-gray-800 text-sm sm:text-base break-all">${booking.event.date || "Not set"}</p>
+          <p class="font-black text-gray-800 text-sm sm:text-base break-all">${booking.event.date ? formatDateOnly(booking.event.date) : "Not set"}</p>
         </div>
       </div>
     </div>
@@ -1006,9 +1012,11 @@ window.openEditModal = async function(booking, id, businessId) {
   </div>
 </div>`;
 
-  document.querySelectorAll("#editItemsContainer .item-row").forEach(attachRowCalculationListeners);
-  editingBookingId = id;
+  // Set business context BEFORE wiring listeners so date changes can resolve it.
   window._editBusinessId = businessId;
+  editingBookingId = id;
+
+  document.querySelectorAll("#editItemsContainer .item-row").forEach(attachRowCalculationListeners);
 
   wireEditTotalAndFeeListeners();
 
@@ -1049,10 +1057,36 @@ window.openEditModal = async function(booking, id, businessId) {
   }
 };
 
+/* =========================
+   DATE FORMATTERS
+========================= */
+// Full date with weekday, no time — used for the Event Date field.
+function formatDateOnly(value) {
+  if (!value) return "Not set";
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return value; // fall back to raw string if unparseable
+  return date.toLocaleDateString("en-NG", {
+    weekday: "long",
+    year: "numeric",
+    month: "short",
+    day: "numeric"
+  });
+}
+
+// Full date + time with weekday — used for Delivery / Return.
 function formatDateTime(value) {
   if (!value) return "Not set";
   const date = new Date(value);
-  return date.toLocaleString("en-NG", { weekday: "short", year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true });
+  if (isNaN(date.getTime())) return value;
+  return date.toLocaleString("en-NG", {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true
+  });
 }
 
 window.addEditItem = function() {
@@ -1233,16 +1267,16 @@ async function checkAndNotifyStatusChange(booking, id, businessId) {
   if (booking.status !== calculated) {
     updates.status = calculated;
     if (calculated === "overdue" && !booking.overdueNotified) {
-      await sendNotification(businessId, `⚠️ Booking for ${booking.client.name} is OVERDUE`, auth.currentUser?.email, "booking_overdue", id);
+      await sendNotification(businessId, `OVERDUE - Booking for ${booking.client.name} is OVERDUE`, auth.currentUser?.email, "booking_overdue", id);
       updates.overdueNotified = true;
     }
     if (calculated === "returned" && !booking.returnNotified) {
-      await sendNotification(businessId, `✅ Booking for ${booking.client.name} has been RETURNED`, auth.currentUser?.email, "booking_returned", id);
+      await sendNotification(businessId, `RETURNED - Booking for ${booking.client.name} has been RETURNED`, auth.currentUser?.email, "booking_returned", id);
       updates.returnNotified = true;
     }
   }
   if (isOverbooked && !booking.overbookedNotified) {
-    await sendNotification(businessId, `⚠️ Booking for ${booking.client.name} is OVERBOOKED (vendor stock used)`, auth.currentUser?.email, "booking_overbooked", id);
+    await sendNotification(businessId, `OVERBOOKED - Booking for ${booking.client.name} is OVERBOOKED (vendor stock used)`, auth.currentUser?.email, "booking_overbooked", id);
     updates.overbookedNotified = true;
   }
   if (Object.keys(updates).length > 0) await updateDoc(bookingRef, updates);
