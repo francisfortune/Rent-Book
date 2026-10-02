@@ -374,22 +374,16 @@ export function onRemindersChange(businessId, callback) {
 /* =========================================================
    AUTOMATED BACKGROUND ENGINE
    Runs from dashboard.js and bookings.js on page load
-   (throttled to once every 5 minutes per business).
+   (throttled to once every 15 minutes per business).
 
    Notifications generated:
      1. Return overdue          — client didn't return items
      2. Return due in 1 hour    — same-day pickup reminder
      3. Return due in 12 hours  — same-day reminder
      4. Return due in 24 hours  — next-day reminder
-     5. Delivery in 2 hours     — same-day event prep
-     6. Delivery in 24 hours    — day-before prep
+     5. Delivery in 2 hours     — same-day event prep  [NEW]
+     6. Delivery in 24 hours    — day-before prep      [NEW]
      7. Low stock               — item below threshold
-
-   Reminder windows are independent — each fires exactly once
-   when the booking crosses into its window, regardless of
-   whether the wider window already fired. This means a booking
-   created 20h before return will fire its 24h reminder, then
-   its 12h reminder, then its 1h reminder, in order.
 ========================================================= */
 export async function runAutomatedChecks(businessId) {
     try {
@@ -401,12 +395,11 @@ export async function runAutomatedChecks(businessId) {
         const lastCheck = businessData.lastEngineCheck;
         const now = new Date();
 
-        // Throttle: 5 minutes (was 15 — too long, missed reminder windows)
         if (lastCheck) {
             const lastCheckTime = lastCheck.toDate ? lastCheck.toDate() : new Date(lastCheck);
             const timeDiff = now.getTime() - lastCheckTime.getTime();
-            const fiveMinutes = 5 * 60 * 1000;
-            if (timeDiff < fiveMinutes) {
+            const fifteenMinutes = 15 * 60 * 1000;
+            if (timeDiff < fifteenMinutes) {
                 console.log(
                     `Automated checks throttled. Last run: ${Math.round(timeDiff / 1000)}s ago.`
                 );
@@ -420,21 +413,18 @@ export async function runAutomatedChecks(businessId) {
         });
 
         /* =================================================
-           SCAN ALL BOOKINGS
-           No status filter — we check the status client-side
-           so we never miss bookings with stale / missing status.
+           SCAN ALL RELEVANT BOOKINGS
         ================================================= */
         const bookingsRef = collection(db, "businesses", businessId, "bookings");
-        const bookingsSnap = await getDocs(bookingsRef);
+        const bookingsQuery = query(
+            bookingsRef,
+            where("status", "in", ["active", "overdue", "upcoming"])
+        );
+        const bookingsSnap = await getDocs(bookingsQuery);
 
         for (const bookingDoc of bookingsSnap.docs) {
             const booking = bookingDoc.data();
             const bookingId = bookingDoc.id;
-
-            // Skip bookings that are already done — nothing to remind about.
-            if (booking.status === "returned" || booking.status === "cancelled") {
-                continue;
-            }
 
             const returnDateStr = booking.event?.returnDate;
             const deliveryDateStr =
@@ -472,58 +462,8 @@ export async function runAutomatedChecks(businessId) {
                 } else {
                     const hoursRemaining = diffToReturn / (1000 * 60 * 60);
 
-                    /* ---- 24-hour window (fires once when crossing into 24h) ---- */
-                    if (
-                        hoursRemaining <= 24 &&
-                        hoursRemaining > 12 &&
-                        !booking.returnReminder24Sent
-                    ) {
-                        await updateDoc(bookingDoc.ref, {
-                            returnReminder24Sent: true,
-                            updatedAt: serverTimestamp()
-                        });
-                        await notifyAll({
-                            businessId,
-                            message: `Return due tomorrow — ${clientName}`,
-                            type: "rental_return_reminder",
-                            bookingId,
-                            deepLink: `/bookings.html?highlight=${bookingId}`,
-                            clientEmail,
-                            clientPhone,
-                            clientName,
-                            channels: ["inapp", "push", "email", "sms"]
-                        });
-                    }
-
-                    /* ---- 12-hour window (fires once when crossing into 12h) ---- */
-                    if (
-                        hoursRemaining <= 12 &&
-                        hoursRemaining > 1 &&
-                        !booking.returnReminder12Sent
-                    ) {
-                        await updateDoc(bookingDoc.ref, {
-                            returnReminder12Sent: true,
-                            updatedAt: serverTimestamp()
-                        });
-                        await notifyAll({
-                            businessId,
-                            message: `Return due in 12 hours — ${clientName}`,
-                            type: "rental_return_reminder",
-                            bookingId,
-                            deepLink: `/bookings.html?highlight=${bookingId}`,
-                            clientEmail,
-                            clientPhone,
-                            clientName,
-                            channels: ["inapp", "push", "email", "sms"]
-                        });
-                    }
-
-                    /* ---- 1-hour window (fires once when crossing into 1h) ---- */
-                    if (
-                        hoursRemaining <= 1 &&
-                        hoursRemaining > 0 &&
-                        !booking.returnReminder1Sent
-                    ) {
+                    /* ---- 1-hour return reminder ---- */
+                    if (hoursRemaining <= 1 && !booking.returnReminder1Sent) {
                         await updateDoc(bookingDoc.ref, {
                             returnReminder1Sent: true,
                             updatedAt: serverTimestamp()
@@ -540,20 +480,60 @@ export async function runAutomatedChecks(businessId) {
                             channels: ["inapp", "push", "sms"]
                         });
                     }
+                    /* ---- 12-hour return reminder ---- */
+                    else if (hoursRemaining <= 12 && !booking.returnReminder12Sent) {
+                        await updateDoc(bookingDoc.ref, {
+                            returnReminder12Sent: true,
+                            updatedAt: serverTimestamp()
+                        });
+                        await notifyAll({
+                            businessId,
+                            message: `Return due in 12 hours — ${clientName}`,
+                            type: "rental_return_reminder",
+                            bookingId,
+                            deepLink: `/bookings.html?highlight=${bookingId}`,
+                            clientEmail,
+                            clientPhone,
+                            clientName,
+                            channels: ["inapp", "push", "email", "sms"]
+                        });
+                    }
+                    /* ---- 24-hour return reminder ---- */
+                    else if (hoursRemaining <= 24 && !booking.returnReminder24Sent) {
+                        await updateDoc(bookingDoc.ref, {
+                            returnReminder24Sent: true,
+                            updatedAt: serverTimestamp()
+                        });
+                        await notifyAll({
+                            businessId,
+                            message: `Return due tomorrow — ${clientName}`,
+                            type: "rental_return_reminder",
+                            bookingId,
+                            deepLink: `/bookings.html?highlight=${bookingId}`,
+                            clientEmail,
+                            clientPhone,
+                            clientName,
+                            channels: ["inapp", "push", "email", "sms"]
+                        });
+                    }
                 }
             }
 
-            /* ---------- DELIVERY / EVENT HANDLING ----------
-               Only fires while the booking is still active or upcoming.
-               Returned/cancelled already skipped above. */
-            if (deliveryDateStr) {
+            /* ---------- DELIVERY / EVENT HANDLING (NEW) ----------
+               Only fires while the booking is still upcoming or active.
+               Skips returned bookings entirely. */
+            if (
+                deliveryDateStr &&
+                booking.status !== "returned" &&
+                booking.status !== "cancelled"
+            ) {
                 const deliveryDate = new Date(deliveryDateStr);
                 const diffToDelivery = deliveryDate.getTime() - now.getTime();
                 const hoursUntilDelivery = diffToDelivery / (1000 * 60 * 60);
 
-                /* ---- 24-hour delivery reminder (only if > 2h out) ---- */
+                /* ---- 24-hour delivery reminder ---- */
                 if (
-                    hoursUntilDelivery > 2 &&
+                    hoursUntilDelivery > 0 &&
                     hoursUntilDelivery <= 24 &&
                     !booking.deliveryReminder24Sent
                 ) {
@@ -563,7 +543,7 @@ export async function runAutomatedChecks(businessId) {
                     });
                     await notifyAll({
                         businessId,
-                        message: `Delivery tomorrow for ${clientName} on ${deliveryDateStr}. Do you remember?`,
+                        message: `Delivery tomorrow For ${clientName} on ${deliveryDateStr} \n Do Remember?`,
                         type: "delivery_reminder",
                         bookingId,
                         deepLink: `/bookings.html?highlight=${bookingId}`,
@@ -586,7 +566,7 @@ export async function runAutomatedChecks(businessId) {
                     });
                     await notifyAll({
                         businessId,
-                        message: `Delivery in 2 hours for ${clientName}. Are you ready?`,
+                        message: `Delivery in 2 hours for ${clientName} \n Are you Ready?`,
                         type: "delivery_reminder",
                         bookingId,
                         deepLink: `/bookings.html?highlight=${bookingId}`,
