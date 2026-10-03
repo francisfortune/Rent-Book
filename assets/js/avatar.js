@@ -43,16 +43,18 @@ async function initAvatarAndDropdown() {
         </a>
 
 
-        <a href="analytics.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#800080';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
+<a href="ai-assistant.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#800080';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
+          <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">chat</span>
+          AI Assistant
+        </a>
+
+
+        
+                <a href="analytics.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#800080';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
           <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">bar_chart</span>
           Analytics
         </a>
 
-
-        <a href="ai-assistant.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#800080';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
-          <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">chat</span>
-          AI Assistant
-        </a>
 
         <a href="settings.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#800080';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
           <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">settings</span>

@@ -1,87 +1,381 @@
-import { db } from './firebase-config.js'; // Your firebase init file
-import { collection, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js";
+// assets/js/analytics.js
+// ============================================================================
+// Full analytics page for Tracknrent.
+// Reads from analytics-service.js — no aggregation logic here, only rendering.
+// ============================================================================
 
-// Global Chart Instances (to update them later)
-let revenueChart;
-let categoryChart;
+import { auth, db } from "./firebase.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getBusinessIdByEmail } from "./shared.js";
+import { getFullAnalytics, buildRange } from "./services/analytics-service.js";
 
-async function loadBusinessAnalytics() {
-    const businessId = localStorage.getItem('businessId'); // Assuming you store ID on login
-    const bookingsRef = collection(db, "bookings");
-    
-    // 1. Fetch all bookings for this specific business
-    const q = query(bookingsRef, where("businessId", "==", businessId), orderBy("timestamp", "desc"));
-    const querySnapshot = await getDocs(q);
+let currentBusinessId = null;
+let currentPreset = "this_month"; // default
+let revenueChart = null;
+let lastData = null;
 
-    let totalRevenue = 0;
-    let customerStats = {}; // { customerName: { totalSpent: 0, items: [], status: '' } }
-    let itemPopularity = {}; // { itemName: count }
-    let monthlyRevenue = { 'Jan': 0, 'Feb': 0, 'Mar': 0, 'Apr': 0, 'May': 0, 'Jun': 0 };
-
-    querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        const amount = parseFloat(data.totalPrice) || 0;
-        const date = data.timestamp.toDate();
-        const month = date.toLocaleString('default', { month: 'short' });
-
-        // Calculate Revenue
-        totalRevenue += amount;
-        if (monthlyRevenue.hasOwnProperty(month)) {
-            monthlyRevenue[month] += amount;
-        }
-
-        // Aggregate Customer Data
-        if (!customerStats[data.customerName]) {
-            customerStats[data.customerName] = { 
-                spent: 0, 
-                items: [], 
-                status: data.paymentStatus 
-            };
-        }
-        customerStats[data.customerName].spent += amount;
-        customerStats[data.customerName].items.push(data.itemName);
-
-        // Track Item Popularity
-        itemPopularity[data.itemName] = (itemPopularity[data.itemName] || 0) + 1;
-    });
-
-    updateUI(totalRevenue, monthlyRevenue, customerStats, itemPopularity);
+/* =========================
+   FORMATTERS
+========================= */
+function money(n) {
+  const v = Number(n || 0);
+  return `₦${v.toLocaleString("en-NG")}`;
 }
 
-function updateUI(total, monthlyData, customers, items) {
-    // Update Revenue Text
-    document.getElementById('totalRevenueText').innerText = `₦${total.toLocaleString()}`;
+function number(n) {
+  return Number(n || 0).toLocaleString("en-NG");
+}
 
-    // Find Most Popular Item
-    const topItem = Object.keys(items).reduce((a, b) => items[a] > items[b] ? a : b);
-    document.getElementById('topItemText').innerText = topItem;
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = String(str ?? "");
+  return div.innerHTML;
+}
 
-    // Update Revenue Chart
-    revenueChart.data.datasets[0].data = Object.values(monthlyData);
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+
+function setHTML(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = value;
+}
+
+/**
+ * Human-friendly "since" label. Handles null = unknown booking date.
+ */
+function sinceLabel(daysSince) {
+  if (daysSince === null || daysSince === undefined) return "Unknown";
+  if (daysSince <= 0) return "Today";
+  if (daysSince === 1) return "1 day ago";
+  return `${daysSince} days ago`;
+}
+
+/* =========================
+   RENDER: MONEY HEADER
+========================= */
+function renderMoneyHeader(data) {
+  const { totalRevenue, previousRevenue, changePct, bookingCount } = data.revenue;
+
+  setText("bigRevenue", money(totalRevenue));
+
+  // Header line: change % and previous revenue
+  const header = document.getElementById("bigRevenueHeader");
+  if (header) {
+    if (changePct === null || previousRevenue === 0) {
+      header.innerHTML = `<span style="opacity:.7;">${number(bookingCount)} bookings · no comparison available</span>`;
+      header.style.color = "";
+    } else if (changePct >= 0) {
+      header.innerHTML = `
+        <span style="color:#059669;font-weight:800;">↑ ${changePct.toFixed(1)}%</span>
+        <span style="opacity:.75;"> vs previous period (${money(previousRevenue)})</span>`;
+      header.style.color = "";
+    } else {
+      header.innerHTML = `
+        <span style="color:#dc2626;font-weight:800;">↓ ${Math.abs(changePct).toFixed(1)}%</span>
+        <span style="opacity:.75;"> vs previous period (${money(previousRevenue)})</span>`;
+      header.style.color = "";
+    }
+  }
+}
+
+/* =========================
+   RENDER: SNAPSHOT CARDS
+========================= */
+function renderSnapshot(data) {
+  const s = data.snapshot;
+  setText("snapBookings", number(s.bookingCount));
+  setText("snapReturned", number(s.returned));
+  setText("snapOwed", money(s.owedTotal));
+  setText("snapOverdue", number(s.overdue));
+  setText("snapDamages", money(s.damagesTotal));
+}
+
+/* =========================
+   RENDER: OUTSTANDING BY CLIENT
+========================= */
+function renderOutstanding(list) {
+  const tbody = document.getElementById("outstandingTableBody");
+  const totalEl = document.getElementById("outstandingTotal");
+  const countEl = document.getElementById("outstandingCount");
+
+  if (countEl) countEl.textContent = `${list.length}`;
+  const total = list.reduce((s, c) => s + c.totalOwed, 0);
+  if (totalEl) totalEl.textContent = `Total outstanding: ${money(total)}`;
+
+  if (!tbody) return;
+
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-400">🎉 No outstanding balances</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.slice(0, 15).map(c => {
+    const phoneClean = String(c.phone || "").replace(/\D/g, "");
+    const waLink = phoneClean
+      ? `https://wa.me/${phoneClean}?text=${encodeURIComponent(
+          `Hi ${c.name}, hope you're well! Just a friendly reminder — ${money(c.totalOwed)} outstanding on your booking(s). Let me know when convenient. Thanks!`
+        )}`
+      : "";
+    return `
+      <tr class="border-b border-gray-100 hover:bg-gray-50">
+        <td class="p-3 font-medium text-gray-800">${escapeHtml(c.name)}</td>
+        <td class="p-3 font-bold text-red-600">${money(c.totalOwed)}</td>
+        <td class="p-3 text-gray-500 text-sm">${sinceLabel(c.daysSince)}</td>
+        <td class="p-3 text-right">
+          ${waLink
+            ? `<a href="${waLink}" target="_blank" rel="noopener"
+                 class="inline-block px-3 py-1.5 text-xs font-bold rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition">
+                 Remind
+               </a>`
+            : `<span class="text-xs text-gray-400">No phone</span>`}
+        </td>
+      </tr>`;
+  }).join("");
+}
+
+/* =========================
+   RENDER: BEST CUSTOMERS
+========================= */
+function renderBestCustomers(list) {
+  const tbody = document.getElementById("bestCustomersTableBody");
+  if (!tbody) return;
+
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-400">No customers yet in this period</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map((c, i) => {
+    const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "";
+    return `
+      <tr class="border-b border-gray-100 hover:bg-gray-50">
+        <td class="p-3">
+          <span class="font-medium text-gray-800">${escapeHtml(c.name)}</span>
+          ${medal ? `<span class="ml-2">${medal}</span>` : ""}
+        </td>
+        <td class="p-3 text-sm text-gray-600">${escapeHtml(c.phone || "—")}</td>
+        <td class="p-3 text-sm text-gray-600">${number(c.bookingCount)} booking${c.bookingCount === 1 ? "" : "s"}</td>
+        <td class="p-3 font-bold text-gray-800 text-right">${money(c.totalSpent)}</td>
+      </tr>`;
+  }).join("");
+}
+
+/* =========================
+   RENDER: TOP ITEMS
+========================= */
+function renderTopItems(list) {
+  const tbody = document.getElementById("topItemsTableBody");
+  if (!tbody) return;
+
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-400">No items rented in this period</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map((it, i) => {
+    const badge = i === 0 ? `<span class="ml-2 text-[10px] font-black uppercase text-purple-600">⭐ Best earner</span>` : "";
+    return `
+      <tr class="border-b border-gray-100 hover:bg-gray-50">
+        <td class="p-3 font-medium text-gray-800">
+          ${escapeHtml(it.name)}${badge}
+        </td>
+        <td class="p-3 text-sm text-gray-600">${number(it.unitsRented)} units</td>
+        <td class="p-3 text-sm text-gray-600">${number(it.timesBooked)} booking${it.timesBooked === 1 ? "" : "s"}</td>
+        <td class="p-3 font-bold text-gray-800 text-right">${money(it.revenue)}</td>
+      </tr>`;
+  }).join("");
+}
+
+/* =========================
+   RENDER: DAMAGE REPORT
+========================= */
+function renderDamages(data) {
+  const d = data.damageReport;
+
+  setText("damageTotal", money(d.totalDamageAmount));
+  setText("damageRate", `${d.damageRatePct.toFixed(2)}%`);
+  setText("damageCautionKept", money(d.totalCautionKept));
+  setText("damageCautionReturned", money(d.totalCautionReturned));
+
+  const net = d.netDamageCost;
+  const netEl = document.getElementById("damageNetCost");
+  if (netEl) {
+    netEl.textContent = money(net);
+    netEl.style.color = net > 0 ? "#dc2626" : "#059669";
+  }
+
+  const netLabel = document.getElementById("damageNetLabel");
+  if (netLabel) {
+    netLabel.textContent = net > 0
+      ? "Out-of-pocket loss (caution fee didn't cover it)"
+      : "Fully covered by caution fees";
+  }
+
+  // By item table
+  const itemBody = document.getElementById("damageByItemTableBody");
+  if (itemBody) {
+    if (!d.byItem.length) {
+      itemBody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-gray-400">No damages recorded</td></tr>`;
+    } else {
+      itemBody.innerHTML = d.byItem.slice(0, 10).map(it => `
+        <tr class="border-b border-gray-100">
+          <td class="p-3 font-medium text-gray-800">${escapeHtml(it.name)}</td>
+          <td class="p-3 text-sm text-gray-600">${number(it.timesDamaged)}</td>
+          <td class="p-3 text-sm text-gray-600">${number(it.unitsLost)}</td>
+          <td class="p-3 font-bold text-red-600 text-right">${money(it.amount)}</td>
+        </tr>`).join("");
+    }
+  }
+
+  // By client table
+  const clientBody = document.getElementById("damageByClientTableBody");
+  if (clientBody) {
+    if (!d.byClient.length) {
+      clientBody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-gray-400">No damages recorded</td></tr>`;
+    } else {
+      clientBody.innerHTML = d.byClient.slice(0, 10).map(c => `
+        <tr class="border-b border-gray-100">
+          <td class="p-3 font-medium text-gray-800">${escapeHtml(c.name)}</td>
+          <td class="p-3 text-sm text-gray-600">${number(c.timesDamaged)}</td>
+          <td class="p-3 font-bold text-red-600 text-right">${money(c.amount)}</td>
+        </tr>`).join("");
+    }
+  }
+}
+
+/* =========================
+   RENDER: REVENUE CHART
+========================= */
+async function renderRevenueChart(businessId) {
+  const canvas = document.getElementById("revenueChart");
+  if (!canvas) return;
+
+  // We don't use the "from/to" range for the chart — always last 12 months.
+  const { getMonthlyRevenue } = await import("./services/analytics-service.js");
+  const monthly = await getMonthlyRevenue(businessId, { months: 12 });
+  const labels = monthly.map(m => m.label);
+  const values = monthly.map(m => m.revenue);
+
+  if (revenueChart) {
+    revenueChart.data.labels = labels;
+    revenueChart.data.datasets[0].data = values;
     revenueChart.update();
+    return;
+  }
 
-    // Update Customer Table
-    const tableBody = document.querySelector('tbody');
-    tableBody.innerHTML = ''; // Clear placeholders
+  if (!window.Chart) {
+    console.warn("[Analytics] Chart.js not loaded — skipping chart");
+    return;
+  }
 
-    Object.keys(customers).forEach(name => {
-        const c = customers[name];
-        const row = `
-            <tr class="border-b border-gray-50 hover:bg-gray-50 transition">
-                <td class="p-4 font-medium text-gray-800">${name}</td>
-                <td class="p-4">${c.items.length} Items</td>
-                <td class="p-4">₦${c.spent.toLocaleString()}</td>
-                <td class="p-4">
-                    <span class="${c.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} px-3 py-1 rounded-full text-[10px] font-bold">
-                        ${c.status.toUpperCase()}
-                    </span>
-                </td>
-                <td class="p-4 text-center"><button class="text-purple-600">View</button></td>
-            </tr>
-        `;
-        tableBody.innerHTML += row;
-    });
+  revenueChart = new window.Chart(canvas, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "Revenue (₦)",
+        data: values,
+        backgroundColor: "#800080",
+        borderRadius: 6,
+        maxBarThickness: 40
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `₦${Number(ctx.parsed.y).toLocaleString("en-NG")}`
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (v) => `₦${Number(v).toLocaleString("en-NG")}`
+          }
+        }
+      }
+    }
+  });
 }
 
-// Initialize on load
-window.onload = loadBusinessAnalytics;
+/* =========================
+   LOAD + RENDER EVERYTHING
+========================= */
+async function loadAndRender() {
+  if (!currentBusinessId) return;
+
+  // Show loading state
+  setText("bigRevenue", "…");
+
+  const { from, to } = buildRange(currentPreset);
+
+  try {
+    const data = await getFullAnalytics(currentBusinessId, { from, to });
+    lastData = data;
+
+    renderMoneyHeader(data);
+    renderSnapshot(data);
+    renderOutstanding(data.outstandingByClient);
+    renderBestCustomers(data.bestCustomers);
+    renderTopItems(data.topItems);
+    renderDamages(data);
+
+    console.log(`[Analytics] ✅ Rendered ${data.bookingCountInRange} bookings`);
+  } catch (err) {
+    console.error("[Analytics] Failed to load:", err);
+    setText("bigRevenue", "—");
+  }
+}
+
+/* =========================
+   RANGE PRESET BUTTONS
+========================= */
+function wireRangeButtons() {
+  const buttons = document.querySelectorAll("[data-preset]");
+  buttons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const preset = btn.dataset.preset;
+      if (preset === currentPreset) return;
+      currentPreset = preset;
+
+      // Update active styling
+      buttons.forEach(b => {
+        b.classList.toggle("range-btn-active", b.dataset.preset === preset);
+      });
+
+      loadAndRender();
+    });
+  });
+}
+
+/* =========================
+   BOOT
+========================= */
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    window.location.href = "signup.html";
+    return;
+  }
+
+  try {
+    currentBusinessId = await getBusinessIdByEmail(user.email, user);
+  } catch (err) {
+    console.error("[Analytics] Auth error:", err);
+    setText("bigRevenue", "—");
+    return;
+  }
+
+  // Render chart once (it fetches its own 12-month data)
+  await renderRevenueChart(currentBusinessId);
+
+  // Load everything for the default preset
+  wireRangeButtons();
+  await loadAndRender();
+});

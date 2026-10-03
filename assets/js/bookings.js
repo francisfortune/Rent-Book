@@ -153,6 +153,17 @@ function renderDamagedPill() {
     </span>`;
 }
 
+// ===== CHANGE 1: renderOwingPill() — mirrors renderDamagedPill but red for owing balance =====
+function renderOwingPill() {
+  return `
+    <span class="inline-flex items-center gap-1.5 bg-red-100 text-red-800 border border-red-200
+                 rounded-full px-2.5 py-1 font-black uppercase tracking-wider
+                 whitespace-nowrap leading-none text-[10px]">
+      <span class="inline-block w-1.5 h-1.5 rounded-full bg-red-500"></span>
+      <span>Owing</span>
+    </span>`;
+}
+
 /* =========================
    RECEIPT TEXT GENERATOR
 ========================= */
@@ -357,23 +368,46 @@ window.returnBooking = async function(bookingId, businessId, items) {
   if (!items || items.length === 0) { alert("No items found in booking"); return; }
   if (currentRole === "viewer") { alert("Permission denied: viewers cannot process returns."); return; }
 
-  const hasBorrowedItems = items.some(i => (i.shortage || 0) > 0);
-  if (hasBorrowedItems) {
-    if (!confirm("This booking was overbooked.\nHave you returned borrowed items to the vendor?")) return;
-  }
-
+  // ===== CHANGE 4: Combined reminder (owing + borrowed) in one confirm =====
+  // We need the booking doc to compute owing. Fetch it here, then decide
+  // whether a confirm is needed at all.
   try {
     const bookingRef = doc(db, "businesses", businessId, "bookings", bookingId);
     const snap = await getDoc(bookingRef);
     if (!snap.exists()) { alert("Booking not found"); return; }
 
     const booking = { id: bookingId, ...snap.data() };
+
+    const owing = Math.max(
+      0,
+      Number(booking.payment?.total || 0) - Number(booking.payment?.paid || 0)
+    );
+    const hasBorrowedItems = items.some(i => (i.shortage || 0) > 0);
+
+    // Only show a confirm if there's something to remind about.
+    if (owing > 0 || hasBorrowedItems) {
+      const lines = [];
+      if (owing > 0) {
+        lines.push(
+          `This booking has ₦${owing.toLocaleString()} owing. You can still mark it as returned — just a reminder.`
+        );
+      }
+      if (hasBorrowedItems) {
+        lines.push(
+          "This booking had borrowed items. Confirm you've returned them to the vendor."
+        );
+      }
+      const proceed = confirm(`Confirm return:\n\n${lines.join("\n\n")}`);
+      if (!proceed) return;
+    }
+
     window.openReturnSettlementModal(booking, bookingId, businessId);
   } catch (error) {
     console.error("Failed to open return settlement:", error);
     alert("Could not open the return settlement screen: " + error.message);
   }
 };
+// ===== END CHANGE 4 =====
 
 // ===== NEW: Token demo-safety =====
 // The saved template may be missing {clientName} / {businessName} tokens
@@ -743,6 +777,13 @@ window.confirmReturnSettlement = async function(id, businessId) {
     const returnNote = document.getElementById("returnNoteTextarea")?.value?.trim() || "";
     const damageStatus = damages.length ? "damaged" : "clean";
 
+    // ===== CHANGE 5: Compute owing at return for audit trail =====
+    const owingAtReturn = Math.max(
+      0,
+      Number(booking.payment?.total || 0) - Number(booking.payment?.paid || 0)
+    );
+    // ===== END CHANGE 5 (calculation) =====
+
     // ---- Write the booking's return audit trail (purely additive) ----
     const bookingRef = doc(db, "businesses", businessId, "bookings", id);
     await updateDoc(bookingRef, {
@@ -754,7 +795,10 @@ window.confirmReturnSettlement = async function(id, businessId) {
       damagesRecordedAt: serverTimestamp(),
       returnNote,
       returnNoteSentAt: serverTimestamp(),
-      damageStatus
+      damageStatus,
+      // ===== CHANGE 5: Store owingAtReturn (0 if fully paid) =====
+      owingAtReturn
+      // ===== END CHANGE 5 =====
     });
 
     const updatedSnap = await getDoc(bookingRef);
@@ -806,6 +850,18 @@ window.confirmReturnSettlement = async function(id, businessId) {
       "booking_returned",
       id
     );
+
+    // ===== CHANGE 7: Second notification when returned with owing balance =====
+    if (owingAtReturn > 0) {
+      await sendNotification(
+        businessId,
+        `${booking.client.name}'s booking was returned with ₦${owingAtReturn.toLocaleString()} still owing.`,
+        auth.currentUser?.email || "System",
+        "return_owing",
+        id
+      );
+    }
+    // ===== END CHANGE 7 =====
 
     // ---- WhatsApp: still fires immediately, exactly as before ----
     const finalMessage = buildReturnSettlementMessage(updatedBooking);
@@ -1182,15 +1238,21 @@ function populateEditOtherFeesRepeater(booking) {
 // upcoming / overdue bookings see NO history card at all — nothing to
 // tell them yet. When returned, the card leads with the return date so
 // the most important fact is the first thing the eye lands on.
+// ===== REDESIGN: Booking History as a vertical timeline =====
+// Replaces the old flat-list version. Each event is a node on a vertical
+// timeline with a colored dot + connector line, a bold title, a subtler
+// subtitle, and a right-aligned timestamp. Newest events appear first so
+// what just happened is what the eye lands on. Events cascade in with a
+// short fade-in animation when the modal opens.
 function buildAuditTrailHTML(booking) {
   // Hide the entire card for anything that hasn't been returned.
   if (booking.status !== "returned") return "";
 
-  const rows = [];
+  // ── Collect timeline events (newest first) ──
+  // Each event: { icon, title, subtitle, timestamp, tone }
+  const events = [];
 
-  // ── Row 1: RETURN DATE (the headline fact) ──
-  // Try the most precise timestamp first, then fall back to the raw
-  // event.returnDate string. If both are missing we skip this row.
+  // ── 1. Returned (headline event, always first) ──
   const returnStamp =
     booking.payment?.cautionFeeSettledAt ||
     booking.damagesRecordedAt ||
@@ -1199,70 +1261,187 @@ function buildAuditTrailHTML(booking) {
   if (returnStamp) {
     const d = returnStamp?.toDate?.() ? returnStamp.toDate() : new Date(returnStamp);
     if (!isNaN(d.getTime())) {
-      rows.push({
-        html: `✅ <strong>Returned on</strong> ${d.toLocaleString("en-NG", {
-          weekday: "short", year: "numeric", month: "short", day: "numeric",
-          hour: "numeric", minute: "2-digit", hour12: true
-        })}`,
-        color: "#059669"
+      events.push({
+        icon: "task_alt",
+        title: "Returned",
+        subtitle: "Booking marked as returned and settled.",
+        timestamp: d,
+        tone: "green"
       });
     }
   }
 
-  // ── Row 2: Booking created (context, secondary) ──
+  // ── 2. Damage summary OR clean return ──
+  const hasDamages =
+    booking.damageStatus === "damaged" &&
+    Array.isArray(booking.damages) &&
+    booking.damages.length > 0;
+
+  if (hasDamages) {
+    const totalDamageAmount = booking.damages.reduce(
+      (s, d) => s + Number(d.amount || 0),
+      0
+    );
+    const damageList = booking.damages
+      .map(d => `${d.itemName} ×${d.quantity}`)
+      .join(", ");
+
+    events.push({
+      icon: "report",
+      title: "Damages reported",
+      subtitle: `${damageList} — ₦${totalDamageAmount.toLocaleString()} charged`,
+      timestamp: null,
+      tone: "red"
+    });
+  } else {
+    events.push({
+      icon: "verified",
+      title: "All items in good shape",
+      subtitle: "No damages reported.",
+      timestamp: null,
+      tone: "green"
+    });
+  }
+
+  // ── 3. Caution fee settlement ──
+  const returnedFee = Number(booking.payment?.cautionFeeReturned || 0);
+  const keptFee = Number(booking.payment?.cautionFeeKept || 0);
+  if (returnedFee || keptFee) {
+    let subtitle = `₦${returnedFee.toLocaleString()} refunded`;
+    if (keptFee > 0) subtitle += `, ₦${keptFee.toLocaleString()} retained`;
+
+    events.push({
+      icon: "payments",
+      title: "Caution fee settled",
+      subtitle,
+      timestamp: null,
+      tone: keptFee > 0 ? "amber" : "purple"
+    });
+  }
+
+  // ── 4. Owing at return ──
+  const owingAtReturn = Number(booking.owingAtReturn || 0);
+  if (owingAtReturn > 0) {
+    events.push({
+      icon: "error",
+      title: "Owing at return",
+      subtitle: `₦${owingAtReturn.toLocaleString()} was still unpaid.`,
+      timestamp: null,
+      tone: "amber"
+    });
+  }
+
+  // ── 5. Thank-you message sent ──
+  if (booking.returnNote) {
+    const preview =
+      booking.returnNote.length > 60
+        ? booking.returnNote.slice(0, 60).trim() + "…"
+        : booking.returnNote;
+
+    events.push({
+      icon: "mail",
+      title: "Thank-you sent",
+      subtitle: `"${preview}"`,
+      timestamp: booking.returnNoteSentAt?.toDate?.() || null,
+      tone: "purple"
+    });
+  }
+
+  // ── 6. Booking created (oldest — shown at the bottom) ──
   if (booking.createdAt) {
     const createdDate = booking.createdAt?.toDate?.()
       ? booking.createdAt.toDate()
       : new Date(booking.createdAt);
     if (!isNaN(createdDate.getTime())) {
-      rows.push({
-        html: `📝 Booking created on ${createdDate.toLocaleString("en-NG", {
-          weekday: "short", year: "numeric", month: "short", day: "numeric",
-          hour: "numeric", minute: "2-digit", hour12: true
-        })}`,
-        color: "#374151"
+      events.push({
+        icon: "add_circle",
+        title: "Booking created",
+        subtitle: "Booking was saved to your system.",
+        timestamp: createdDate,
+        tone: "gray"
       });
     }
   }
 
-  // ── Row 3+: Damage summary (one row per damaged item, or a clean message) ──
-  if (booking.damageStatus === "damaged" && Array.isArray(booking.damages) && booking.damages.length) {
-    booking.damages.forEach(d => {
-      rows.push({
-        html: `⚠️ ${d.itemName} x${d.quantity} — ₦${Number(d.amount || 0).toLocaleString()} charged`,
-        color: "#b91c1c"
-      });
-    });
-  } else {
-    rows.push({
-      html: `📦 All items were returned in good shape.`,
-      color: "#059669"
-    });
-  }
+  if (!events.length) return "";
 
-  // ── Caution fee settlement ──
-  const returned = Number(booking.payment?.cautionFeeReturned || 0);
-  const kept = Number(booking.payment?.cautionFeeKept || 0);
-  if (returned || kept) {
-    let line = `💰 Caution fee settled — ₦${returned.toLocaleString()} refunded`;
-    if (kept > 0) line += `, ₦${kept.toLocaleString()} retained`;
-    rows.push({ html: line, color: "#374151" });
-  }
+  // ── Tone palette — one place to tune the whole design ──
+  const TONES = {
+    green:  { dot: "#059669", ring: "#d1fae5", icon: "#059669" },
+    red:    { dot: "#dc2626", ring: "#fee2e2", icon: "#dc2626" },
+    amber:  { dot: "#d97706", ring: "#fef3c7", icon: "#b45309" },
+    purple: { dot: "#800080", ring: "#f3e8ff", icon: "#800080" },
+    gray:   { dot: "#9ca3af", ring: "#f3f4f6", icon: "#6b7280" }
+  };
 
-  // ── Return note sent to client ──
-  if (booking.returnNote) {
-    rows.push({
-      html: `💌 Message sent to client: "${booking.returnNote}"`,
-      color: "#374151"
+  function formatStamp(d) {
+    if (!d) return "";
+    return d.toLocaleString("en-NG", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true
     });
   }
 
+  // ── Build each timeline node ──
+  const timelineHTML = events
+    .map((ev, idx) => {
+      const t = TONES[ev.tone] || TONES.gray;
+      const isLast = idx === events.length - 1;
+
+      return `
+        <div class="audit-node" style="display:flex;gap:14px;position:relative;">
+          <!-- Node + connector column -->
+          <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:32px;">
+            <div style="width:32px;height:32px;border-radius:50%;background:${t.ring};display:flex;align-items:center;justify-content:center;flex-shrink:0;z-index:2;position:relative;">
+              <span class="material-symbols-outlined" style="font-size:16px;color:${t.icon};font-variation-settings:'wght' 600;">${ev.icon}</span>
+            </div>
+            ${!isLast ? `<div style="flex:1;width:2px;background:linear-gradient(to bottom, ${t.dot}55, #e5e7eb);margin:4px 0;min-height:20px;"></div>` : ""}
+          </div>
+
+          <!-- Content column -->
+          <div style="flex:1;min-width:0;padding-bottom:${isLast ? "0" : "16px"};">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+              <p style="font-size:13.5px;font-weight:800;color:#1f2937;margin:0;line-height:1.3;">${ev.title}</p>
+              ${ev.timestamp ? `<p style="font-size:11px;color:#9ca3af;font-weight:600;white-space:nowrap;margin:0;">${formatStamp(ev.timestamp)}</p>` : ""}
+            </div>
+            <p style="font-size:12px;color:#6b7280;margin:2px 0 0;line-height:1.5;word-break:break-word;">${ev.subtitle}</p>
+          </div>
+        </div>`;
+    })
+    .join("");
+
+  // ── Wrap in the card, include the cascade animation ──
   return `
-    <div style="background:#faf7fb;border:1px solid #ecd9ef;border-radius:14px;padding:16px 18px;">
-      <p style="text-transform:uppercase;font-weight:bold;color:#800080;font-size:13px;letter-spacing:1px;margin:0 0 12px;">Booking History</p>
-      ${rows.map(r => `<div style="display:flex;gap:10px;font-size:13px;line-height:1.5;color:${r.color};">${r.html}</div>`).join("")}
+    <style>
+      @keyframes auditFadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      .audit-node {
+        opacity: 0;
+        animation: auditFadeIn 0.35s ease both;
+      }
+      .audit-node:nth-child(1) { animation-delay: 0.05s; }
+      .audit-node:nth-child(2) { animation-delay: 0.10s; }
+      .audit-node:nth-child(3) { animation-delay: 0.15s; }
+      .audit-node:nth-child(4) { animation-delay: 0.20s; }
+      .audit-node:nth-child(5) { animation-delay: 0.25s; }
+      .audit-node:nth-child(6) { animation-delay: 0.30s; }
+    </style>
+
+    <div style="background:linear-gradient(180deg,#faf7fb 0%,#ffffff 100%);border:1px solid #ecd9ef;border-radius:14px;padding:18px 20px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+        <span class="material-symbols-outlined" style="font-size:18px;color:#800080;">history</span>
+        <p style="text-transform:uppercase;font-weight:900;color:#800080;font-size:12px;letter-spacing:1.5px;margin:0;">Booking History</p>
+      </div>
+      ${timelineHTML}
     </div>`;
 }
+
+
 
 window.openBooking = function(booking, id, businessId) {
   const life = getBookingLifecycle(booking);
@@ -1335,6 +1514,7 @@ window.openBooking = function(booking, id, businessId) {
         ${renderBadge(booking, "text-[11px]")}
         ${booking.damageStatus === "damaged" ? renderDamagedPill() : ""}
         ${isOverbooked ? renderOverbookedPill() : ""}
+        ${Math.max(0, totalAmount - amountPaid) > 0 ? renderOwingPill() : ""}
       </div>
     </div>
   </div>
@@ -1493,7 +1673,16 @@ window.openBooking = function(booking, id, businessId) {
           onclick='returnBooking("${id}", "${businessId}", ${JSON.stringify(booking.items)})'>MARK RETURNED</button>
       </div>
     ` : status === "returned" ? `
+      <!-- ===== CHANGE 8: Returned banner + optional Record Payment button ===== -->
       <div class="p-4 bg-green-50 text-green-700 text-center font-bold rounded-xl border border-green-200">✓ Items Successfully Returned</div>
+      ${(Math.max(0, totalAmount - amountPaid) > 0 && currentRole !== "viewer") ? `
+        <button class="w-full py-3 bg-purple-700 text-white rounded-xl font-black text-sm shadow-lg hover:bg-purple-800 transition flex items-center justify-center gap-2"
+          onclick='window.openRecordPaymentModal("${id}", "${businessId}")'>
+          <span class="material-symbols-outlined" style="font-size:1.1rem;">payments</span>
+          Record Payment
+        </button>
+      ` : ""}
+      <!-- ===== END CHANGE 8 ===== -->
     ` : ""}
     <div class="flex flex-col sm:flex-row gap-3">
       <button onclick="closeModal()" class="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-bold uppercase text-xs hover:bg-gray-300 transition">Close</button>
@@ -1512,6 +1701,156 @@ window.openBooking = function(booking, id, businessId) {
   const dlBtn = document.getElementById("downloadReceiptImgBtn");
   if (dlBtn) dlBtn.addEventListener("click", () => generateReceiptImage(booking, currentBusinessName));
 };
+
+/* ========================================================
+   ===== CHANGE 9: openRecordPaymentModal() =====
+   Small modal for recording an additional payment on an already-returned
+   booking that still has an owing balance.
+======================================================== */
+window.openRecordPaymentModal = async function(id, businessId) {
+  try {
+    const bookingRef = doc(db, "businesses", businessId, "bookings", id);
+    const snap = await getDoc(bookingRef);
+    if (!snap.exists()) {
+      alert("Booking not found.");
+      return;
+    }
+    const booking = snap.data();
+
+    const total = Number(booking.payment?.total || 0);
+    const paid = Number(booking.payment?.paid || 0);
+    const owing = Math.max(0, total - paid);
+
+    const BRAND = "#800080";
+
+    modalContent.innerHTML = `
+<div style="display:flex;flex-direction:column;gap:20px;padding:4px;width:100%;max-width:520px;margin:0 auto;box-sizing:border-box;">
+
+  <div style="background:linear-gradient(135deg, ${BRAND} 0%, #5c005c 100%);padding:20px 22px;border-radius:16px;color:#fff;box-shadow:0 10px 30px rgba(128,0,128,0.25);">
+    <p style="font-size:11px;letter-spacing:0.15em;text-transform:uppercase;opacity:0.85;margin:0 0 6px;">Record Payment</p>
+    <h3 style="font-size:20px;font-weight:900;line-height:1.2;margin:0;word-break:break-word;">${booking.client?.name || "Client"}</h3>
+  </div>
+
+  <div style="background:#f5edf6;border:1px solid #d8b4fe;border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;">
+    <div style="display:flex;justify-content:space-between;gap:10px;font-size:14px;color:#374151;">
+      <span style="opacity:0.75;">Total:</span>
+      <strong>₦${total.toLocaleString()}</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:10px;font-size:14px;color:#374151;">
+      <span style="opacity:0.75;">Paid so far:</span>
+      <strong>₦${paid.toLocaleString()}</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:10px;font-size:15px;border-top:1px solid #d8b4fe;padding-top:10px;">
+      <span style="font-weight:800;color:#b91c1c;">Owing:</span>
+      <strong style="font-weight:900;color:#b91c1c;">₦${owing.toLocaleString()}</strong>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:6px;">
+    <label style="font-size:12px;color:${BRAND};font-weight:700;">Amount received (₦)</label>
+    <input id="recordPaymentAmount" type="number" min="0" max="${owing}" placeholder="0"
+      style="width:100%;padding:14px 16px;font-size:18px;font-weight:700;border-radius:10px;border:1px solid #d8b4fe;background:#fff;color:#111827;outline:none;box-sizing:border-box;">
+  </div>
+
+  <div style="display:flex;gap:10px;">
+    <button onclick="closeModal()"
+      style="flex:1;padding:12px;background:#f3f4f6;color:#4b5563;border:1px solid #e5e7eb;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;">
+      Cancel
+    </button>
+    <button onclick='window.submitRecordedPayment("${id}", "${businessId}")'
+      style="flex:1;padding:12px;background:${BRAND};color:#fff;border:none;border-radius:10px;font-weight:900;font-size:13px;cursor:pointer;box-shadow:0 6px 20px rgba(128,0,128,0.3);">
+      Add Payment
+    </button>
+  </div>
+</div>`;
+
+    bookingModal.style.display = "flex";
+    document.body.style.overflow = "hidden";
+
+    // Focus + Enter-to-submit
+    const input = document.getElementById("recordPaymentAmount");
+    if (input) {
+      input.focus();
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          window.submitRecordedPayment(id, businessId);
+        }
+      });
+    }
+  } catch (err) {
+    console.error("openRecordPaymentModal failed:", err);
+    alert("Could not open the payment modal: " + err.message);
+  }
+};
+// ===== END CHANGE 9 =====
+
+/* ========================================================
+   ===== CHANGE 10: submitRecordedPayment() =====
+   Commits an additional payment, updates payment.paid, notifies, then
+   reopens the booking modal with fresh data.
+======================================================== */
+window.submitRecordedPayment = async function(id, businessId) {
+  try {
+    const input = document.getElementById("recordPaymentAmount");
+    const entered = Math.max(0, Number(input?.value || 0));
+
+    const bookingRef = doc(db, "businesses", businessId, "bookings", id);
+    const snap = await getDoc(bookingRef);
+    if (!snap.exists()) {
+      alert("Booking not found.");
+      return;
+    }
+    const booking = snap.data();
+
+    const total = Number(booking.payment?.total || 0);
+    const paid = Number(booking.payment?.paid || 0);
+    const owing = Math.max(0, total - paid);
+
+    if (entered <= 0) {
+      alert("Enter a valid amount.");
+      return;
+    }
+
+    // Clamp so we never overpay.
+    const clamped = Math.min(entered, owing);
+    const newPaid = Math.min(total, paid + clamped);
+    const newOwing = Math.max(0, total - newPaid);
+
+    await updateDoc(bookingRef, { "payment.paid": newPaid });
+
+    if (newOwing <= 0) {
+      await sendNotification(
+        businessId,
+        `${booking.client.name}'s balance is now fully settled. 🎉`,
+        auth.currentUser?.email || "System",
+        "payment_recorded",
+        id
+      );
+    } else {
+      await sendNotification(
+        businessId,
+        `Payment received from ${booking.client.name}: ₦${clamped.toLocaleString()} — owing now ₦${newOwing.toLocaleString()}.`,
+        auth.currentUser?.email || "System",
+        "payment_recorded",
+        id
+      );
+    }
+
+    closeModal();
+    alert("Payment recorded ✅");
+
+    // Reopen the booking modal with fresh data so badges + totals refresh.
+    const freshSnap = await getDoc(bookingRef);
+    if (freshSnap.exists()) {
+      openBooking(freshSnap.data(), id, businessId);
+    }
+  } catch (err) {
+    console.error("submitRecordedPayment failed:", err);
+    alert("Failed to record payment: " + err.message);
+  }
+};
+// ===== END CHANGE 10 =====
 
 /* ========================================================
    ===== OPTION B: Multi-receipt gallery for the EDIT modal =====
@@ -1990,8 +2329,10 @@ function enableButton(button) {
    Uses the same renderBadge() and renderOverbookedPill() as the modal,
    so badges are visually identical across the table and the detail view.
 ========================= */
+// ===== CHANGE 2: renderRow() now also shows the Owing pill =====
 function renderRow(b, id, businessId) {
   const isOverbooked = isBookingOverbooked(b);
+  const owing = Math.max(0, Number(b.payment?.total || 0) - Number(b.payment?.paid || 0));
 
   return `
     <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
@@ -2002,6 +2343,7 @@ function renderRow(b, id, businessId) {
           ${renderBadge(b, "text-[10px]")}
           ${b.damageStatus === "damaged" ? renderDamagedPill() : ""}
           ${isOverbooked ? renderOverbookedPill() : ""}
+          ${owing > 0 ? renderOwingPill() : ""}
         </div>
       </td>
       <td class="p-4">
@@ -2010,6 +2352,7 @@ function renderRow(b, id, businessId) {
       </td>
     </tr>`;
 }
+// ===== END CHANGE 2 =====
 
 window.handleViewClick = function(element) {
   openBookingById(element.dataset.id, element.dataset.business);

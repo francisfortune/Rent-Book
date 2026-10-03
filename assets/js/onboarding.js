@@ -56,9 +56,9 @@ const steps = [
     desc: "Set up your public rental page so prospective clients can browse and reach out."
   },
   {
-    selector: "#user-avatar",
-    title: "Account & Settings 🤖",
-    desc: "Customize settings, invite team members, view reports, or ask the AI Assistant for help."
+  selector: "#user-avatar",
+    title: "Settings & Analytics ⚙️📈",
+    desc: "Tap your avatar to open Settings — customize your profile, invite team members, and manage notifications. From there, jump into Analytics to see revenue trends, top customers, outstanding balances, and damage losses."
   }
 ];
 
