@@ -20,7 +20,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/f
 import { editBookingTransaction } from "./services/bookingService.js";
 import { uploadReceiptImage } from "./utils/upload.js";
 import { generateReceiptImage } from "./pdf.js";
-import { checkDateAvailability, getAvailabilityMap, fetchActiveBookings } from "./services/availabilityService.js";
+import { checkDateAvailability, getAvailabilityMap, fetchActiveBookings, getBookingWindow } from "./services/availabilityService.js";
 import { getBookingLifecycle, renderLifecycleBadge, renderOverbookedBadge, isBookingOverbooked, LIFECYCLE_BADGE_COLORS } from "./services/bookingStatus.js";
 
 import { runAutomatedChecks } from "./services/reminderService.js";
@@ -28,6 +28,20 @@ import { runAutomatedChecks } from "./services/reminderService.js";
 let currentRole = "viewer";
 let currentBusinessName = "";
 let publicProfileSettings = { enabled: false, slug: "" }; // Store storefront status
+
+// Shown in the return-settlement modal whenever a business hasn't customized
+// its own return message yet. Kept in sync with the identical constant in
+// setting.js and setup.js.
+const DEFAULT_RETURN_MESSAGE_TEMPLATE =
+  "Hi {clientName}, thank you for renting with {businessName}! We've received your items back in good condition. We truly appreciate your business and look forward to serving you again soon! 🙏";
+let returnMessageTemplate = DEFAULT_RETURN_MESSAGE_TEMPLATE;
+
+// State for whichever booking is currently open in the return-settlement
+// modal -- set by openReturnSettlementModal, read by addDamageRow and
+// confirmReturnSettlement.
+let returnSettlementBooking = null;
+let returnSettlementId = null;
+let returnSettlementBusinessId = null;
 
 /* =========================
    LISTEN TO BUSINESS PROFILE SETTINGS
@@ -42,6 +56,7 @@ function listenToBusinessProfile(businessId) {
         enabled: data.publicProfile?.enabled || false,
         slug: data.publicProfile?.slug || ""
       };
+      returnMessageTemplate = data.returnMessageTemplate || DEFAULT_RETURN_MESSAGE_TEMPLATE;
     }
   });
 }
@@ -127,6 +142,17 @@ function renderOverbookedPill() {
     </span>`;
 }
 
+// ===== FIX 2: Damaged badge — mirrors renderOverbookedPill but red =====
+function renderDamagedPill() {
+  return `
+    <span class="inline-flex items-center gap-1.5 bg-red-100 text-red-800 border border-red-200
+                 rounded-full px-2.5 py-1 font-black uppercase tracking-wider
+                 whitespace-nowrap leading-none text-[10px]">
+      <span class="inline-block w-1.5 h-1.5 rounded-full bg-red-500"></span>
+      <span>Damaged</span>
+    </span>`;
+}
+
 /* =========================
    RECEIPT TEXT GENERATOR
 ========================= */
@@ -137,6 +163,11 @@ function generateReceiptText(booking) {
   const cautionFee = Number(booking.payment?.cautionFee || 0);
   const transportationFee = Number(booking.payment?.transportationFee || 0);
   const otherFees = Number(booking.payment?.otherFees || 0);
+  // Backward-compatible reader: old bookings have a single otherFees number;
+  // new bookings have an itemized otherFeesList array.
+  const otherFeeRows = Array.isArray(booking.payment?.otherFeesList) && booking.payment.otherFeesList.length
+    ? booking.payment.otherFeesList
+    : (otherFees > 0 ? [{ label: "Other Fees", amount: otherFees }] : []);
 
   let itemsSummary = booking.items?.map(i => {
     return `• ${i.name} (x${i.qty})\n${i.summary ? `   - ${i.summary}` : ""} - ₦${(i.total || 0).toLocaleString()}`;
@@ -148,7 +179,9 @@ function generateReceiptText(booking) {
   let feesLines = "";
   if (cautionFee) feesLines += `Caution Fee: ₦${cautionFee.toLocaleString()}\n`;
   if (transportationFee) feesLines += `Transportation: ₦${transportationFee.toLocaleString()}\n`;
-  if (otherFees) feesLines += `Other Fees: ₦${otherFees.toLocaleString()}\n`;
+  otherFeeRows.forEach(f => {
+    feesLines += `${f.label || "Other Fee"}: ₦${Number(f.amount || 0).toLocaleString()}\n`;
+  });
 
   let receiptText = `*${currentBusinessName} Booking Receipt*\n\n` +
     `Hi ${booking.client.name}, your booking details are below:\n\n` +
@@ -315,47 +348,486 @@ async function exportBookingsPDF() {
 /* =========================
    RETURN BOOKING
 ========================= */
+/* =========================
+   RETURN BOOKING -- entry point (unchanged name/signature so the
+   "MARK RETURNED" button's markup never has to change). Now opens the
+   Return Settlement modal instead of marking returned immediately.
+========================= */
 window.returnBooking = async function(bookingId, businessId, items) {
   if (!items || items.length === 0) { alert("No items found in booking"); return; }
-
-  const btn = document.activeElement;
-  if (btn) disableButton(btn);
+  if (currentRole === "viewer") { alert("Permission denied: viewers cannot process returns."); return; }
 
   const hasBorrowedItems = items.some(i => (i.shortage || 0) > 0);
   if (hasBorrowedItems) {
     if (!confirm("This booking was overbooked.\nHave you returned borrowed items to the vendor?")) return;
   }
-  if (!confirm("Mark this booking as returned?")) return;
-
-  const loader = document.createElement("div");
-  loader.id = "returnLoader";
-  loader.style = `position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.85);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10000;font-family:sans-serif;`;
-  loader.innerHTML = `<div style="width:50px;height:50px;border:5px solid #f3f3f3;border-top:5px solid purple;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:20px;"></div><h3 style="color:purple;font-weight:800;">MARKING RETURN...</h3><p style="color:purple;font-size:0.8rem;margin-top:5px;">Syncing inventory, please wait.</p><style>@keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}</style>`;
-  document.body.appendChild(loader);
 
   try {
     const bookingRef = doc(db, "businesses", businessId, "bookings", bookingId);
     const snap = await getDoc(bookingRef);
-    if (!snap.exists()) { document.body.removeChild(loader); alert("Booking not found"); return; }
+    if (!snap.exists()) { alert("Booking not found"); return; }
 
-    const booking = snap.data();
-    await updateDoc(bookingRef, { status: "returned" });
+    const booking = { id: bookingId, ...snap.data() };
+    window.openReturnSettlementModal(booking, bookingId, businessId);
+  } catch (error) {
+    console.error("Failed to open return settlement:", error);
+    alert("Could not open the return settlement screen: " + error.message);
+  }
+};
 
-    document.body.removeChild(loader);
+// ===== NEW: Token demo-safety =====
+// The saved template may be missing {clientName} / {businessName} tokens
+// entirely (business deleted them). We still want the real client name in
+// the greeting, so we ALWAYS guarantee a "Hi {realName}," opening line:
+//   1. If the template contains {clientName}, replace as before.
+//   2. If it doesn't, prepend "Hi {realName}," so the client name is never lost.
+// This makes the tokens a soft/demo hint rather than a hard requirement.
+function applyReturnMessageTemplate(template, booking) {
+  const clientName = booking?.client?.name || "there";
+  const bizName = currentBusinessName || "us";
+
+  let output = (template || DEFAULT_RETURN_MESSAGE_TEMPLATE)
+    .replace(/\{clientName\}/g, clientName)
+    .replace(/\{businessName\}/g, bizName);
+
+  // If the template never mentioned the client name, prepend a real greeting
+  // so the customer always sees their own name. Skip if the template already
+  // opens with a greeting line containing the name.
+  const startsWithClientGreeting =
+    output.trimStart().toLowerCase().startsWith(`hi ${clientName.toLowerCase()}`) ||
+    output.trimStart().toLowerCase().startsWith(`hello ${clientName.toLowerCase()}`) ||
+    output.trimStart().toLowerCase().startsWith(`dear ${clientName.toLowerCase()}`);
+
+  if (!startsWithClientGreeting) {
+    output = `Hi ${clientName},\n\n${output}`;
+  }
+
+  return output;
+}
+// ===== END NEW =====
+
+function escapeHtmlForTextarea(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/** One damage repeater row. Items offered are the ones actually in THIS
+ * booking (so you can only record damage on something that was rented),
+ * tagged so we know later whether it's a catalog item (safe to deduct from
+ * inventory) or a custom/vendor-borrowed one (nothing of yours to deduct). */
+// ===== FIX 1: Damage amount input — remove pre-typed value, keep hint =====
+// ===== NEW: Per-item damage qty clamp (can't exceed what was rented) =====
+function buildDamageRowHTML() {
+  const items = returnSettlementBooking?.items || [];
+
+  // Each option carries the max qty that was actually rented for that item.
+  // For custom (not-in-inventory) items we fall back to the qty on that row.
+  const options = items.map(i => {
+    const rentedQty = Math.max(1, Number(i.qty || 0));
+    return `<option value="${escapeHtmlForTextarea(i.name)}" data-is-custom="${!!i.isCustom}" data-max="${rentedQty}">${escapeHtmlForTextarea(i.name)}${i.isCustom ? " (not in inventory)" : ""} — rented: ${rentedQty}</option>`;
+  }).join("");
+
+  return `
+    <div class="damage-row" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:#fff;border:0.5px solid #e5e5e5;border-radius:6px;padding:8px 10px;">
+      <select class="damage-item-select" onchange="window.syncDamageQtyMax(this)"
+        style="flex:2 1 140px;min-width:0;padding:6px 8px;font-size:13px;border-radius:6px;border:0.5px solid #d8b4fe;background:#f9fafb;outline:none;">
+        <option value="">-- Select item --</option>
+        ${options}
+      </select>
+      <input class="damage-qty" type="number" min="1" max="1" placeholder="Qty"
+        oninput="window.clampDamageQty(this)"
+        style="flex:0 1 70px;min-width:0;padding:6px 8px;font-size:13px;text-align:center;border-radius:6px;border:0.5px solid #d8b4fe;background:#f9fafb;outline:none;box-sizing:border-box;">
+      <input class="damage-amount" type="number" min="0" placeholder="\u20a6 charge"
+        style="flex:0 1 100px;min-width:0;padding:6px 8px;font-size:13px;text-align:center;border-radius:6px;border:0.5px solid #d8b4fe;background:#f9fafb;outline:none;box-sizing:border-box;">
+      <button type="button" onclick="this.parentElement.remove();" style="width:28px;height:28px;flex-shrink:0;border:0.5px solid #fca5a5;border-radius:6px;background:#fef2f2;color:#b91c1c;cursor:pointer;">\u2715</button>
+    </div>`;
+}
+
+// ===== NEW: Keep the damage qty input's max in sync with the picked item =====
+window.syncDamageQtyMax = function (selectEl) {
+  const row = selectEl.closest(".damage-row");
+  if (!row) return;
+  const qtyInput = row.querySelector(".damage-qty");
+  if (!qtyInput) return;
+
+  const selectedOpt = selectEl.selectedOptions[0];
+  const maxQty = Number(selectedOpt?.dataset.max || 0);
+  if (maxQty > 0) {
+    qtyInput.max = String(maxQty);
+  } else {
+    qtyInput.removeAttribute("max");
+  }
+  // Clamp current value to the new max (or back to 1 if no item picked yet).
+  window.clampDamageQty(qtyInput);
+};
+
+// ===== NEW: Clamp the damage qty value to [1, max] as the user types =====
+window.clampDamageQty = function (qtyInput) {
+  const raw = Number(qtyInput.value || 0);
+  const max = Number(qtyInput.max || 0) || Infinity;
+  let clamped = Math.floor(raw);
+  if (!isFinite(clamped) || clamped < 1) clamped = 1;
+  if (clamped > max) clamped = max;
+  if (String(clamped) !== qtyInput.value) {
+    qtyInput.value = String(clamped);
+  }
+};
+
+
+window.addDamageRow = function() {
+  const container = document.getElementById("damageRowsContainer");
+  if (!container) return;
+  container.insertAdjacentHTML("beforeend", buildDamageRowHTML());
+};
+
+window.updateCautionFeeUI = function() {
+  const selected = document.querySelector('input[name="cautionHandling"]:checked')?.value;
+  const wrap = document.getElementById("partialCautionWrap");
+  if (wrap) wrap.style.display = selected === "partial" ? "block" : "none";
+};
+
+/* =========================
+   RETURN SETTLEMENT MODAL
+   ===== NEW: Redesigned with #800080 inline styles =====
+========================= */
+window.openReturnSettlementModal = function(booking, id, businessId) {
+  returnSettlementBooking = booking;
+  returnSettlementId = id;
+  returnSettlementBusinessId = businessId;
+
+  const cautionFee = Number(booking.payment?.cautionFee || 0);
+  const prefilledNote = applyReturnMessageTemplate(returnMessageTemplate, booking);
+
+  // ===== NEW: #800080 brand color =====
+  const BRAND = "#800080";
+  const BRAND_LIGHT = "#f5edf6";
+  const BRAND_BORDER = "#d8b4fe";
+
+  modalContent.innerHTML = `
+<div style="display:flex;flex-direction:column;gap:20px;padding:4px;width:100%;max-width:640px;margin:0 auto;box-sizing:border-box;">
+
+  <div style="background:linear-gradient(135deg, ${BRAND} 0%, #5c005c 100%);padding:22px 24px;border-radius:18px;color:#fff;box-shadow:0 10px 30px rgba(128,0,128,0.25);">
+    <p style="font-size:11px;letter-spacing:0.15em;text-transform:uppercase;opacity:0.85;margin:0 0 6px;">Return Settlement</p>
+    <h3 style="font-size:22px;font-weight:900;line-height:1.2;margin:0;word-break:break-word;">${booking.client?.name || "Client"}</h3>
+  </div>
+
+  <div style="background:${BRAND_LIGHT};border:1px solid ${BRAND_BORDER};border-radius:16px;padding:18px 20px;">
+    <h4 style="font-size:14px;font-weight:800;color:${BRAND};margin:0 0 6px;">Caution Fee</h4>
+    <p style="font-size:12px;color:#6b7280;margin:0 0 14px;">Collected: <strong style="color:#374151;">\u20a6${cautionFee.toLocaleString()}</strong></p>
+    <div style="display:flex;flex-direction:column;gap:10px;font-size:14px;color:#374151;">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <input type="radio" name="cautionHandling" value="full" checked onchange="updateCautionFeeUI()" style="accent-color:${BRAND};">
+        <span>Full return</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <input type="radio" name="cautionHandling" value="partial" onchange="updateCautionFeeUI()" style="accent-color:${BRAND};">
+        <span>Partial return</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <input type="radio" name="cautionHandling" value="kept" onchange="updateCautionFeeUI()" style="accent-color:${BRAND};">
+        <span>Kept (damage/loss)</span>
+      </label>
+    </div>
+    <div id="partialCautionWrap" style="display:none;margin-top:14px;">
+      <label style="font-size:11px;font-weight:800;color:${BRAND};text-transform:uppercase;display:block;margin-bottom:6px;">Amount to keep (\u20a6)</label>
+      <input id="cautionKeptAmount" type="number" min="0" max="${cautionFee}" value="0"
+        style="width:100%;padding:10px 12px;border:1px solid ${BRAND_BORDER};border-radius:10px;font-size:14px;outline:none;box-sizing:border-box;background:#fff;">
+    </div>
+  </div>
+
+  <div style="background:${BRAND_LIGHT};border:1px solid ${BRAND_BORDER};border-radius:16px;padding:18px 20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+      <h4 style="font-size:14px;font-weight:800;color:${BRAND};margin:0;">Damages</h4>
+      <button type="button" onclick="addDamageRow()"
+        style="font-size:12px;font-weight:800;padding:8px 14px;border-radius:10px;border:1px solid ${BRAND_BORDER};background:#fff;color:${BRAND};cursor:pointer;">
+        + Add damaged item
+      </button>
+    </div>
+    <div id="damageRowsContainer" style="display:flex;flex-direction:column;gap:8px;"></div>
+    <p style="font-size:11px;color:#9ca3af;margin:10px 0 0;">Leave empty if everything came back in good condition.</p>
+  </div>
+
+  <div style="background:${BRAND_LIGHT};border:1px solid ${BRAND_BORDER};border-radius:16px;padding:18px 20px;">
+    <h4 style="font-size:14px;font-weight:800;color:${BRAND};margin:0 0 10px;">Thank-you message</h4>
+    <textarea id="returnNoteTextarea" rows="5"
+      style="width:100%;padding:12px;border:1px solid ${BRAND_BORDER};border-radius:10px;font-size:13px;outline:none;box-sizing:border-box;background:#fff;font-family:inherit;resize:vertical;">${escapeHtmlForTextarea(prefilledNote)}</textarea>
+    <p style="font-size:11px;color:#9ca3af;margin:8px 0 0;">Pre-filled from your Settings template — edit freely for this customer. Sent via WhatsApp when you confirm.</p>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    <button onclick="confirmReturnSettlement('${id}', '${businessId}')"
+      style="width:100%;padding:14px;background:${BRAND};color:#fff;border:none;border-radius:12px;font-weight:900;font-size:14px;cursor:pointer;box-shadow:0 6px 20px rgba(128,0,128,0.3);">
+      Confirm Return
+    </button>
+    <button onclick="closeModal()"
+      style="width:100%;padding:12px;background:#f3f4f6;color:#4b5563;border:1px solid #e5e7eb;border-radius:12px;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;cursor:pointer;">
+      Cancel
+    </button>
+  </div>
+</div>`;
+
+  bookingModal.style.display = "flex";
+  document.body.style.overflow = "hidden";
+};
+// ===== END NEW =====
+
+/** Builds the customer-facing settlement message: greeting, damage summary,
+ * caution settlement, the (possibly edited) thank-you note, and the review
+ * link -- same URL/guard as generateReceiptText uses. */
+function buildReturnSettlementMessage(booking) {
+  const lines = [];
+  lines.push(`Hi ${booking.client?.name || "there"},`);
+  lines.push("");
+
+  if (booking.damages && booking.damages.length) {
+    lines.push("Return summary:");
+    booking.damages.forEach(d => {
+      lines.push(`- ${d.itemName} x${d.quantity}: \u20a6${Number(d.amount || 0).toLocaleString()} charged`);
+    });
+    lines.push("");
+  }
+
+  const p = booking.payment || {};
+  if (p.cautionFeeReturned || p.cautionFeeKept) {
+    let line = `Caution fee: \u20a6${Number(p.cautionFee || 0).toLocaleString()} held -- \u20a6${Number(p.cautionFeeReturned || 0).toLocaleString()} refunded`;
+    if (p.cautionFeeKept) line += `, \u20a6${Number(p.cautionFeeKept).toLocaleString()} retained`;
+    lines.push(line + ".");
+    lines.push("");
+  }
+
+  if (booking.returnNote) lines.push(booking.returnNote);
+
+  if (publicProfileSettings.enabled && publicProfileSettings.slug) {
+    const storeUrl = `${window.location.origin}/p/${publicProfileSettings.slug}`;
+    lines.push("");
+    lines.push(`\u{1F310} Leave a review or rate us: ${storeUrl}`);
+  }
+
+  return lines.join("\n");
+}
+
+/**
+ * STUB -- no backend wired yet. Builds the message + payload for each
+ * channel the customer has contact info for, and logs it. No network call,
+ * no Firestore write. Swap console.info for a fetch() call once the backend
+ * exists; nothing else here changes.
+ */
+async function notifyReturnSettlementByChannel(booking, business) {
+  const body = buildReturnSettlementMessage(booking);
+  const attempts = [];
+  if (booking.client?.email) attempts.push({ channel: "email", to: booking.client.email });
+  if (booking.client?.phone) attempts.push({ channel: "sms", to: booking.client.phone });
+
+  for (const attempt of attempts) {
+    try {
+      const payload = {
+        channel: attempt.channel,
+        to: attempt.to,
+        subject: "Your rental has been returned \u2014 settlement summary",
+        body,
+        businessId: business?.id || business,
+        bookingId: booking.id,
+        type: "return_settlement"
+      };
+      console.info("[ReturnSettlement] would send:", payload);
+    } catch (err) {
+      console.error("[ReturnSettlement] stub failed for channel", attempt.channel, err);
+    }
+  }
+}
+
+/* =========================
+   CONFIRM RETURN SETTLEMENT -- the actual commit.
+   Writes the booking's return audit trail, deducts damaged catalog items
+   from BOTH totalQuantity and availableQuantity (never just one -- see the
+   spec notes), runs the post-return overbooked cascade, then fires the
+   WhatsApp message and the email/SMS stub hooks.
+========================= */
+window.confirmReturnSettlement = async function(id, businessId) {
+  const confirmBtn = event?.target;
+  if (confirmBtn) disableButton(confirmBtn);
+
+  try {
+    const booking = returnSettlementBooking;
+    if (!booking || returnSettlementId !== id) {
+      throw new Error("Return session expired -- please reopen this booking and try again.");
+    }
+
+    // ---- Caution fee settlement ----
+    const cautionFee = Number(booking.payment?.cautionFee || 0);
+    const handling = document.querySelector('input[name="cautionHandling"]:checked')?.value || "full";
+    let cautionFeeKept = 0;
+    let cautionFeeReturned = 0;
+    if (handling === "full") {
+      cautionFeeReturned = cautionFee;
+    } else if (handling === "kept") {
+      cautionFeeKept = cautionFee;
+    } else {
+      cautionFeeKept = Math.min(cautionFee, Math.max(0, Number(document.getElementById("cautionKeptAmount")?.value || 0)));
+      cautionFeeReturned = cautionFee - cautionFeeKept;
+    }
+
+    // ---- Damages + the critical inventory deduction rule ----
+    const damageRowEls = document.querySelectorAll("#damageRowsContainer .damage-row");
+    const damages = [];
+    const inventoryMap = getInventoryMap(); // { nameLower: inventoryDoc }
+
+    for (const row of damageRowEls) {
+      const select = row.querySelector(".damage-item-select");
+      const itemName = select?.value || "";
+      if (!itemName) continue;
+
+      const isCustom = select.selectedOptions[0]?.dataset.isCustom === "true";
+            // ===== NEW: Clamp qty at save time too — defence in depth =====
+      // Even if someone bypasses the UI, we never record more damage
+      // than what was actually rented for this booking.
+      const rentedQtyForItem = Math.max(
+        0,
+        Number(
+          (returnSettlementBooking?.items || []).find(
+            it => (it.name || "").trim().toLowerCase() === itemName.trim().toLowerCase()
+          )?.qty || 0
+        )
+      );
+      const rawQty = Math.max(0, Number(row.querySelector(".damage-qty")?.value || 0));
+      const qty = rentedQtyForItem > 0
+        ? Math.min(rawQty, rentedQtyForItem)
+        : rawQty; // fallback: no matching line item, use raw qty as-is
+      const amount = Math.max(0, Number(row.querySelector(".damage-amount")?.value || 0));
+      if (qty <= 0) continue;
+
+      const invMatch = !isCustom ? inventoryMap[itemName.trim().toLowerCase()] : null;
+      damages.push({ itemId: invMatch?.id || "", itemName, quantity: qty, amount });
+
+      // Only a real catalog match gets deducted -- vendor-borrowed / custom
+      // items never touch your own inventory, because none of it was yours.
+      if (invMatch?.id) {
+        const itemRef = doc(db, "businesses", businessId, "inventory", invMatch.id);
+        const freshSnap = await getDoc(itemRef);
+        if (freshSnap.exists()) {
+          const freshData = freshSnap.data();
+          // BOTH fields drop by the same amount, clamped at 0 -- never negative,
+          // and never just one of the two (see spec: deducting only one breaks
+          // either the Total display or the live availability engine).
+          const newTotal = Math.max(0, Number(freshData.totalQuantity || 0) - qty);
+          const newAvailable = Math.max(0, Number(freshData.availableQuantity || 0) - qty);
+          await updateDoc(itemRef, {
+            totalQuantity: newTotal,
+            availableQuantity: newAvailable,
+            updatedAt: serverTimestamp()
+          });
+
+          // ===== FIX 4: Per-item damage notification (in-app + push) =====
+          const notifMsg =
+            `${invMatch.name} reduced from ${Number(freshData.totalQuantity || 0)} to ${newTotal} due to damage on ${booking.client?.name || "client"}'s return`;
+
+          await sendNotification(
+            businessId,
+            notifMsg,
+            auth.currentUser?.email || "System",
+            "inventory_damage",
+            id
+          );
+
+          try {
+            await sendPush(notifMsg, "/inventory.html");
+          } catch (e) {
+            console.warn("Damage push failed (non-blocking):", e);
+          }
+        }
+      }
+    }
+
+    const returnNote = document.getElementById("returnNoteTextarea")?.value?.trim() || "";
+    const damageStatus = damages.length ? "damaged" : "clean";
+
+    // ---- Write the booking's return audit trail (purely additive) ----
+    const bookingRef = doc(db, "businesses", businessId, "bookings", id);
+    await updateDoc(bookingRef, {
+      status: "returned",
+      "payment.cautionFeeReturned": cautionFeeReturned,
+      "payment.cautionFeeKept": cautionFeeKept,
+      "payment.cautionFeeSettledAt": serverTimestamp(),
+      damages,
+      damagesRecordedAt: serverTimestamp(),
+      returnNote,
+      returnNoteSentAt: serverTimestamp(),
+      damageStatus
+    });
+
+    const updatedSnap = await getDoc(bookingRef);
+    const updatedBooking = { id, ...updatedSnap.data() };
+
+    // ---- Post-return cascade: does any OTHER active booking now come up short? ----
+    // Only worth checking when inventory actually changed (i.e. there were
+    // damages on catalog items) -- nothing else in a return touches stock.
+    if (damages.some(d => d.itemId)) {
+      try {
+        const invSnap = await getDocs(collection(db, "businesses", businessId, "inventory"));
+        const freshInventory = invSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const otherActiveBookings = await fetchActiveBookings(businessId, id);
+
+        const newlyOverbooked = otherActiveBookings.filter(ob => {
+          const { start, end } = getBookingWindow(ob);
+          const map = getAvailabilityMap(freshInventory, otherActiveBookings, start, end, ob.id);
+          return (ob.items || []).some(it => {
+            if (it.isCustom) return false;
+            const key = (it.name || "").trim().toLowerCase();
+            const free = map.has(key) ? map.get(key) : 0;
+            const ownPortion = Math.max(0, Number(it.qty || 0) - Number(it.shortage || it.borrowed || 0));
+            return ownPortion > free;
+          });
+        });
+
+        if (newlyOverbooked.length) {
+          const names = newlyOverbooked.map(b => b.client?.name || "Unknown client").join(", ");
+          await sendNotification(
+            businessId,
+            `Damage on this return made ${newlyOverbooked.length} booking(s) overbooked: ${names}`,
+            auth.currentUser.email,
+            "booking_overbooked",
+            id
+          );
+        }
+      } catch (cascadeErr) {
+        console.error("Post-return overbooked cascade failed:", cascadeErr);
+      }
+    }
+
     closeModal();
-    alert("Booking marked as returned successfully! ✅");
+    alert(`Booking marked as returned and settled successfully! \u2705${damages.length ? ` (${damages.length} damage item(s) recorded)` : ""}`);
 
     await sendNotification(
       businessId,
-      `${booking.client.name}'s items have been returned successfully ✅`,
+      `${booking.client.name}'s items have been returned successfully \u2705${damages.length ? ` -- ${damages.length} item(s) recorded with damage` : ""}`,
       auth.currentUser.email,
       "booking_returned",
-      bookingId
+      id
     );
+
+    // ---- WhatsApp: still fires immediately, exactly as before ----
+    const finalMessage = buildReturnSettlementMessage(updatedBooking);
+    if (updatedBooking.client?.phone) {
+      shareToWhatsApp(updatedBooking.client.phone, finalMessage);
+    }
+
+    // ---- Email/SMS stub hooks -- never allowed to block the return ----
+    try {
+      await notifyReturnSettlementByChannel(updatedBooking, { id: businessId, name: currentBusinessName });
+    } catch (stubErr) {
+      console.error("notifyReturnSettlementByChannel failed:", stubErr);
+    }
+
   } catch (error) {
-    if (document.getElementById("returnLoader")) document.body.removeChild(loader);
-    console.error("Return failed:", error);
-    alert("An error occurred during return. Please check your connection and try again.");
+    console.error("Return settlement failed:", error);
+    alert("An error occurred while settling the return: " + error.message);
+  } finally {
+    if (confirmBtn) enableButton(confirmBtn);
+    returnSettlementBooking = null;
+    returnSettlementId = null;
+    returnSettlementBusinessId = null;
   }
 };
 
@@ -471,7 +943,12 @@ function markEditTotalUserEdited() {
 
 function clearEditTotalOverride() {
   const totalEl = document.getElementById("editTotal");
-  if (totalEl) delete totalEl.dataset.userEdited;
+  if (totalEl) {
+    delete totalEl.dataset.userEdited;
+    // Drop the "seeded from saved booking" flag too — the user is making
+    // a change that legitimately affects the total, so let recalc run.
+    delete totalEl.dataset.seeded;
+  }
 }
 
 function recalculateEditWorkspace() {
@@ -516,29 +993,36 @@ function recalculateEditWorkspace() {
   const computedTotal = itemsSubtotal + feesTotal;
 
   const totalEl = document.getElementById("editTotal");
-  const wasManuallyEdited = totalEl?.dataset.userEdited === "true";
+  // Treat the total as "user-owned" if:
+  //   • the user typed in it during THIS session, OR
+  //   • the booking already had a saved total when the modal opened.
+  // We mark that second case below in openEditModal() by setting
+  // data-seeded="true" on the input. Until the user actually edits
+  // items/qty/price/fees, we NEVER overwrite their real total.
+  const isUserOwned =
+    totalEl?.dataset.userEdited === "true" ||
+    totalEl?.dataset.seeded === "true";
 
-  if (totalEl && !wasManuallyEdited) {
+  if (totalEl && !isUserOwned) {
     totalEl.value = computedTotal;
   }
 
-  const subtotalDisplay = document.getElementById("editItemsSubtotalDisplay");
-  if (subtotalDisplay) {
-    const manualValue = Number(totalEl?.value || 0);
-    const delta = manualValue - computedTotal;
 
-    if (!wasManuallyEdited) {
+    const subtotalDisplay = document.getElementById("editItemsSubtotalDisplay");
+  if (subtotalDisplay) {
+    const realTotal = Number(totalEl?.value || 0);
+
+    // Always show the REAL total first (that's what the customer is paying).
+    // Show the freshly-computed breakdown as a secondary hint only when it
+    // differs from the real total — otherwise the hint is just noise.
+    if (realTotal === computedTotal) {
       subtotalDisplay.innerHTML =
-        `Items + fees subtotal: <strong>₦${computedTotal.toLocaleString()}</strong>`;
+        `Real total: <strong>₦${realTotal.toLocaleString()}</strong> ` +
+        `<span style="color:#9ca3af;">(matches items + fees)</span>`;
     } else {
-      const deltaLabel = delta < 0
-        ? `₦${Math.abs(delta).toLocaleString()} discount`
-        : delta > 0
-          ? `₦${delta.toLocaleString()} surcharge`
-          : "matches subtotal";
       subtotalDisplay.innerHTML =
-        `Items + fees would be <strong>₦${computedTotal.toLocaleString()}</strong> · ` +
-        `you set <strong>₦${manualValue.toLocaleString()}</strong> (${deltaLabel})`;
+        `Real total: <strong>₦${realTotal.toLocaleString()}</strong> ` +
+        `<span style="color:#9ca3af;">(items + fees breakdown: ₦${computedTotal.toLocaleString()})</span>`;
     }
   }
 
@@ -547,7 +1031,13 @@ function recalculateEditWorkspace() {
 }
 
 window.useEditSubtotal = function () {
-  clearEditTotalOverride();
+  // Manually requesting the subtotal means the user WANTS to overwrite
+  // whatever total is currently there — so drop the seed flag too.
+  const tEl = document.getElementById("editTotal");
+  if (tEl) {
+    delete tEl.dataset.seeded;
+    delete tEl.dataset.userEdited;
+  }
   recalculateEditWorkspace();
 };
 
@@ -607,9 +1097,173 @@ function wireEditTotalAndFeeListeners() {
   });
 }
 
+/* ========================================================
+   OTHER FEES REPEATER (edit modal)
+   Same pattern as add.js: the hidden #editOtherFees input keeps holding the
+   computed SUM and fires its normal "input" event when that sum changes, so
+   the existing listener above (clearEditTotalOverride + recalculateEditWorkspace)
+   keeps working completely unchanged. We only ever add payment.otherFeesList
+   alongside the untouched payment.otherFees number.
+======================================================== */
+function buildEditOtherFeeRowHTML(label = "", amount = "") {
+  const safeLabel = String(label).replace(/"/g, '&quot;');
+  return `
+    <div class="edit-other-fee-row" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+      <input type="text" class="edit-other-fee-label" placeholder="e.g. Diesel" value="${safeLabel}"
+        style="flex:2 1 120px;min-width:0;padding:8px 10px;font-size:13px;border-radius:6px;border:0.5px solid #d8b4fe;background:#fff;outline:none;box-sizing:border-box;">
+      <input type="text" class="edit-other-fee-amount" inputmode="numeric" placeholder="₦0" value="${amount}"
+        style="flex:1 1 80px;min-width:0;padding:8px 10px;font-size:13px;border-radius:6px;border:0.5px solid #d8b4fe;background:#fff;outline:none;box-sizing:border-box;">
+      <button type="button" class="remove-edit-other-fee-btn" style="width:28px;height:28px;flex-shrink:0;border:0.5px solid #fca5a5;border-radius:6px;background:#fef2f2;color:#b91c1c;cursor:pointer;">✕</button>
+    </div>`;
+}
+
+function syncEditOtherFeesHidden() {
+  const rows = document.querySelectorAll("#editOtherFeesRepeater .edit-other-fee-row");
+  let sum = 0;
+  rows.forEach(row => {
+    const amount = parseFloat((row.querySelector(".edit-other-fee-amount")?.value || "0").toString().replace(/,/g, '')) || 0;
+    sum += amount;
+  });
+
+  const display = document.getElementById("editOtherFeesSubtotalDisplay");
+  if (display) display.textContent = `Other fees total: ₦${sum.toLocaleString()}`;
+
+  const hidden = document.getElementById("editOtherFees");
+  if (hidden) {
+    hidden.value = sum;
+    hidden.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+}
+
+function getEditOtherFeesList() {
+  const rows = document.querySelectorAll("#editOtherFeesRepeater .edit-other-fee-row");
+  const list = [];
+  rows.forEach(row => {
+    const label = (row.querySelector(".edit-other-fee-label")?.value || "").trim();
+    const amount = parseFloat((row.querySelector(".edit-other-fee-amount")?.value || "0").toString().replace(/,/g, '')) || 0;
+    if (label || amount > 0) list.push({ label: label || "Other Fee", amount });
+  });
+  return list;
+}
+
+window.addEditOtherFeeRow = function(label = "", amount = "") {
+  const container = document.getElementById("editOtherFeesRepeater");
+  if (!container) return;
+  container.insertAdjacentHTML("beforeend", buildEditOtherFeeRowHTML(label, amount));
+  const row = container.lastElementChild;
+  row.querySelector(".edit-other-fee-label")?.addEventListener("input", syncEditOtherFeesHidden);
+  row.querySelector(".edit-other-fee-amount")?.addEventListener("input", syncEditOtherFeesHidden);
+  row.querySelector(".remove-edit-other-fee-btn")?.addEventListener("click", () => {
+    row.remove();
+    syncEditOtherFeesHidden();
+  });
+  syncEditOtherFeesHidden();
+};
+
+/** Pre-fills the edit modal's fee repeater from the booking -- itemized list
+ * if present, otherwise a single row carrying the old lump sum (if any). */
+function populateEditOtherFeesRepeater(booking) {
+  const container = document.getElementById("editOtherFeesRepeater");
+  if (!container) return;
+  container.innerHTML = "";
+  const rows = Array.isArray(booking.payment?.otherFeesList) && booking.payment.otherFeesList.length
+    ? booking.payment.otherFeesList
+    : (booking.payment?.otherFees > 0 ? [{ label: "Other Fees", amount: booking.payment.otherFees }] : []);
+  rows.forEach(r => window.addEditOtherFeeRow(r.label || "", r.amount || 0));
+  syncEditOtherFeesHidden();
+}
+
 /* =========================
    OPEN BOOKING MODAL
 ========================= */
+// ===== FIX 3: Full audit trail card for the booking modal =====
+// ===== FIX 3 (updated): Booking History card =====
+// Only renders when the booking has actually been RETURNED. Active /
+// upcoming / overdue bookings see NO history card at all — nothing to
+// tell them yet. When returned, the card leads with the return date so
+// the most important fact is the first thing the eye lands on.
+function buildAuditTrailHTML(booking) {
+  // Hide the entire card for anything that hasn't been returned.
+  if (booking.status !== "returned") return "";
+
+  const rows = [];
+
+  // ── Row 1: RETURN DATE (the headline fact) ──
+  // Try the most precise timestamp first, then fall back to the raw
+  // event.returnDate string. If both are missing we skip this row.
+  const returnStamp =
+    booking.payment?.cautionFeeSettledAt ||
+    booking.damagesRecordedAt ||
+    booking.event?.returnDate;
+
+  if (returnStamp) {
+    const d = returnStamp?.toDate?.() ? returnStamp.toDate() : new Date(returnStamp);
+    if (!isNaN(d.getTime())) {
+      rows.push({
+        html: `✅ <strong>Returned on</strong> ${d.toLocaleString("en-NG", {
+          weekday: "short", year: "numeric", month: "short", day: "numeric",
+          hour: "numeric", minute: "2-digit", hour12: true
+        })}`,
+        color: "#059669"
+      });
+    }
+  }
+
+  // ── Row 2: Booking created (context, secondary) ──
+  if (booking.createdAt) {
+    const createdDate = booking.createdAt?.toDate?.()
+      ? booking.createdAt.toDate()
+      : new Date(booking.createdAt);
+    if (!isNaN(createdDate.getTime())) {
+      rows.push({
+        html: `📝 Booking created on ${createdDate.toLocaleString("en-NG", {
+          weekday: "short", year: "numeric", month: "short", day: "numeric",
+          hour: "numeric", minute: "2-digit", hour12: true
+        })}`,
+        color: "#374151"
+      });
+    }
+  }
+
+  // ── Row 3+: Damage summary (one row per damaged item, or a clean message) ──
+  if (booking.damageStatus === "damaged" && Array.isArray(booking.damages) && booking.damages.length) {
+    booking.damages.forEach(d => {
+      rows.push({
+        html: `⚠️ ${d.itemName} x${d.quantity} — ₦${Number(d.amount || 0).toLocaleString()} charged`,
+        color: "#b91c1c"
+      });
+    });
+  } else {
+    rows.push({
+      html: `📦 All items were returned in good shape.`,
+      color: "#059669"
+    });
+  }
+
+  // ── Caution fee settlement ──
+  const returned = Number(booking.payment?.cautionFeeReturned || 0);
+  const kept = Number(booking.payment?.cautionFeeKept || 0);
+  if (returned || kept) {
+    let line = `💰 Caution fee settled — ₦${returned.toLocaleString()} refunded`;
+    if (kept > 0) line += `, ₦${kept.toLocaleString()} retained`;
+    rows.push({ html: line, color: "#374151" });
+  }
+
+  // ── Return note sent to client ──
+  if (booking.returnNote) {
+    rows.push({
+      html: `💌 Message sent to client: "${booking.returnNote}"`,
+      color: "#374151"
+    });
+  }
+
+  return `
+    <div style="background:#faf7fb;border:1px solid #ecd9ef;border-radius:14px;padding:16px 18px;">
+      <p style="text-transform:uppercase;font-weight:bold;color:#800080;font-size:13px;letter-spacing:1px;margin:0 0 12px;">Booking History</p>
+      ${rows.map(r => `<div style="display:flex;gap:10px;font-size:13px;line-height:1.5;color:${r.color};">${r.html}</div>`).join("")}
+    </div>`;
+}
+
 window.openBooking = function(booking, id, businessId) {
   const life = getBookingLifecycle(booking);
   const status = life.key;
@@ -618,10 +1272,25 @@ window.openBooking = function(booking, id, businessId) {
   const amountPaid = booking.payment?.paid || 0;
   const balanceRemaining = totalAmount - amountPaid;
   const fees = booking.payment || {};
+
+  // ===== FIX 5A: Itemized fee lines (backward-compatible with single otherFees number) =====
+  const otherFeeRows =
+    Array.isArray(fees.otherFeesList) && fees.otherFeesList.length
+      ? fees.otherFeesList
+      : (Number(fees.otherFees || 0) > 0
+          ? [{ label: "Other Fees", amount: Number(fees.otherFees) }]
+          : []);
+
   const feeLines = [
-    fees.cautionFee ? `Caution Fee: ₦${Number(fees.cautionFee).toLocaleString()}` : null,
-    fees.transportationFee ? `Transportation: ₦${Number(fees.transportationFee).toLocaleString()}` : null,
-    fees.otherFees ? `Other Fees: ₦${Number(fees.otherFees).toLocaleString()}` : null
+    fees.cautionFee
+      ? `Caution Fee: ₦${Number(fees.cautionFee).toLocaleString()}`
+      : null,
+    fees.transportationFee
+      ? `Transportation: ₦${Number(fees.transportationFee).toLocaleString()}`
+      : null,
+    ...otherFeeRows.map(
+      r => `${r.label || "Other Fee"}: ₦${Number(r.amount || 0).toLocaleString()}`
+    )
   ].filter(Boolean);
 
   // Broadened filter: anything borrowed OR not in inventory OR custom shows here.
@@ -664,10 +1333,13 @@ window.openBooking = function(booking, id, businessId) {
       </div>
       <div class="flex flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
         ${renderBadge(booking, "text-[11px]")}
+        ${booking.damageStatus === "damaged" ? renderDamagedPill() : ""}
         ${isOverbooked ? renderOverbookedPill() : ""}
       </div>
     </div>
   </div>
+
+  ${buildAuditTrailHTML(booking)}
 
   <div class="flex flex-col gap-3">
     <div class="flex flex-col sm:flex-row gap-3">
@@ -742,41 +1414,50 @@ window.openBooking = function(booking, id, businessId) {
     </div>
   </div>
 
-${booking.receiptImage ? `
-  <div class="mt-4">
-    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
-      <p class="text-[10px] font-black text-purple-700 uppercase flex items-center gap-2">
-        <span class="material-symbols-outlined text-sm">receipt_long</span> Receipt Image
-      </p>
-      <span class="inline-flex items-center gap-1.5 bg-purple-100 text-purple-800 border border-purple-200 rounded-full px-2.5 py-1 font-black uppercase tracking-wider text-[10px] leading-none">
-        <span class="inline-block w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-        Uploaded
-      </span>
-    </div>
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-      <img src="${booking.receiptImage}" 
-           alt="Receipt Image" 
-           class="w-full max-h-64 object-contain"
-           onerror="this.parentElement.innerHTML='<div class=\\'p-4 text-center text-gray-400 text-sm\\'>Image failed to load</div>'">
-    </div>
-  </div>
-` : `
-  <div class="mt-4">
-    <div class="flex items-center gap-2 mb-2 flex-wrap">
-      <p class="text-[10px] font-black text-gray-400 uppercase flex items-center gap-2">
-        <span class="material-symbols-outlined text-sm">receipt_long</span> Receipt Image
-      </p>
-      <span class="inline-flex items-center gap-1.5 bg-gray-100 text-gray-500 border border-gray-200 rounded-full px-2.5 py-1 font-black uppercase tracking-wider text-[10px] leading-none">
-        <span class="inline-block w-1.5 h-1.5 rounded-full bg-gray-400"></span>
-        Not uploaded
-      </span>
-    </div>
-    <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
-      <span class="material-symbols-outlined text-4xl text-gray-300">image</span>
-      <p class="text-xs text-gray-400 mt-2">No receipt image available</p>
-    </div>
-  </div>
-`}
+  <!-- ===== FIX 5B: Multiple receipt images (backward-compatible with single receiptImage) ===== -->
+  ${(() => {
+    const imgs =
+      Array.isArray(booking.receiptImages) && booking.receiptImages.length
+        ? booking.receiptImages
+        : (booking.receiptImage ? [booking.receiptImage] : []);
+
+    if (!imgs.length) {
+      return `
+        <div class="mt-4">
+          <p class="text-[10px] font-black text-gray-400 uppercase flex items-center gap-2 mb-2">
+            <span class="material-symbols-outlined text-sm">receipt_long</span> Receipt Images
+          </p>
+          <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
+            <span class="material-symbols-outlined text-4xl text-gray-300">image</span>
+            <p class="text-xs text-gray-400 mt-2">No receipt image available</p>
+          </div>
+        </div>`;
+    }
+
+    return `
+      <div class="mt-4">
+        <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+          <p class="text-[10px] font-black text-purple-700 uppercase flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">receipt_long</span> Receipt Images (${imgs.length})
+          </p>
+          <span class="inline-flex items-center gap-1.5 bg-purple-100 text-purple-800 border border-purple-200 rounded-full px-2.5 py-1 font-black uppercase tracking-wider text-[10px] leading-none">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+            ${imgs.length} uploaded
+          </span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          ${imgs.map((url, idx) => `
+            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+              <img src="${url}" alt="Receipt ${idx + 1}"
+                   class="w-full max-h-64 object-contain"
+                   onerror="this.parentElement.innerHTML='<div class=\\'p-4 text-center text-gray-400 text-sm\\'>Image failed to load</div>'">
+              <p class="text-[10px] text-gray-500 text-center py-2 border-t border-gray-100">
+                Receipt ${idx + 1} of ${imgs.length}
+              </p>
+            </div>`).join("")}
+        </div>
+      </div>`;
+  })()}
 
   ${booking.notes ? `<div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4"><p class="text-xs font-bold text-yellow-700 uppercase">Notes</p><p class="text-sm text-gray-700 mt-1 break-words">${booking.notes}</p></div>` : ""}
 
@@ -831,6 +1512,57 @@ ${booking.receiptImage ? `
   const dlBtn = document.getElementById("downloadReceiptImgBtn");
   if (dlBtn) dlBtn.addEventListener("click", () => generateReceiptImage(booking, currentBusinessName));
 };
+
+/* ========================================================
+   ===== OPTION B: Multi-receipt gallery for the EDIT modal =====
+   State + rendering helpers. Populated by openEditModal(), mutated
+   by add/remove clicks, snapshotted by saveEdit().
+======================================================== */
+window._editReceiptImages = [];
+
+window.renderEditReceiptGallery = function () {
+  const gallery = document.getElementById("editReceiptGallery");
+  if (!gallery) return;
+
+  const imgs = window._editReceiptImages || [];
+
+  if (!imgs.length) {
+    gallery.innerHTML = `
+      <div style="background:#f9fafb;border:2px dashed #d8b4fe;border-radius:8px;padding:20px;text-align:center;cursor:pointer;"
+           onclick="document.getElementById('editReceiptInput').click()">
+        <span style="font-size:2rem;color:purple;">📸</span>
+        <p style="font-size:12px;color:#6b7280;margin:4px 0 0;">Tap to upload receipt image(s)</p>
+      </div>`;
+    return;
+  }
+
+  gallery.innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      ${imgs.map((url, idx) => `
+        <div style="position:relative;display:inline-block;">
+          <img src="${url}" alt="Receipt ${idx + 1}"
+               style="max-height:100px;max-width:140px;border-radius:8px;border:1px solid #e5e5e5;object-fit:contain;background:#fff;">
+          <button type="button"
+                  onclick="window.removeEditReceipt(${idx})"
+                  style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:#dc2626;color:#fff;border:none;font-size:12px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">
+            ✕
+          </button>
+        </div>
+      `).join("")}
+    </div>
+    <button type="button"
+            onclick="document.getElementById('editReceiptInput').click()"
+            style="margin-top:10px;padding:8px 14px;font-size:12px;font-weight:700;color:purple;background:#f5f0ff;border:1px solid #d8b4fe;border-radius:8px;cursor:pointer;">
+      + Add another receipt
+    </button>`;
+};
+
+window.removeEditReceipt = function (idx) {
+  if (!Array.isArray(window._editReceiptImages)) return;
+  window._editReceiptImages.splice(idx, 1);
+  window.renderEditReceiptGallery();
+};
+/* ===== END OPTION B ===== */
 
 /* =========================
    EDIT MODAL
@@ -942,10 +1674,17 @@ window.openEditModal = async function(booking, id, businessId) {
       <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;">Transportation (₦)</label>
       <input id="editTransportationFee" type="number" value="${booking.payment?.transportationFee || 0}" style="width:100%;padding:4px 0;font-size:15px;font-weight:500;border:none;background:transparent;color:#374151;outline:none;box-sizing:border-box;">
     </div>
-    <div style="background:#f9fafb;border-radius:12px;border:0.5px solid #e5e5e5;padding:0.75rem 1rem;">
-      <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;">Other Fees (₦)</label>
-      <input id="editOtherFees" type="number" value="${booking.payment?.otherFees || 0}" style="width:100%;padding:4px 0;font-size:15px;font-weight:500;border:none;background:transparent;color:#374151;outline:none;box-sizing:border-box;">
+  </div>
+
+  <div style="background:#f9fafb;border-radius:12px;border:0.5px solid #e5e5e5;padding:1rem 1.25rem;display:flex;flex-direction:column;gap:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <label style="font-size:12px;color:purple;font-weight:600;">Other Fees</label>
+      <button type="button" onclick="addEditOtherFeeRow()" style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:6px;border:0.5px solid #d8b4fe;background:#f5f0ff;color:purple;cursor:pointer;">+ Add fee</button>
     </div>
+    <div id="editOtherFeesRepeater" style="display:flex;flex-direction:column;gap:6px;"></div>
+    <p id="editOtherFeesSubtotalDisplay" style="font-size:11px;color:#9ca3af;margin:0;">Other fees total: ₦0</p>
+    <!-- Computed sum of the rows above -- still read exactly like before (payment.otherFees). -->
+    <input type="hidden" id="editOtherFees" value="${booking.payment?.otherFees || 0}">
   </div>
 
   <div style="background:#f9fafb;border-radius:12px;border:0.5px solid #e5e5e5;padding:1rem 1.25rem;">
@@ -976,28 +1715,14 @@ window.openEditModal = async function(booking, id, businessId) {
     </p>
   </div>
 
+<!-- ===== OPTION B: Multi-receipt gallery in edit modal ===== -->
 <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;border-top:1px solid #e5e5e5;padding-top:12px;">
-  <label style="font-size:12px;color:purple;font-weight:600;">Receipt Image</label>
-  ${booking.receiptImage ? `
-    <div style="position:relative;display:inline-block;">
-      <img src="${booking.receiptImage}" 
-           alt="Receipt" 
-           style="max-height:120px;max-width:100%;border-radius:8px;border:1px solid #e5e5e5;object-fit:contain;">
-      <button type="button" onclick="document.getElementById('editReceiptInput').click()" 
-              style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.7);color:white;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">
-        Change
-      </button>
-    </div>
-  ` : `
-    <div style="background:#f9fafb;border:2px dashed #d8b4fe;border-radius:8px;padding:20px;text-align:center;cursor:pointer;"
-         onclick="document.getElementById('editReceiptInput').click()">
-      <span style="font-size:2rem;color:purple;">📸</span>
-      <p style="font-size:12px;color:#6b7280;margin:4px 0 0;">Tap to upload receipt image</p>
-    </div>
-  `}
+  <label style="font-size:12px;color:purple;font-weight:600;">Receipt Images</label>
+  <div id="editReceiptGallery"></div>
   <input type="file" id="editReceiptInput" accept="image/*" style="display:none;">
   <p id="editReceiptStatus" style="font-size:11px;color:#059669;margin-top:4px;display:none;">Image uploaded ✅</p>
 </div>
+<!-- ===== END OPTION B ===== -->
 
   <div style="display:flex;flex-direction:column;gap:6px;">
     <label style="font-size:12px;color:purple;font-weight:600;">Internal notes</label>
@@ -1018,13 +1743,52 @@ window.openEditModal = async function(booking, id, businessId) {
 
   document.querySelectorAll("#editItemsContainer .item-row").forEach(attachRowCalculationListeners);
 
+  populateEditOtherFeesRepeater(booking);
   wireEditTotalAndFeeListeners();
+
+
+  // ===== NEW: Seed the total as "user-owned" so recalculateEditWorkspace
+  // doesn't overwrite it with the freshly-computed value on modal open.
+  // It only becomes editable-by-recalc again once the user manually changes
+  // the total itself (which flips it to dataset.userEdited = "true") OR
+  // clears items/fees (which our clearEditTotalOverride() will handle).
+  {
+    const tEl = document.getElementById("editTotal");
+    if (tEl) {
+      tEl.dataset.seeded = "true";
+      // The seed flag must be dropped the moment the user starts
+      // interacting with anything that would legitimately recompute the
+      // total — otherwise a stale "seeded" value would override a real
+      // recalculation forever.
+      const dropSeed = () => { delete tEl.dataset.seeded; };
+      ["editCautionFee","editTransportationFee","editOtherFees","editPaid"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener("input", dropSeed, { once: true });
+      });
+      document.querySelectorAll("#editItemsContainer .item-qty, #editItemsContainer .item-price").forEach(el => {
+        el.addEventListener("input", dropSeed, { once: true });
+      });
+    }
+  }
+
+
 
   await refreshEditAvailability(businessId);
 
+  // ===== OPTION B: Bootstrap the multi-receipt gallery for this booking =====
+  // Reads receiptImages[] if present; otherwise falls back to the single
+  // legacy receiptImage field so old bookings show their one image.
+  window._editReceiptImages =
+    Array.isArray(booking.receiptImages) && booking.receiptImages.length
+      ? [...booking.receiptImages]
+      : (booking.receiptImage ? [booking.receiptImage] : []);
+  window.renderEditReceiptGallery();
+
   const editReceiptInput = document.getElementById('editReceiptInput');
   if (editReceiptInput) {
-    editReceiptInput.addEventListener('change', async function(e) {
+    // Each change adds ONE image to the gallery. User can repeat as many
+    // times as they want — mirrors the "Change" affordance they're used to.
+    editReceiptInput.addEventListener('change', async function (e) {
       const file = e.target.files[0];
       if (!file) return;
 
@@ -1035,26 +1799,24 @@ window.openEditModal = async function(booking, id, businessId) {
 
       try {
         const imageUrl = await uploadReceiptImage(businessId, file);
-        window._editReceiptImageUrl = imageUrl;
+        if (imageUrl) {
+          window._editReceiptImages.push(imageUrl);
+          window.renderEditReceiptGallery();
+        }
         statusEl.textContent = '✅ Image uploaded!';
         statusEl.style.color = '#059669';
-
-        const container = this.parentElement;
-        const preview = container.querySelector('img') || container.querySelector('div[style*="dashed"]');
-        if (preview) {
-          if (preview.tagName === 'IMG') {
-            preview.src = imageUrl;
-          } else {
-            preview.outerHTML = `<img src="${imageUrl}" alt="Receipt" style="max-height:120px;max-width:100%;border-radius:8px;border:1px solid #e5e5e5;object-fit:contain;">`;
-          }
-        }
+        setTimeout(() => { statusEl.style.display = 'none'; }, 1500);
       } catch (error) {
         console.error('Upload failed:', error);
         statusEl.textContent = '❌ Upload failed';
         statusEl.style.color = '#dc2626';
       }
+
+      // Reset so the same file can be picked again if needed.
+      editReceiptInput.value = "";
     });
   }
+  // ===== END OPTION B =====
 };
 
 /* =========================
@@ -1145,10 +1907,11 @@ window.saveEdit = async function(id, businessId, originalItems) {
       return;
     }
 
-    const receiptImageUrl = window._editReceiptImageUrl || null;
-    if (receiptImageUrl) {
-      window._editReceiptImageUrl = null;
-    }
+    // ===== OPTION B: Snapshot the multi-receipt gallery at save time =====
+    const finalReceiptImages = Array.isArray(window._editReceiptImages)
+      ? [...window._editReceiptImages]
+      : [];
+    const receiptImageUrl = finalReceiptImages[0] || null;
 
     const updatedBookingData = {
       "client.name": document.getElementById("editName").value.trim(),
@@ -1164,12 +1927,13 @@ window.saveEdit = async function(id, businessId, originalItems) {
       "payment.cautionFee": Number(document.getElementById("editCautionFee")?.value || 0),
       "payment.transportationFee": Number(document.getElementById("editTransportationFee")?.value || 0),
       "payment.otherFees": Number(document.getElementById("editOtherFees")?.value || 0),
+      "payment.otherFeesList": getEditOtherFeesList(),
+      // Write BOTH fields — array for new code, first-or-null for legacy readers.
+      receiptImage: receiptImageUrl,
+      receiptImages: finalReceiptImages,
       notes: document.getElementById("editNotes").value.trim()
     };
-
-    if (receiptImageUrl) {
-      updatedBookingData.receiptImage = receiptImageUrl;
-    }
+    // ===== END OPTION B =====
 
     const { shortages } = await editBookingTransaction(businessId, id, updatedBookingData, originalItems, updatedItems);
 
@@ -1180,6 +1944,10 @@ window.saveEdit = async function(id, businessId, originalItems) {
       alert("Booking updated successfully! ✅");
     }
     closeModal();
+
+    // ===== OPTION B: Clear the gallery state after save =====
+    window._editReceiptImages = [];
+    // ===== END OPTION B =====
 
     await sendNotification(
       businessId,
@@ -1232,6 +2000,7 @@ function renderRow(b, id, businessId) {
       <td class="p-4 cursor-pointer" data-id="${id}" data-business="${businessId}" onclick="handleViewClick(this)">
         <div class="flex items-center gap-2 flex-wrap">
           ${renderBadge(b, "text-[10px]")}
+          ${b.damageStatus === "damaged" ? renderDamagedPill() : ""}
           ${isOverbooked ? renderOverbookedPill() : ""}
         </div>
       </td>

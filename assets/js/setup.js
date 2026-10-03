@@ -334,6 +334,10 @@ async function processReferral(user, newBusinessId) {
       settings: {
         inventoryEditableByStaff: false
       },
+      // Default return thank-you message -- editable anytime from Settings.
+      // Kept in sync with the identical constant in setting.js and bookings.js.
+      returnMessageTemplate:
+        "Hi {clientName}, thank you for renting with {businessName}! We've received your items back in good condition. We truly appreciate your business and look forward to serving you again soon! 🙏",
       createdAt: serverTimestamp()
     });
 

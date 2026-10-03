@@ -1,4 +1,4 @@
-// assets/js/settings.js — FIXED + SHARE EVERYWHERE
+// assets/js/settings.js — FIXED
 // ---------------------------------------------------------------------------
 // Fixes in this version:
 //   1. Only ONE onSnapshot(businessRef) listener (was two competing ones).
@@ -6,11 +6,10 @@
 //   3. referralCode generation guarded so listener updates don't loop.
 //   4. notifiedAccepted flag set BEFORE push — prevents repeat pushes.
 //   5. marketplace/features objects seeded once, guarded.
-//   6. Self-heal pending invite → accepted on page load.
-//   7. ✅ NEW: Share button works EVERYWHERE — native share sheet on mobile,
-//      custom fallback modal on desktop with WhatsApp / Telegram / Email /
-//      SMS / X / Facebook / LinkedIn links + "Copy full message" button.
-//   8. ✅ Copy button left unchanged — copies the raw URL only.
+//   6. ✅ NEW: Self-heal pending invite → accepted on page load. Ensures
+//      the partner list and role-based UI are correct even if the primary
+//      accept in auth.js was skipped (e.g. user was already signed in
+//      when the invite was created).
 // ---------------------------------------------------------------------------
 
 import { auth, db } from "./firebase.js";
@@ -37,9 +36,17 @@ import {
   signOut
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
+// Shown on the settings page (and used as the starting point in the return
+// flow) whenever a business hasn't customized its own return message yet.
+// Kept in sync with the identical constant in bookings.js and setup.js.
+const DEFAULT_RETURN_MESSAGE_TEMPLATE =
+  "Hi {clientName}, thank you for renting with {businessName}! We've received your items back in good condition. We truly appreciate your business and look forward to serving you again soon! 🙏";
+
 // ===== DOM =====
 const businessNameInput = document.getElementById("businessName");
 const saveBusinessBtn = document.getElementById("saveBusinessName");
+const returnMessageInput = document.getElementById("returnMessageTemplate");
+const saveReturnMessageBtn = document.getElementById("saveReturnMessageTemplate");
 const brandNameMobileEl = document.getElementById("brand-name-mobile");
 const topNavBrand = document.getElementById("topnav-brand");
 
@@ -116,6 +123,12 @@ function renderReferralProgress(data) {
 
 /* =========================================================
    SELF-HEAL PENDING INVITE
+   Runs once on settings page load. If the currently-logged-in
+   user's own businessMembers doc is still "pending", flip it to
+   "accepted" and link their uid. This is a safety net for the
+   case where the primary accept in auth.js was skipped — e.g.
+   the user was already signed in when the invite was created,
+   so their signup flow never re-ran.
 ========================================================= */
 async function selfHealPendingInvite(user, businessId) {
   try {
@@ -124,6 +137,7 @@ async function selfHealPendingInvite(user, businessId) {
       ? user.phoneNumber.replace(/[\s\-\(\)]/g, "")
       : null;
 
+    // Look up this user's own member doc scoped to the current business
     let mySnap = null;
 
     if (myEmail) {
@@ -169,6 +183,7 @@ async function selfHealPendingInvite(user, businessId) {
 /* =========================================================
    REFERRAL ANALYTICS
 ========================================================= */
+
 async function loadReferralAnalytics(businessId) {
   try {
     const referralList = document.getElementById("referralList");
@@ -273,173 +288,49 @@ async function loadReferralAnalytics(businessId) {
 }
 
 /* =========================================================
-   SHARE MESSAGE TEMPLATE — single source of truth
-========================================================= */
-function buildReferralMessage(url) {
-  return (
-    "Omo, I finally found something that fixed my rental business stress 😅\n\n" +
-    "You know how we're always writing bookings in a notebook, then one customer is calling, " +
-    "another one is asking where their chairs are, and you're just there confused?\n\n" +
-    "There's this app called Tracknrent. Bookings, inventory, WhatsApp receipts, payments — " +
-    "everything is just there. No more \"who still has my canopy?\" wahala.\n\n" +
-    "I've been using it and honestly it's a game changer. Just sign up with my link, " +
-    "you'll thank me later 🙏\n\n" +
-    url
-  );
-}
-
-/* =========================================================
-   DESKTOP FALLBACK SHARE MODAL
-========================================================= */
-function openFallbackShareModal(fullMessage, url) {
-  document.getElementById("__shareFallbackModal")?.remove();
-
-  const modal = document.createElement("div");
-  modal.id = "__shareFallbackModal";
-  modal.style.cssText = `
-    position: fixed; inset: 0; background: rgba(0,0,0,0.55);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 99999; padding: 16px; font-family: inherit;
-  `;
-
-  const encodedMsg = encodeURIComponent(fullMessage);
-  const encodedUrl = encodeURIComponent(url);
-  const encodedTitle = encodeURIComponent("Tracknrent — you need to see this");
-
-  modal.innerHTML = `
-    <div style="background:#fff; width:100%; max-width:420px; border-radius:18px;
-                padding:22px; box-shadow:0 20px 50px rgba(0,0,0,.25);
-                max-height:90vh; overflow-y:auto;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-        <h3 style="margin:0; font-size:1.15rem; font-weight:700; color:purple;">Share your referral</h3>
-        <button id="__shareClose" style="background:none; border:none; font-size:1.6rem; line-height:1; cursor:pointer; color:#94a3b8;">&times;</button>
-      </div>
-
-      <p style="font-size:0.82rem; color:#64748b; margin:0 0 12px 0;">
-        Pick an app, or copy the pre-typed message and paste it anywhere.
-      </p>
-
-      <div id="__shareMessagePreview" style="background:#f8fafc; border:1px solid #e2e8f0;
-           border-radius:12px; padding:12px; font-size:0.82rem; color:#334155;
-           white-space:pre-wrap; max-height:140px; overflow-y:auto; margin-bottom:14px;">
-${fullMessage}
-      </div>
-
-      <button id="__shareCopyMsg" style="width:100%; background:purple; color:#fff;
-              border:none; padding:12px; border-radius:12px; font-weight:600;
-              cursor:pointer; margin-bottom:10px; font-size:0.95rem;">
-        Copy full message
-      </button>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-        <a href="https://wa.me/?text=${encodedMsg}" target="_blank" rel="noopener"
-           style="background:#25D366; color:#fff; text-decoration:none; padding:11px;
-                  border-radius:12px; font-weight:600; font-size:0.85rem;
-                  text-align:center; display:flex; align-items:center; justify-content:center; gap:6px;">
-          WhatsApp
-        </a>
-        <a href="https://t.me/share/url?url=${encodedUrl}&text=${encodedMsg}" target="_blank" rel="noopener"
-           style="background:#229ED9; color:#fff; text-decoration:none; padding:11px;
-                  border-radius:12px; font-weight:600; font-size:0.85rem;
-                  text-align:center; display:flex; align-items:center; justify-content:center; gap:6px;">
-          Telegram
-        </a>
-        <a href="mailto:?subject=${encodedTitle}&body=${encodedMsg}"
-           style="background:#475569; color:#fff; text-decoration:none; padding:11px;
-                  border-radius:12px; font-weight:600; font-size:0.85rem;
-                  text-align:center; display:flex; align-items:center; justify-content:center; gap:6px;">
-          Email
-        </a>
-        <a href="sms:?&body=${encodedMsg}"
-           style="background:#0f172a; color:#fff; text-decoration:none; padding:11px;
-                  border-radius:12px; font-weight:600; font-size:0.85rem;
-                  text-align:center; display:flex; align-items:center; justify-content:center; gap:6px;">
-          SMS
-        </a>
-      </div>
-
-      <div style="display:flex; gap:8px; margin-top:10px;">
-        <a href="https://twitter.com/intent/tweet?text=${encodedMsg}" target="_blank" rel="noopener"
-           style="flex:1; background:#0f172a; color:#fff; text-decoration:none; padding:10px;
-                  border-radius:12px; font-weight:600; font-size:0.8rem; text-align:center;">
-          X / Twitter
-        </a>
-        <a href="https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedMsg}" target="_blank" rel="noopener"
-           style="flex:1; background:#1877F2; color:#fff; text-decoration:none; padding:10px;
-                  border-radius:12px; font-weight:600; font-size:0.8rem; text-align:center;">
-          Facebook
-        </a>
-        <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}" target="_blank" rel="noopener"
-           style="flex:1; background:#0A66C2; color:#fff; text-decoration:none; padding:10px;
-                  border-radius:12px; font-weight:600; font-size:0.8rem; text-align:center;">
-          LinkedIn
-        </a>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-
-  const close = () => modal.remove();
-  modal.addEventListener("click", (e) => { if (e.target === modal) close(); });
-  document.getElementById("__shareClose").onclick = close;
-
-  document.getElementById("__shareCopyMsg").onclick = async () => {
-    const btn = document.getElementById("__shareCopyMsg");
-    try {
-      await navigator.clipboard.writeText(fullMessage);
-    } catch {
-      const ta = document.createElement("textarea");
-      ta.value = fullMessage;
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-    }
-    btn.textContent = "✓ Copied! Paste it anywhere";
-    btn.style.background = "#16a34a";
-    setTimeout(() => {
-      btn.textContent = "Copy full message";
-      btn.style.background = "purple";
-    }, 1800);
-  };
-}
-
-/* =========================================================
-   SHARE REFERRAL — works everywhere
+   SHARE REFERRAL LINK (native share sheet)
 ========================================================= */
 document.getElementById("shareReferralBtn")?.addEventListener("click", async () => {
-  const url = (document.getElementById("referralLinkInput")?.value || "").trim();
+  const input = document.getElementById("referralLinkInput");
+  const url = (input?.value || "").trim();
 
   if (!url) {
     alert("Referral link not ready yet. Please wait a moment and try again.");
     return;
   }
 
-  const fullMessage = buildReferralMessage(url);
+const shareData = {
+  title: "Tracknrent — you need to see this",
+  text:
+    "Omo, I finally found something that fixed my rental business stress 😅\n\n" +
+    "You know how we're always writing bookings in a notebook, then one customer is calling, " +
+    "another one is asking where their chairs are, and you're just there confused?\n\n" +
+    "There's this app called Tracknrent. Bookings, inventory, WhatsApp receipts, payments — " +
+    "everything is just there. No more \"who still has my canopy?\" wahala.\n\n" +
+    "I've been using it and honestly it's a game changer. Just sign up with my link, " +
+    "you'll thank me later 🙏",
+  url
+};
 
-  // Everything goes into `text` — omit `url:` so iOS/WhatsApp/Telegram
-  // keep the message intact instead of dropping it.
-  const shareData = {
-    title: "Tracknrent — you need to see this",
-    text: fullMessage
-  };
 
-  // 1. Try native share (mobile + some desktop)
-  if (navigator.share) {
-    try {
+  try {
+    if (navigator.share) {
       await navigator.share(shareData);
-      return;
-    } catch (err) {
-      if (err?.name === "AbortError") return;
-      console.warn("Native share failed, falling back to modal:", err);
+    } else {
+      await navigator.clipboard.writeText(url);
+      alert("Referral link copied. Share it anywhere you like.");
+    }
+  } catch (err) {
+    if (err?.name !== "AbortError") {
+      console.warn("Share failed:", err);
+      try {
+        await navigator.clipboard.writeText(url);
+        alert("Couldn't open the share menu — link copied instead.");
+      } catch {
+        alert("Couldn't share or copy the link. Please copy it manually.");
+      }
     }
   }
-
-  // 2. Desktop fallback — modal with direct app links
-  openFallbackShareModal(fullMessage, url);
 });
 
 /* =========================================================
@@ -489,6 +380,7 @@ function wireNotificationPreferences(user) {
 /* =========================================================
    PARTNERS (live list + edit/delete)
 ========================================================= */
+
 let partnersUnsub = null;
 
 function listenToPartners(membersRef, businessId) {
@@ -718,7 +610,7 @@ if (logoutBtn)
   };
 
 /* =========================================================
-   COPY REFERRAL LINK  — unchanged: copies raw URL only
+   COPY REFERRAL LINK
 ========================================================= */
 if (copyReferralBtn) {
   copyReferralBtn.addEventListener("click", async () => {
@@ -737,6 +629,7 @@ if (copyReferralBtn) {
 /* =========================================================
    MAIN AUTH + LIVE DATA
 ========================================================= */
+
 onAuthStateChanged(auth, async (user) => {
   if (!user) return (window.location.href = "signup.html");
 
@@ -747,10 +640,12 @@ onAuthStateChanged(auth, async (user) => {
     const businessRef = doc(db, "businesses", businessId);
     const membersRef = collection(db, "businessMembers");
 
-    // Self-heal: claim own pending invite if still pending
+    // ---- ✅ SELF-HEAL: claim my own pending invite if still pending ----
+    // Runs BEFORE resolving role, so the role lookup below sees the
+    // freshly-accepted doc.
     await selfHealPendingInvite(user, businessId);
 
-    // Resolve current role
+    // ---- Resolve current role ----
     let memberQuery;
     if (user.email) {
       memberQuery = query(membersRef, where("email", "==", user.email.toLowerCase().trim()));
@@ -760,14 +655,14 @@ onAuthStateChanged(auth, async (user) => {
     const memberSnap = memberQuery ? await getDocs(memberQuery) : { empty: true };
     if (!memberSnap.empty) currentRole = memberSnap.docs[0].data().role;
 
-    // Referral analytics
+    // ---- Referral analytics ----
     await loadReferralAnalytics(businessId);
 
-    // Notification preferences
+    // ---- Notification preferences ----
     wireNotificationPreferences(user);
 
     // =====================================================
-    // SINGLE business listener
+    // SINGLE business listener — no duplicates, no nesting
     // =====================================================
     let referralCodeInFlight = false;
     let marketplaceSeeded = false;
@@ -782,6 +677,14 @@ onAuthStateChanged(auth, async (user) => {
       if (brandNameMobileEl) brandNameMobileEl.textContent = newName;
       if (feedbackBusinessName) feedbackBusinessName.value = newName;
       if (topNavBrand) topNavBrand.textContent = newName;
+
+      // Pre-fill the return thank-you message template -- only on first
+      // render per page load, so it doesn't clobber text the owner is
+      // actively typing if this listener fires again mid-edit.
+      if (returnMessageInput && !returnMessageInput.dataset.loaded) {
+        returnMessageInput.value = data.returnMessageTemplate || DEFAULT_RETURN_MESSAGE_TEMPLATE;
+        returnMessageInput.dataset.loaded = "true";
+      }
 
       // Referral code — guarded so listener doesn't loop
       let referralCode = data.referralCode;
@@ -839,6 +742,7 @@ onAuthStateChanged(auth, async (user) => {
 
     // =====================================================
     // SINGLE member listener — invite-acceptance push
+    // (guarded: flag written BEFORE push so failures don't repeat)
     // =====================================================
     onSnapshot(query(membersRef, where("businessId", "==", businessId)), (snapshot) => {
       snapshot.docChanges().forEach(async (change) => {
@@ -846,6 +750,7 @@ onAuthStateChanged(auth, async (user) => {
         const data = change.doc.data();
         if (data.status !== "accepted" || data.notifiedAccepted) return;
 
+        // Set the flag FIRST — if this fails, skip the push entirely.
         try {
           await updateDoc(doc(db, "businessMembers", change.doc.id), { notifiedAccepted: true });
         } catch (err) {
@@ -893,6 +798,38 @@ onAuthStateChanged(auth, async (user) => {
         setTimeout(() => {
           saveBusinessBtn.textContent = "Save Changes";
           saveBusinessBtn.disabled = false;
+        }, 1200);
+      });
+    }
+
+    // =====================================================
+    // Save return thank-you message template
+    // =====================================================
+    if (saveReturnMessageBtn) {
+      saveReturnMessageBtn.addEventListener("click", async () => {
+        if (currentRole !== "owner") return alert("Only the owner can change the return message.");
+        const newTemplate = (returnMessageInput?.value || "").trim();
+        if (!newTemplate) return alert("Return message cannot be empty");
+
+        saveReturnMessageBtn.disabled = true;
+        saveReturnMessageBtn.textContent = "Saving...";
+
+        await updateDoc(businessRef, { returnMessageTemplate: newTemplate, updatedAt: serverTimestamp() });
+
+        await addDoc(collection(db, "businesses", businessId, "notifications"), {
+          message: `Return thank-you message template was updated`,
+          type: "settings_change",
+          triggeredBy: auth.currentUser.email,
+          createdAt: serverTimestamp(),
+          readBy: []
+        });
+
+        await sendPush(`Return thank-you message template was updated`, "/settings.html");
+
+        saveReturnMessageBtn.textContent = "Saved!";
+        setTimeout(() => {
+          saveReturnMessageBtn.textContent = "Save Changes";
+          saveReturnMessageBtn.disabled = false;
         }, 1200);
       });
     }

@@ -100,7 +100,12 @@ function collectDraftState() {
     vendor: row.querySelector(".vendor-name")?.value || ""
   }));
 
-  return { fields, items, savedAt: Date.now() };
+  const otherFeesRows = Array.from(document.querySelectorAll("#otherFeesRepeater .other-fee-row")).map(row => ({
+    label: row.querySelector(".other-fee-label")?.value || "",
+    amount: row.querySelector(".other-fee-amount")?.value || ""
+  }));
+
+  return { fields, items, otherFeesRows, savedAt: Date.now() };
 }
 
 let draftSaveTimer;
@@ -126,7 +131,8 @@ function draftHasContent(draft) {
   if (!draft) return false;
   const fieldsHaveContent = Object.values(draft.fields || {}).some(v => (v || "").toString().trim().length > 0);
   const itemsHaveContent = (draft.items || []).some(i => (i.itemName || i.customName || "").trim().length > 0);
-  return fieldsHaveContent || itemsHaveContent;
+  const feesHaveContent = (draft.otherFeesRows || []).some(r => (r.label || "").trim().length > 0 || Number(r.amount) > 0);
+  return fieldsHaveContent || itemsHaveContent || feesHaveContent;
 }
 
 /** Restores a saved draft (with confirmation) if one exists. Returns true if it restored a draft's item rows. */
@@ -179,6 +185,18 @@ async function restoreDraftIfAny() {
   });
   updateSelectOptions();
 
+  // Rebuild the itemized "Other Fees" rows from the draft (if any).
+  const otherFeesContainer = document.getElementById("otherFeesRepeater");
+  if (otherFeesContainer) {
+    otherFeesContainer.innerHTML = "";
+    (draft.otherFeesRows || []).forEach(feeDraft => {
+      if ((feeDraft.label || "").trim() || Number(feeDraft.amount) > 0) {
+        addOtherFeeRow(feeDraft.label || "", feeDraft.amount || "");
+      }
+    });
+    syncOtherFeesHidden();
+  }
+
   return true;
 }
 
@@ -212,6 +230,75 @@ function getFeeValue(id) {
   const el = document.getElementById(id);
   if (!el) return 0;
   return parseFloat((el.value || "0").toString().replace(/,/g, '')) || 0;
+}
+
+/* ========================================================
+   OTHER FEES - itemized repeater
+   The visible UI is a list of {label, amount} rows. The hidden #otherFees
+   input keeps holding the computed SUM, exactly like before, so every bit
+   of existing code that reads getFeeValue("otherFees") -- recalcTotal, the
+   draft fields list, the submit payload -- keeps working completely
+   unchanged. We only ever add a new payment.otherFeesList field alongside it.
+======================================================== */
+function buildOtherFeeRowHTML(label = "", amount = "") {
+  const safeLabel = String(label).replace(/"/g, '&quot;');
+  return `
+    <div class="other-fee-row" style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+      <input type="text" class="other-fee-label" placeholder="e.g. Diesel" value="${safeLabel}"
+        style="flex:2 1 140px; min-width:0; padding:10px; border-radius:8px; border:1px solid #e2e8f0; box-sizing:border-box;">
+      <input type="text" class="other-fee-amount" inputmode="numeric" placeholder="₦0" value="${amount}"
+        style="flex:1 1 90px; min-width:0; padding:10px; border-radius:8px; border:1px solid #e2e8f0; box-sizing:border-box;">
+      <button type="button" class="remove-other-fee-btn" style="flex:0 0 32px; height:32px; border:1px solid #fca5a5; border-radius:8px; background:#fef2f2; color:#b91c1c; cursor:pointer;">✕</button>
+    </div>`;
+}
+
+function syncOtherFeesHidden() {
+  const rows = document.querySelectorAll("#otherFeesRepeater .other-fee-row");
+  let sum = 0;
+  rows.forEach(row => {
+    const amount = parseFloat((row.querySelector(".other-fee-amount")?.value || "0").toString().replace(/,/g, '')) || 0;
+    sum += amount;
+  });
+
+  const display = document.getElementById("otherFeesSubtotalDisplay");
+  if (display) display.textContent = `Other fees total: ₦${sum.toLocaleString('en-NG')}`;
+
+  const hidden = document.getElementById("otherFees");
+  if (hidden) {
+    hidden.value = sum;
+    // Fire the SAME "input" event the old plain number field used to fire,
+    // so the existing listener (clearTotalUserOverride + recalcTotal) runs
+    // exactly as before -- nothing new to wire, nothing old to break.
+    hidden.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+}
+
+/** Reads the itemized rows for payment.otherFeesList (only non-empty rows). */
+function getOtherFeesList() {
+  const rows = document.querySelectorAll("#otherFeesRepeater .other-fee-row");
+  const list = [];
+  rows.forEach(row => {
+    const label = (row.querySelector(".other-fee-label")?.value || "").trim();
+    const amount = parseFloat((row.querySelector(".other-fee-amount")?.value || "0").toString().replace(/,/g, '')) || 0;
+    if (label || amount > 0) {
+      list.push({ label: label || "Other Fee", amount });
+    }
+  });
+  return list;
+}
+
+function addOtherFeeRow(label = "", amount = "") {
+  const container = document.getElementById("otherFeesRepeater");
+  if (!container) return;
+  container.insertAdjacentHTML("beforeend", buildOtherFeeRowHTML(label, amount));
+  const row = container.lastElementChild;
+  row.querySelector(".other-fee-label")?.addEventListener("input", syncOtherFeesHidden);
+  row.querySelector(".other-fee-amount")?.addEventListener("input", syncOtherFeesHidden);
+  row.querySelector(".remove-other-fee-btn")?.addEventListener("click", () => {
+    row.remove();
+    syncOtherFeesHidden();
+  });
+  syncOtherFeesHidden();
 }
 
 /**
@@ -366,6 +453,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // ===== OTHER FEES REPEATER =====
+  document.getElementById("addOtherFeeBtn")?.addEventListener("click", () => addOtherFeeRow());
+
   // ===== FEES: clear total override so items + fees recalc =====
   ["cautionFee", "transportationFee", "otherFees"].forEach(id => {
     const el = document.getElementById(id);
@@ -452,7 +542,7 @@ window.addItemRow = function () {
           ${item.name} (${item.availableQuantity} avail)
         </option>
       `).join("")}
-      <option value="__custom__">✏️ Not in inventory (type item name)</option>
+      <option value="__Custom__">✏️ Not in inventory (type item name)</option>
     </select>
     <div class="flex gap-2 w-full sm:w-auto">
         <input class="item-qty w-20 p-2 border rounded-lg outline-none" type="number" min="1" value="1" required>
@@ -623,24 +713,59 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// 3. Receipt image preview handler
+// ===== FIX 6: Multi-file receipt preview handler =====
+window._receiptFiles = [];
+
 const receiptInput = document.getElementById("receiptImage");
-const receiptPreview = document.getElementById("receiptPreview");
-const receiptThumbnail = document.getElementById("receiptThumbnail");
+const receiptPreviewList = document.getElementById("receiptPreviewList");
 const receiptText = document.getElementById("receiptText");
+
+function renderReceiptPreviews() {
+  if (!receiptPreviewList) return;
+  receiptPreviewList.innerHTML = window._receiptFiles.map((entry, idx) => `
+    <div style="position:relative; display:inline-block;">
+      <img src="${entry.dataUrl}" alt="Receipt ${idx + 1}"
+           style="max-width:90px; max-height:90px; border-radius:8px; object-fit:cover; border:1px solid #e2e8f0;">
+      <button type="button" data-idx="${idx}"
+              style="position:absolute; top:-6px; right:-6px; width:20px; height:20px; border-radius:50%; background:#dc2626; color:#fff; border:none; font-size:11px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;"
+              class="remove-receipt-btn">✕</button>
+    </div>
+  `).join("");
+
+  receiptPreviewList.querySelectorAll(".remove-receipt-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const idx = Number(btn.dataset.idx);
+      window._receiptFiles.splice(idx, 1);
+      renderReceiptPreviews();
+    });
+  });
+
+  if (receiptText) {
+    receiptText.textContent = window._receiptFiles.length
+      ? `${window._receiptFiles.length} image(s) attached`
+      : "Tap to add receipt photo(s)";
+  }
+}
 
 if (receiptInput) {
   receiptInput.addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    if (file) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    let pending = files.length;
+    files.forEach(file => {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        receiptThumbnail.src = e.target.result;
-        receiptPreview.style.display = "block";
-        receiptText.textContent = "Tap to change receipt";
+      reader.onload = (ev) => {
+        window._receiptFiles.push({ file, dataUrl: ev.target.result });
+        pending -= 1;
+        if (pending === 0) renderReceiptPreviews();
       };
       reader.readAsDataURL(file);
-    }
+    });
+
+    // Reset so the same file can be picked twice
+    receiptInput.value = "";
   });
 }
 
@@ -743,12 +868,18 @@ document
         }
       }
 
-      /* ===== UPLOAD RECEIPT IMAGE ===== */
-      let receiptImageUrl = null;
-      const receiptFile = receiptInput?.files[0];
-      if (receiptFile) {
-        submitBtn.textContent = "Uploading receipt...";
-        receiptImageUrl = await uploadReceiptImage(businessId, receiptFile);
+      // ===== FIX 6: UPLOAD RECEIPT IMAGES (multiple) =====
+      const receiptImageUrls = [];
+      if (window._receiptFiles.length) {
+        submitBtn.textContent = "Uploading receipts...";
+        for (const entry of window._receiptFiles) {
+          try {
+            const url = await uploadReceiptImage(businessId, entry.file);
+            if (url) receiptImageUrls.push(url);
+          } catch (err) {
+            console.warn("Receipt upload failed for one file:", err);
+          }
+        }
       }
 
       // Inside the submit event listener, before creating bookingData:
@@ -762,6 +893,7 @@ document
       const cleanCaution = getFeeValue("cautionFee");
       const cleanTransportation = getFeeValue("transportationFee");
       const cleanOtherFees = getFeeValue("otherFees");
+      const cleanOtherFeesList = getOtherFeesList();
 
       // ✅ Update the bookingData payment section
       const bookingData = {
@@ -784,9 +916,12 @@ document
           method: paymentMethod.value,
           cautionFee: cleanCaution,
           transportationFee: cleanTransportation,
-          otherFees: cleanOtherFees
+          otherFees: cleanOtherFees,
+          otherFeesList: cleanOtherFeesList
         },
-        receiptImage: receiptImageUrl,
+        // ===== FIX 6: Save both single + array receipt fields for backward compat =====
+        receiptImage: receiptImageUrls[0] || null,
+        receiptImages: receiptImageUrls,
         notes: document.getElementById("notes")?.value || "",
         status: "active",
         createdBy: {
@@ -842,6 +977,8 @@ document
       /* Nothing to deduct — availability for any date window is computed
          live from active bookings (see availabilityService.js). */
 
+      // ===== FIX 6: Clear in-memory receipt array before navigating away =====
+      window._receiptFiles = [];
       clearDraft();
       window.location.href = "bookings.html";
     } catch (error) {
@@ -1014,7 +1151,3 @@ window.shareToWhatsApp = function() {
   updateBtnSize();
   */
 // })();
-
-
-
-
