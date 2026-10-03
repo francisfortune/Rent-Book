@@ -6,19 +6,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Bookings | Tracknrent</title>
     <link rel="canonical" href="https://tracknrent.vercel.app/add.html" />
-    <meta name="description" content="Add bookings and Track them and also Generate booking Receipt and share via WhatsApp">
+    <meta name="description"
+        content="Add bookings and Track them and also Generate booking Receipt and share via WhatsApp">
     <meta name="keywords" content="Tracknrent add item, SaaS inventory management, rental item addition">
 
     <meta property="og:title" content="Add Item – Tracknrent SaaS">
-    <meta property="og:description" content="Add bookings and Track them and also Generate booking Receipt and share via WhatsApp">
+    <meta property="og:description"
+        content="Add bookings and Track them and also Generate booking Receipt and share via WhatsApp">
     <meta property="twitter:title" content="Add Item – Tracknrent SaaS">
-    <meta property="twitter:description" content="Add bookings and Track them and also Generate booking Receipt and share via WhatsApp">
+    <meta property="twitter:description"
+        content="Add bookings and Track them and also Generate booking Receipt and share via WhatsApp">
 
     <!-- ✅ MUST BE FIRST — Loads OneSignal SDK -->
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 
-<!-- ✅ Then your module -->
-<script type="module" src="assets/js/onesignal.js" defer></script>
+    <!-- ✅ Then your module -->
+    <script type="module" src="assets/js/onesignal.js" defer></script>
 
     <!-- FAVICON -->
     <link rel="icon" href="favicon.ico" sizes="any">
@@ -687,47 +690,48 @@
                 display: block !important;
             }
         }
+
         /* ============================================
    SAVE BOOKING BUTTON
 ============================================ */
 
-.btn {
-    position: relative;
-    padding: 8px 15px;
-    background: purple;
-    color: white;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    border: none;
-    cursor: pointer;
-}
+        .btn {
+            position: relative;
+            padding: 8px 15px;
+            background: purple;
+            color: white;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
 
-.btn:hover {
-    background: #6b21a5;
-    transform: translateY(-2px);
-}
+        .btn:hover {
+            background: #6b21a5;
+            transform: translateY(-2px);
+        }
 
-/* Specific styles for the Save Booking button in form actions */
-.form-actions .btn {
-    padding: 14px 40px;
-    background: purple;
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-weight: 700;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(128, 0, 128, 0.3);
-}
+        /* Specific styles for the Save Booking button in form actions */
+        .form-actions .btn {
+            padding: 14px 40px;
+            background: purple;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(128, 0, 128, 0.3);
+        }
 
-.form-actions .btn:hover {
-    background: #6b21a5;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 25px rgba(128, 0, 128, 0.4);
-}
+        .form-actions .btn:hover {
+            background: #6b21a5;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(128, 0, 128, 0.4);
+        }
     </style>
     <style>
         @view-transition {
@@ -746,7 +750,8 @@
                 <li><a href="dashboard.html">
                         <span class="icon">
                             <div class="logo">
-                                <img src="assets/imgs/logo.png" alt="Tracknrent" style="width: 74px; height: 50px; object-fit: contain; margin-right: 4px;" />
+                                <img src="assets/imgs/logo.png" alt="Tracknrent"
+                                    style="width: 74px; height: 50px; object-fit: contain; margin-right: 4px;" />
                             </div>
                         </span>
                         <span class="brand">Tracknrent</span>
@@ -787,7 +792,8 @@
                 </div>
 
                 <div class="user">
-                    <div id="user-avatar" style="width: 100%; height: 100%; border-radius: 50%; background: purple; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.2rem; text-transform: uppercase;">
+                    <div id="user-avatar"
+                        style="width: 100%; height: 100%; border-radius: 50%; background: purple; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.2rem; text-transform: uppercase;">
                         ?
                     </div>
                 </div>
@@ -824,7 +830,8 @@
                         <h3>Event Details</h3>
                         <div class="form-group">
                             <label>Event Type</label>
-                            <input id="eventType" list="eventTypeOptions" placeholder="Select or type event type" class="p-3 border rounded-xl w-full" />
+                            <input id="eventType" list="eventTypeOptions" placeholder="Select or type event type"
+                                class="p-3 border rounded-xl w-full" />
                             <datalist id="eventTypeOptions">
                                 <option value="Wedding">
                                 <option value="Birthday">
@@ -866,62 +873,87 @@
                         </button>
 
                         <h3 style="margin-top:20px;">Additional Fees</h3>
-                        <div class="fees-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px;">
+                        <div class="fees-grid"
+                            style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px;">
                             <div class="form-group">
                                 <label>Caution Fee (₦)</label>
-                                <input type="text" id="cautionFee" inputmode="numeric" placeholder="0" style="padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
+                                <input type="text" id="cautionFee" inputmode="numeric" placeholder="0"
+                                    style="padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
                             </div>
                             <div class="form-group">
                                 <label>Logistics (₦)</label>
-                                <input type="text" id="transportationFee" inputmode="numeric" placeholder="0" style="padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
+                                <input type="text" id="transportationFee" inputmode="numeric" placeholder="0"
+                                    style="padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
                             </div>
-                            <div class="form-group">
-                                <label>Other Fees (₦)</label>
-                                <input type="text" id="otherFees" inputmode="numeric" placeholder="0" style="padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
-                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-top:10px;">
+                            <label>Other Fees</label>
+                            <p style="font-size:11px; color:#9ca3af; margin:-2px 0 8px;">Itemize each extra charge (e.g.
+                                Diesel, Setup, Cleaning) so it's clear on the receipt — instead of one lump sum.</p>
+                            <div id="otherFeesRepeater" style="display:flex; flex-direction:column; gap:8px;"></div>
+                            <button type="button" id="addOtherFeeBtn"
+                                style="margin-top:8px; padding:8px 14px; font-size:0.85rem; background:#f3e8ff; color:purple; border:1px solid #d8b4fe; border-radius:8px; cursor:pointer;">+
+                                Add fee line</button>
+                            <p id="otherFeesSubtotalDisplay" style="font-size:11px; color:#9ca3af; margin-top:6px;">
+                                Other fees total: ₦0</p>
+                            <!-- Computed sum of the rows above, kept in sync automatically.
+                                 Still read by the rest of the app exactly like before (payment.otherFees). -->
+                            <input type="hidden" id="otherFees" value="0">
                         </div>
 
                         <h3 style="margin-top:20px;">Payment</h3>
                         <div class="form-group">
                             <label>Total Amount (₦)</label>
-                            <input type="text" id="totalAmount" inputmode="numeric" style="background:#f7fafc; font-weight:700; color:purple; padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
-                            <p style="font-size:11px; color:#9ca3af; margin-top:2px;">Auto-calculated from items + fees.</p>
+                            <input type="text" id="totalAmount" inputmode="numeric"
+                                style="background:#f7fafc; font-weight:700; color:purple; padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
+                            <p style="font-size:11px; color:#9ca3af; margin-top:2px;">Auto-calculated from items + fees.
+                            </p>
                         </div>
                         <div class="form-group">
                             <label>Amount Paid (₦)</label>
-                            <input type="text" id="amountPaid" inputmode="numeric" placeholder="0" style="background:#f7fafc; font-weight:700; color:purple; padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
+                            <input type="text" id="amountPaid" inputmode="numeric" placeholder="0"
+                                style="background:#f7fafc; font-weight:700; color:purple; padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
                         </div>
                         <div class="form-group">
                             <label>Payment Method</label>
-                            <select id="paymentMethod" style="padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%;">
+                            <select id="paymentMethod"
+                                style="padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%;">
                                 <option>Cash</option>
                                 <option>Transfer</option>
                             </select>
                         </div>
 
                         <div class="form-group">
-                            <div id="receiptPreviewBox" class="mt-6 p-4 border-2 border-dashed border-purple-200 rounded-2xl bg-purple-50/50">
+                            <div id="receiptPreviewBox"
+                                class="mt-6 p-4 border-2 border-dashed border-purple-200 rounded-2xl bg-purple-50/50">
                                 <h3 class="text-xs font-bold text-purple-400 uppercase mb-2 flex items-center gap-2">
                                     <span class="material-symbols-outlined">visibility</span> Live Receipt Preview
                                 </h3>
-                                <pre id="liveReceiptText" class="text-sm font-mono whitespace-pre-wrap text-gray-700 leading-relaxed"></pre>
+                                <pre id="liveReceiptText"
+                                    class="text-sm font-mono whitespace-pre-wrap text-gray-700 leading-relaxed"></pre>
                             </div>
                         </div>
 
-                        <div class="form-group">
-                            <label><h3>Receipt Image (optional)</h3></label>
-                            <div class="receipt-upload-container" style="border: 2px dashed #e2e8f0; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s ease;" onclick="document.getElementById('receiptImage').click()">
-                                <input type="file" id="receiptImage" accept="image/*" capture="environment" style="display: none;">
-                                <div id="receiptPreview" style="display: none; margin-bottom: 10px;">
-                                    <img id="receiptThumbnail" style="max-width: 200px; max-height: 150px; border-radius: 8px; object-fit: contain;">
-                                </div>
-                                <span class="material-symbols-outlined" style="font-size: 2rem; color: #718096;">photo_camera</span>
-                                <p id="receiptText" style="color: #718096; font-size: 0.9rem; margin-top: 8px;">Tap to add receipt photo</p>
+                        <div class="receipt-upload-container"
+                            style="border: 2px dashed #e2e8f0; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s ease;"
+                            onclick="document.getElementById('receiptImage').click()">
+                            <input type="file" id="receiptImage" accept="image/*" capture="environment" multiple
+                                style="display: none;">
+                            <div id="receiptPreviewList"
+                                style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:10px;">
                             </div>
+                            <span class="material-symbols-outlined"
+                                style="font-size: 2rem; color: #718096;">photo_camera</span>
+                            <p id="receiptText" style="color: #718096; font-size: 0.9rem; margin-top: 8px;">Tap to add
+                                receipt photo(s) — one per payment</p>
                         </div>
 
+
                         <div class="form-group">
-                            <label><h3>Notes (Optional)</h3></label>
+                            <label>
+                                <h3>Notes (Optional)</h3>
+                            </label>
                             <textarea id="notes" placeholder="e.g Go to Vendor's House and collect items"></textarea>
                         </div>
 
@@ -970,7 +1002,7 @@
         let navigation = document.querySelector(".navigation");
         let main = document.querySelector(".main");
 
-        toggle.onclick = function() {
+        toggle.onclick = function () {
             navigation.classList.toggle("active");
             main.classList.toggle("active");
         };

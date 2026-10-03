@@ -1063,7 +1063,19 @@
 .modal-header {
   flex-shrink: 0;         /* 👈 header never scrolls away */
 }
-
+  @keyframes auditFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .audit-node {
+    animation: auditFadeIn 0.35s ease both;
+  }
+  .audit-node:nth-child(1) { animation-delay: 0.05s; }
+  .audit-node:nth-child(2) { animation-delay: 0.10s; }
+  .audit-node:nth-child(3) { animation-delay: 0.15s; }
+  .audit-node:nth-child(4) { animation-delay: 0.20s; }
+  .audit-node:nth-child(5) { animation-delay: 0.25s; }
+  .audit-node:nth-child(6) { animation-delay: 0.30s; }
 
 
 
