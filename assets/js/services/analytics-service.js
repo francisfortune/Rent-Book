@@ -114,9 +114,19 @@ export function buildRange(preset) {
   }
 }
 
+/**
+ * FIX #1 — Undated rows are now KEPT in range filters instead of being
+ * silently dropped. A booking/batch with no event date AND no createdAt is
+ * rare (usually a manual write or a bad import), but dropping it silently
+ * caused counts to differ between "All Time" and "This Month".
+ */
 function filterByRange(bookings, from, to) {
   if (!from && !to) return bookings;
-  return bookings.filter(b => isInRange(bookingDate(b), from, to));
+  return bookings.filter(b => {
+    const d = bookingDate(b);
+    if (!d) return true; // keep undated rather than silently hide it
+    return isInRange(d, from, to);
+  });
 }
 
 /* ============================================================================
@@ -334,11 +344,14 @@ export async function getTopItems(businessId, { from, to, limit = 10 } = {}) {
 }
 
 /**
- * Revenue per month for the last N months (default 12).
+ * FIX #2 — Monthly buckets now accept an `anchorDate` so two parallel calls
+ * (customer + partner) can be built from the EXACT same "now". Without this,
+ * a rare midnight rollover between the two awaits could shift one array by a
+ * month and misalign the stacked chart.
  */
-export async function getMonthlyRevenue(businessId, { months = 12 } = {}) {
+export async function getMonthlyRevenue(businessId, { months = 12, anchorDate = null } = {}) {
   const all = await fetchAllBookings(businessId);
-  const now = new Date();
+  const now = anchorDate || new Date();
   const buckets = {};
 
   // Seed the last N months with 0 so gaps show as empty bars.
@@ -620,4 +633,323 @@ export async function getFullAnalytics(businessId, { from, to } = {}) {
     damageReport,
     bookingCountInRange: inRange.length
   };
+}
+
+/* ============================================================================
+   RENTAL PARTNERS — lent-out batches only
+   ----------------------------------------------------------------------------
+   Reads `businesses/{id}/externalRentals` and keeps ONLY batch-shaped docs
+   (those with an `items[]` array). The legacy one-doc-per-item shape lives in
+   the same collection — those are skipped here.
+
+   Borrowed-in is intentionally NOT aggregated: borrowed items come from
+   bookings, which are already counted in the customer analytics above.
+============================================================================ */
+
+/** True if this externalRentals doc uses the batch schema (has items[]). */
+function isBatchDoc(d) {
+  return Array.isArray(d.items);
+}
+
+/**
+ * Batch date we filter by: the lend-out date, falling back to createdAt.
+ * Matches the semantics of bookingDate() for customer bookings.
+ */
+function batchDate(b) {
+  return toDate(b.rentalDate) || toDate(b.createdAt) || null;
+}
+
+async function fetchAllBatches(businessId) {
+  if (!businessId) throw new Error("analytics-service: businessId required");
+
+  const col = collection(db, "businesses", businessId, "externalRentals");
+  let snap;
+
+  try {
+    const q = query(col, orderBy("createdAt", "desc"));
+    snap = await getDocs(q);
+  } catch (err) {
+    console.warn("[analytics-service] externalRentals orderBy failed, retrying unordered:", err.message);
+    snap = await getDocs(col);
+  }
+
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(isBatchDoc); // ignore legacy one-doc-per-item rows
+}
+
+/**
+ * FIX #1 (batch side) — Undated batches are now KEPT in range filters.
+ */
+function filterBatchesByRange(batches, from, to) {
+  if (!from && !to) return batches;
+  return batches.filter(b => {
+    const d = batchDate(b);
+    if (!d) return true; // keep undated rather than silently hide it
+    return isInRange(d, from, to);
+  });
+}
+
+/** A lent-out batch is "settled" once it's marked returned. */
+function isBatchOutstanding(b) {
+  return b.status !== "returned";
+}
+
+function batchOwed(b) {
+  const total = Number(b.payment?.total || 0);
+  const paid = Number(b.payment?.paid || 0);
+  return Math.max(0, total - paid);
+}
+
+/**
+ * FULL rental-partners analytics for one range.
+ * Returns the same shape family as getFullAnalytics, so analytics.js can
+ * render it with the same helpers.
+ */
+export async function getRentalPartnerAnalytics(businessId, { from, to } = {}) {
+  const all = await fetchAllBatches(businessId);
+  const inRange = filterBatchesByRange(all, from, to);
+  const now = new Date();
+
+  // ── Revenue (lent-out) ──
+  let totalRevenue = 0;
+  let totalPaid = 0;
+  let totalOutstandingInRange = 0;
+
+  inRange.forEach(b => {
+    const t = Number(b.payment?.total || 0);
+    const p = Number(b.payment?.paid || 0);
+    totalRevenue += t;
+    totalPaid += p;
+    totalOutstandingInRange += Math.max(0, t - p);
+  });
+
+  // Previous equivalent period (same span, immediately before `from`)
+  let previousRevenue = 0;
+  if (from && to) {
+    const spanMs = to.getTime() - from.getTime();
+    const prevTo = new Date(from.getTime() - 1);
+    const prevFrom = new Date(from.getTime() - spanMs - 1);
+    previousRevenue = filterBatchesByRange(all, prevFrom, prevTo)
+      .reduce((s, b) => s + Number(b.payment?.total || 0), 0);
+  }
+
+  const changePct = previousRevenue > 0
+    ? ((totalRevenue - previousRevenue) / previousRevenue) * 100
+    : null;
+
+  // ── Snapshot ──
+  const returned = inRange.filter(b => b.status === "returned").length;
+  const active = inRange.filter(b => b.status === "active").length;
+
+  // Owed / overdue are lifetime — debts don't vanish when the period ends.
+  const owedTotal = all.reduce((sum, b) => {
+    if (!isBatchOutstanding(b)) return sum;
+    return sum + batchOwed(b);
+  }, 0);
+
+  const overdue = all.filter(b => {
+    if (!isBatchOutstanding(b)) return false;
+    const ret = toDate(b.returnDate);
+    return ret && ret < now;
+  }).length;
+
+  // Overbooked batches still open — flag for the UI
+  const overbookedOpen = all.filter(b =>
+    isBatchOutstanding(b) && (b.items || []).some(i => Number(i.shortage || 0) > 0)
+  ).length;
+
+  const damagesTotal = inRange.reduce((sum, b) => {
+    if (!Array.isArray(b.items)) return sum;
+    return sum + b.items.reduce(
+      (s, i) => s + (i.damaged ? Number(i.damageAmount || 0) : 0), 0
+    );
+  }, 0);
+
+  // ── Outstanding by partner (rental business) ──
+  const owedByPartner = {};
+  all.forEach(b => {
+    if (!isBatchOutstanding(b)) return;
+    const owed = batchOwed(b);
+    if (owed <= 0) return;
+
+    const name = b.rentedTo || "Unknown partner";
+    const phone = b.contactPhone || "";
+    const created = batchDate(b);
+
+    if (!owedByPartner[name]) {
+      owedByPartner[name] = {
+        name,
+        phone,
+        totalOwed: 0,
+        batchCount: 0,
+        oldestSince: created
+      };
+    }
+    owedByPartner[name].totalOwed += owed;
+    owedByPartner[name].batchCount += 1;
+    if (created && (!owedByPartner[name].oldestSince || created < owedByPartner[name].oldestSince)) {
+      owedByPartner[name].oldestSince = created;
+    }
+    if (!owedByPartner[name].phone && phone) owedByPartner[name].phone = phone;
+  });
+
+  const outstandingByPartner = Object.values(owedByPartner)
+    .map(c => ({
+      ...c,
+      daysSince: c.oldestSince
+        ? Math.max(0, Math.floor((now - c.oldestSince) / 86400000))
+        : null
+    }))
+    .sort((a, b) => b.totalOwed - a.totalOwed);
+
+  // ── Best partners (by amount paid during the period) ──
+  const bestByPartner = {};
+  inRange.forEach(b => {
+    const name = b.rentedTo || "Unknown partner";
+    const phone = b.contactPhone || "";
+    const t = Number(b.payment?.total || 0);
+    const p = Number(b.payment?.paid || 0);
+
+    if (!bestByPartner[name]) {
+      bestByPartner[name] = {
+        name,
+        phone,
+        totalSpent: 0,
+        batchCount: 0,
+        allPaid: true
+      };
+    }
+    bestByPartner[name].totalSpent += p;
+    bestByPartner[name].batchCount += 1;
+    if (p < t) bestByPartner[name].allPaid = false;
+    if (!bestByPartner[name].phone && phone) bestByPartner[name].phone = phone;
+  });
+
+  const bestPartners = Object.values(bestByPartner)
+    .sort((a, b) => b.totalSpent - a.totalSpent)
+    .slice(0, 10);
+
+  // ── Top lent-out items ──
+  const byItem = {};
+  inRange.forEach(b => {
+    (b.items || []).forEach(it => {
+      const name = it.name || "Unknown";
+      const qty = Number(it.qty || 0);
+      const revenue = Number(it.total || (qty * Number(it.price || 0)) || 0);
+
+      if (!byItem[name]) {
+        byItem[name] = {
+          name,
+          unitsLent: 0,
+          revenue: 0,
+          timesLent: 0
+        };
+      }
+      byItem[name].unitsLent += qty;
+      byItem[name].revenue += revenue;
+      byItem[name].timesLent += 1;
+    });
+  });
+
+  const topItems = Object.values(byItem)
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 10);
+
+  // ── Damage report (lent-out) ──
+  const damageByItem = {};
+  const damageByPartner = {};
+  let totalDamageAmount = 0;
+
+  inRange.forEach(b => {
+    (b.items || []).forEach(it => {
+      if (!it.damaged) return;
+      const amount = Number(it.damageAmount || 0);
+      if (amount <= 0) return;
+
+      totalDamageAmount += amount;
+
+      const itemName = it.name || "Unknown";
+      if (!damageByItem[itemName]) {
+        damageByItem[itemName] = { name: itemName, timesDamaged: 0, unitsLost: 0, amount: 0 };
+      }
+      damageByItem[itemName].timesDamaged += 1;
+      damageByItem[itemName].unitsLost += Number(it.qty || 0);
+      damageByItem[itemName].amount += amount;
+
+      const partnerName = b.rentedTo || "Unknown partner";
+      if (!damageByPartner[partnerName]) {
+        damageByPartner[partnerName] = { name: partnerName, timesDamaged: 0, amount: 0 };
+      }
+      damageByPartner[partnerName].timesDamaged += 1;
+      damageByPartner[partnerName].amount += amount;
+    });
+  });
+
+  const damageReport = {
+    totalDamageAmount,
+    damageRatePct: totalRevenue > 0 ? (totalDamageAmount / totalRevenue) * 100 : 0,
+    byItem: Object.values(damageByItem).sort((a, b) => b.amount - a.amount),
+    byPartner: Object.values(damageByPartner).sort((a, b) => b.amount - a.amount)
+  };
+
+  return {
+    revenue: {
+      totalRevenue,
+      totalPaid,
+      totalOutstandingInRange,
+      batchCount: inRange.length,
+      avgBatch: inRange.length ? Math.round(totalRevenue / inRange.length) : 0,
+      previousRevenue,
+      changePct
+    },
+    snapshot: {
+      batchCount: inRange.length,
+      returned,
+      active,
+      owedTotal,
+      overdue,
+      overbookedOpen,
+      damagesTotal
+    },
+    outstandingByPartner,
+    bestPartners,
+    topItems,
+    damageReport
+  };
+}
+
+/**
+ * FIX #2 (batch side) — Accepts `anchorDate` so the stacked All Revenue chart
+ * aligns perfectly with the customer monthly series.
+ */
+export async function getMonthlyLentOutRevenue(businessId, { months = 12, anchorDate = null } = {}) {
+  const all = await fetchAllBatches(businessId);
+  const now = anchorDate || new Date();
+  const buckets = {};
+
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    buckets[key] = 0;
+  }
+
+  all.forEach(b => {
+    const d = batchDate(b);
+    if (!d) return;
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (key in buckets) {
+      buckets[key] += Number(b.payment?.total || 0);
+    }
+  });
+
+  return Object.entries(buckets).map(([key, revenue]) => {
+    const [y, m] = key.split("-");
+    const date = new Date(Number(y), Number(m) - 1, 1);
+    return {
+      key,
+      label: date.toLocaleString("en-NG", { month: "short", year: "2-digit" }),
+      revenue
+    };
+  });
 }
