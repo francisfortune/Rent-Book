@@ -4,80 +4,68 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Terms & Conditions | TracknRent</title>
-  <meta name="description" content="Official Terms and Conditions for TracknRent - Rental Management Platform. Understand your rights and obligations when using our service.">
-  <meta name="keywords" content="TracknRent terms, rental software terms, SaaS terms, Nigeria data protection">
+  <title>Terms of Service & Privacy Policy | TracknRent</title>
+  <meta name="description" content="Official Terms of Service, Privacy Policy, and Data Protection Notice for TracknRent — the rental management platform for Nigerian rental businesses.">
+  <meta name="keywords" content="TracknRent terms, rental software terms, SaaS terms Nigeria, NDPA 2023, data protection Nigeria, TracknRent privacy policy">
 
-  <!-- FAVICON -->
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="shortcut icon" href="favicon.ico">
 
-  <!-- SEO -->
   <link rel="canonical" href="https://tracknrent.vercel.app/terms.html">
-  <meta property="og:title" content="Terms & Conditions | TracknRent">
-  <meta property="og:description" content="Official Terms and Conditions for TracknRent - Rental Management Platform.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="TracknRent">
+  <meta property="og:title" content="Terms of Service & Privacy Policy | TracknRent">
+  <meta property="og:description" content="The legal agreement between you and TracknRent, plus our data protection commitments.">
   <meta property="og:url" content="https://tracknrent.vercel.app/terms.html">
+  <meta property="og:image" content="https://tracknrent.vercel.app/favicon.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Terms of Service & Privacy Policy | TracknRent">
+  <meta name="twitter:description" content="The legal agreement between you and TracknRent, plus our data protection commitments.">
+  <meta name="twitter:image" content="https://tracknrent.vercel.app/favicon.png">
   <meta name="robots" content="index, follow">
 
-  <!-- Schema Markup for Legal Document -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    "name": "Terms and Conditions",
-    "description": "Official Terms and Conditions for TracknRent Rental Management Platform.",
+    "name": "Terms of Service and Privacy Policy",
+    "description": "Combined Terms of Service, Privacy Policy, and Data Protection Notice for TracknRent.",
     "url": "https://tracknrent.vercel.app/terms.html",
-    "datePublished": "2026-04-10",
-    "dateModified": "2026-09-05",
-    "about": {
-      "@type": "LegalService",
-      "name": "TracknRent Terms of Service"
-    }
+    "datePublished": "2026-01-15",
+    "dateModified": "2026-10-04",
+    "publisher": { "@type": "Organization", "name": "TracknRent" }
   }
   </script>
 
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-    * {
-      font-family: 'Inter', sans-serif;
-      scroll-behavior: smooth;
-    }
-
-    body {
-      background: #f8fafc;
-    }
+    * { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+    body { background: #f8fafc; }
 
     .legal-gradient {
       background: linear-gradient(135deg, #800080 0%, #660066 50%, #4d004d 100%);
       position: relative;
       overflow: hidden;
     }
-
     .legal-gradient::before {
       content: '';
       position: absolute;
-      top: -50%;
-      right: -20%;
-      width: 500px;
-      height: 500px;
+      top: -50%; right: -20%;
+      width: 500px; height: 500px;
       background: rgba(255, 255, 255, 0.05);
       border-radius: 50%;
       pointer-events: none;
     }
-
     .legal-gradient::after {
       content: '';
       position: absolute;
-      bottom: -30%;
-      left: -10%;
-      width: 400px;
-      height: 400px;
+      bottom: -30%; left: -10%;
+      width: 400px; height: 400px;
       background: rgba(255, 255, 255, 0.03);
       border-radius: 50%;
       pointer-events: none;
@@ -93,445 +81,534 @@
     h2 {
       color: #800080;
       font-weight: 800;
-      font-size: 1.4rem;
-      margin-top: 2.5rem;
+      font-size: 1.35rem;
+      margin-top: 2.75rem;
       margin-bottom: 1rem;
       display: flex;
       align-items: center;
       gap: 12px;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid #f1f5f9;
+      scroll-margin-top: 20px;
+    }
+    h2 ion-icon { font-size: 1.6rem; flex-shrink: 0; }
+
+    h3 {
+      color: #1e293b;
+      font-weight: 700;
+      font-size: 1rem;
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
     }
 
-    h2 ion-icon {
-      font-size: 1.8rem;
-      flex-shrink: 0;
-    }
-
-    p,
-    li {
+    p, li {
       color: #475569;
       line-height: 1.8;
-      margin-bottom: 1rem;
+      margin-bottom: 0.9rem;
+      font-size: 0.95rem;
     }
 
-    ul {
-      padding-left: 1.5rem;
-      list-style-type: disc;
-    }
+    ul { padding-left: 1.5rem; list-style-type: disc; }
+    ol { padding-left: 1.5rem; list-style-type: decimal; }
+    ul li, ol li { margin-bottom: 0.55rem; }
 
-    ul li {
-      margin-bottom: 0.6rem;
-    }
+    .clause { color: #800080; font-weight: 700; margin-right: 4px; }
 
     .highlight-box {
       background: #faf0fa;
       border: 1px solid #f0d0f0;
-      border-radius: 16px;
-      padding: 20px 24px;
-      margin: 24px 0;
+      border-left: 4px solid #800080;
+      border-radius: 12px;
+      padding: 18px 22px;
+      margin: 22px 0;
     }
+    .highlight-box strong { color: #800080; }
+    .highlight-box p:last-child { margin-bottom: 0; }
 
-    .highlight-box strong {
-      color: #800080;
+    .definitions {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin: 20px 0;
+    }
+    .definitions dt {
+      font-weight: 700;
+      color: #1e293b;
+      font-size: 0.9rem;
+      margin-top: 12px;
+    }
+    .definitions dt:first-child { margin-top: 0; }
+    .definitions dd {
+      color: #64748b;
+      font-size: 0.9rem;
+      line-height: 1.7;
+      margin: 2px 0 0;
+      padding-left: 0;
     }
 
     .toc-link {
       display: block;
-      padding: 10px 16px;
+      padding: 9px 16px;
       border-left: 3px solid transparent;
       color: #64748b;
       font-weight: 500;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       transition: all 0.25s ease;
       text-decoration: none;
       border-radius: 4px;
+      line-height: 1.4;
     }
-
     .toc-link:hover {
       color: #800080;
       border-left-color: #800080;
       background: #f8fafc;
     }
-
     .toc-link.active {
       color: #800080;
       border-left-color: #800080;
       background: #faf0fa;
+      font-weight: 600;
+    }
+    .toc-group {
+      font-size: 0.68rem;
+      font-weight: 900;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 14px 16px 6px;
     }
 
     @media (max-width: 768px) {
-      h2 {
-        font-size: 1.2rem;
-      }
-      .content-card {
-        padding: 20px !important;
-      }
+      h2 { font-size: 1.15rem; margin-top: 2rem; }
+      .content-card { padding: 20px !important; }
+      p, li { font-size: 0.92rem; }
     }
 
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar {
-      width: 8px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #f1f1f1;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #800080;
-      border-radius: 10px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #660066;
-    }
-</style>
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f1f1; }
+    ::-webkit-scrollbar-thumb { background: #800080; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #660066; }
+  </style>
 </head>
 
 <body>
 
-  <!-- ===== HERO HEADER ===== -->
   <header class="legal-gradient py-16 md:py-20 px-6 text-center text-white relative z-10">
     <div class="max-w-4xl mx-auto relative z-10">
       <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-1.5 rounded-full text-xs font-medium text-purple-200 border border-white/10 mb-6">
         <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
         Legal Document
       </div>
-      <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">Terms and Conditions</h1>
+      <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight mb-4">Terms of Service &amp; Privacy Policy</h1>
       <p class="text-purple-100/90 text-sm md:text-base max-w-2xl mx-auto">
-        Welcome to TracknRent. By using our platform, you agree to these terms. Please read them carefully.
+        The complete legal agreement between you and TracknRent — covering how you use our platform and how we protect your data.
       </p>
-      <div class="flex items-center justify-center gap-4 mt-4 text-xs text-purple-200/80">
-        <span><strong>Last Updated:</strong> September 5, 2026</span>
+      <div class="flex items-center justify-center gap-4 mt-5 text-xs text-purple-200/80 flex-wrap">
+        <span><strong>Effective:</strong> 15 January 2026</span>
+        <span>•</span>
+        <span><strong>Last Updated:</strong> 4 October 2026</span>
         <span>•</span>
         <span><strong>Version:</strong> 2.0</span>
       </div>
     </div>
   </header>
 
-  <!-- ===== MAIN CONTENT ===== -->
   <main class="max-w-6xl mx-auto px-6 py-12">
     <div class="flex flex-col lg:flex-row gap-12">
 
-      <!-- ===== TABLE OF CONTENTS (Desktop) ===== -->
-      <aside class="hidden lg:block w-64 shrink-0 sticky top-6 h-fit">
+      <aside class="hidden lg:block w-72 shrink-0 sticky top-6 h-fit">
         <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-          <p class="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-4">On this page</p>
-          <nav class="space-y-0.5">
-            <a href="#acceptance" class="toc-link">1. Acceptance of Terms</a>
-            <a href="#about" class="toc-link">2. About TracknRent</a>
-            <a href="#eligibility" class="toc-link">3. Eligibility</a>
-            <a href="#accounts" class="toc-link">4. User Accounts</a>
-            <a href="#membership" class="toc-link">5. Business Membership</a>
-            <a href="#roles" class="toc-link">6. Roles & Permissions</a>
-            <a href="#subscription" class="toc-link">7. Subscription & Payments</a>
-            <a href="#cancellation" class="toc-link">8. Cancellation & Refunds</a>
-            <a href="#privacy" class="toc-link">9. Data Privacy</a>
-            <a href="#ip" class="toc-link">10. Intellectual Property</a>
-            <a href="#liability" class="toc-link">11. Limitation of Liability</a>
-            <a href="#indemnification" class="toc-link">12. Indemnification</a>
-            <a href="#termination" class="toc-link">13. Termination</a>
-            <a href="#governing" class="toc-link">14. Governing Law</a>
-            <a href="#changes" class="toc-link">15. Changes to Terms</a>
-            <a href="#contact" class="toc-link">16. Contact Us</a>
+          <p class="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-3">Contents</p>
+          <nav class="space-y-0.5 max-h-[80vh] overflow-y-auto pr-1">
+
+            <p class="toc-group">Part I — Terms of Service</p>
+            <a href="#s1" class="toc-link">1. Acceptance &amp; Eligibility</a>
+            <a href="#s2" class="toc-link">2. Definitions</a>
+            <a href="#s3" class="toc-link">3. Account Registration</a>
+            <a href="#s4" class="toc-link">4. Business Workspace &amp; Roles</a>
+            <a href="#s5" class="toc-link">5. Acceptable Use</a>
+            <a href="#s6" class="toc-link">6. Subscriptions &amp; Payment</a>
+            <a href="#s7" class="toc-link">7. Cancellation &amp; Refunds</a>
+            <a href="#s8" class="toc-link">8. Intellectual Property</a>
+            <a href="#s9" class="toc-link">9. Third-Party Services</a>
+            <a href="#s10" class="toc-link">10. Warranty Disclaimer</a>
+            <a href="#s11" class="toc-link">11. Limitation of Liability</a>
+            <a href="#s12" class="toc-link">12. Indemnity</a>
+            <a href="#s13" class="toc-link">13. Suspension &amp; Termination</a>
+            <a href="#s14" class="toc-link">14. Governing Law &amp; Disputes</a>
+            <a href="#s15" class="toc-link">15. Changes to Terms</a>
+            <a href="#s16" class="toc-link">16. General Provisions</a>
+
+            <p class="toc-group">Part II — Privacy Policy</p>
+            <a href="#p1" class="toc-link">17. Data Controller</a>
+            <a href="#p2" class="toc-link">18. Categories of Data</a>
+            <a href="#p3" class="toc-link">19. Lawful Basis</a>
+            <a href="#p4" class="toc-link">20. How We Use Data</a>
+            <a href="#p5" class="toc-link">21. Sharing &amp; Sub-Processors</a>
+            <a href="#p6" class="toc-link">22. International Transfers</a>
+            <a href="#p7" class="toc-link">23. Retention &amp; Security</a>
+            <a href="#p8" class="toc-link">24. Your Rights</a>
+            <a href="#p9" class="toc-link">25. Cookies &amp; Tracking</a>
+            <a href="#p10" class="toc-link">26. Children's Privacy</a>
+            <a href="#p11" class="toc-link">27. Breach Notification</a>
+            <a href="#p12" class="toc-link">28. Contact &amp; Complaints</a>
           </nav>
         </div>
       </aside>
 
-      <!-- ===== TERMS CONTENT ===== -->
       <article class="w-full lg:flex-1 content-card p-8 md:p-12">
 
-        <!-- ===== INTRODUCTION ===== -->
         <div class="mb-8 pb-8 border-b border-gray-100">
-          <p class="text-sm text-gray-500 mb-2">Effective Date: September 5, 2026</p>
+          <p class="text-sm text-gray-500 mb-2">Effective Date: 15 January 2026</p>
           <p class="text-gray-600 leading-relaxed">
-            <strong>TracknRent</strong> provides a cloud-based rental management platform
-            (the "Service") to help businesses manage inventory, bookings, payments, and operations.
-            By using our Service, you agree to these Terms and Conditions ("Terms").
+            This document is a single, binding agreement between you ("you", "Customer") and <strong>TracknRent</strong>
+            ("we", "us", "our"). It combines our <strong>Terms of Service</strong> (Part I) and our
+            <strong>Privacy Policy and Data Protection Notice</strong> (Part II). By creating an account or using
+            the TracknRent platform at <em>tracknrent.vercel.app</em> (the "Service"), you confirm that you have read,
+            understood, and accepted every clause below.
           </p>
         </div>
 
-        <!-- ===== SECTION 1 ===== -->
-        <section id="acceptance">
-          <h2><ion-icon name="checkmark-circle"></ion-icon> 1. Acceptance of Terms</h2>
-          <p>
-            By accessing or using the TracknRent Platform, you agree to be bound by these Terms and
-            our <a href="#privacy" class="text-purple-600 font-semibold hover:underline">Privacy Policy</a>.
-            If you do not agree to these terms, you must immediately cease using the Platform.
-          </p>
-          <div class="highlight-box">
-            <p class="text-sm font-medium text-gray-700 m-0">
-              <ion-icon name="information-circle" class="text-purple-600 align-middle mr-1"></ion-icon>
-              <strong>Important:</strong> By creating an account, you confirm that you are at least 18 years old
-              and have the legal capacity to enter into this agreement.
-            </p>
+        <!-- ===================================================== -->
+        <!-- PART I — TERMS OF SERVICE                             -->
+        <!-- ===================================================== -->
+
+        <section id="s1">
+          <h2><ion-icon name="checkmark-circle"></ion-icon> 1. Acceptance &amp; Eligibility</h2>
+          <p><span class="clause">1.1</span> You accept these Terms by (a) creating an account, (b) accessing the Service, or (c) clicking any button that says "I agree", "Get Started", or similar.</p>
+          <p><span class="clause">1.2</span> You must be at least <strong>18 years old</strong> and have full legal capacity to enter a binding contract under the <em>Contract Act 1961</em> and applicable Nigerian law.</p>
+          <p><span class="clause">1.3</span> If you accept on behalf of a company, you warrant that you have authority to bind that company.</p>
+          <p><span class="clause">1.4</span> We may refuse service, or refuse to renew it, at our sole discretion, subject to applicable consumer protection laws.</p>
+        </section>
+
+        <section id="s2">
+          <h2><ion-icon name="book"></ion-icon> 2. Definitions</h2>
+          <p>Capitalised terms have the meanings below. Any term not defined here has the meaning given to it under the <em>Nigeria Data Protection Act 2023</em> ("NDPA").</p>
+          <div class="definitions">
+            <dl>
+              <dt>"Account"</dt>
+              <dd>The login credentials and profile you create to access the Service.</dd>
+              <dt>"Business"</dt>
+              <dd>A rental enterprise registered on the Service, managed by an Owner.</dd>
+              <dt>"Content"</dt>
+              <dd>All data you upload, enter, or generate on the Service — including inventory, client records, bookings, receipts, and images.</dd>
+              <dt>"Customer Data"</dt>
+              <dd>Personal data relating to your own clients, which you store inside the Service. You are the controller; we are the processor.</dd>
+              <dt>"Personal Data"</dt>
+              <dd>Any information relating to an identified or identifiable natural person, as defined in NDPA s.65.</dd>
+              <dt>"Service"</dt>
+              <dd>The TracknRent web application, mobile PWA, and any related APIs or tools.</dd>
+              <dt>"Subscription"</dt>
+              <dd>A paid plan granting access to premium features for a defined billing period.</dd>
+              <dt>"User"</dt>
+              <dd>Any individual who accesses the Service, including Owners, Partners, and Viewers.</dd>
+            </dl>
           </div>
         </section>
 
-        <!-- ===== SECTION 2 ===== -->
-        <section id="about">
-          <h2><ion-icon name="business"></ion-icon> 2. About TracknRent</h2>
-          <p>
-            TracknRent is a rental management software platform that helps businesses:
-          </p>
+        <section id="s3">
+          <h2><ion-icon name="person-circle"></ion-icon> 3. Account Registration</h2>
+          <p><span class="clause">3.1</span> You agree to provide accurate, current, and complete information during registration and to keep it up to date.</p>
+          <p><span class="clause">3.2</span> You are solely responsible for the confidentiality of your password and for all activity occurring under your Account. Notify us immediately at <a href="mailto:francisfortune62@gmail.com" class="text-purple-600 font-semibold hover:underline">francisfortune62@gmail.com</a> if you suspect unauthorised access.</p>
+          <p><span class="clause">3.3</span> We are not liable for losses caused by your failure to safeguard your credentials. We recommend a unique password and, where available, multi-factor authentication.</p>
+          <p><span class="clause">3.4</span> You may not share your login, sell access, or impersonate another person or business.</p>
+        </section>
+
+        <section id="s4">
+          <h2><ion-icon name="people"></ion-icon> 4. Business Workspace &amp; Roles</h2>
+          <p><span class="clause">4.1</span> The Service operates on a workspace model. The Owner of a Business may invite Partners and Viewers via email or phone.</p>
+          <p><span class="clause">4.2</span> Three roles exist:</p>
           <ul>
-            <li>Automate record-keeping and inventory tracking</li>
-            <li>Manage client bookings and event schedules</li>
-            <li>Track payments and generate receipts</li>
-            <li>Monitor stock availability in real-time</li>
-            <li>Streamline operational workflows for the rental economy</li>
+            <li><strong>Owner</strong> — full administrative and billing control, including the right to delete the Business and transfer ownership.</li>
+            <li><strong>Partner</strong> — operational access to bookings, inventory, clients, and returns. Cannot alter billing or delete the Business.</li>
+            <li><strong>Viewer</strong> — read-only access to reports and records.</li>
           </ul>
-          <p>
-            Our platform is designed for event rental companies, equipment rental businesses,
-            and service providers in the circular economy.
-          </p>
+          <p><span class="clause">4.3</span> The Owner is responsible for the acts and omissions of every user they invite, including any Content those users upload.</p>
+          <p><span class="clause">4.4</span> We may suspend any user immediately if we reasonably believe they pose a security, fraud, or legal risk to the Service or other users.</p>
         </section>
 
-        <!-- ===== SECTION 3 ===== -->
-        <section id="eligibility">
-          <h2><ion-icon name="people"></ion-icon> 3. Eligibility</h2>
-          <p>
-            To use TracknRent, you must:
-          </p>
+        <section id="s5">
+          <h2><ion-icon name="shield-checkmark"></ion-icon> 5. Acceptable Use</h2>
+          <p><span class="clause">5.1</span> You agree <strong>not</strong> to:</p>
           <ul>
-            <li>Be at least 18 years of age</li>
-            <li>Have the authority to bind your business or organization</li>
-            <li>Provide accurate and complete registration information</li>
-            <li>Not be prohibited from using the Service under applicable law</li>
+            <li>Reverse-engineer, decompile, disassemble, or attempt to extract source code from the Service, except as permitted by the <em>Copyright Act 2022</em>.</li>
+            <li>Use the Service to upload malware, conduct phishing, or store unlawful content.</li>
+            <li>Interfere with the Service's security, rate limits, or availability, or attempt to gain unauthorised access to other Businesses' data.</li>
+            <li>Scrape, crawl, or harvest data except through documented APIs.</li>
+            <li>Store <em>sensitive personal data</em> as defined in NDPA s.65 (health, biometric, genetic, ethnic, political, religious data) without our prior written consent and appropriate safeguards.</li>
+            <li>Use the Service in violation of any Nigerian or foreign law, including the <em>Cybercrimes Act 2015</em> (as amended) and the <em>Money Laundering (Prevention and Prohibition) Act 2022</em>.</li>
           </ul>
-          <p>
-            We reserve the right to refuse service to anyone for any reason at our sole discretion.
-          </p>
+          <p><span class="clause">5.2</span> Breach of this clause is a <strong>material breach</strong> and may result in immediate suspension and, where appropriate, referral to law enforcement.</p>
         </section>
 
-        <!-- ===== SECTION 4 ===== -->
-        <section id="accounts">
-          <h2><ion-icon name="person-circle"></ion-icon> 4. User Accounts</h2>
-          <p>
-            Users must provide accurate registration information. You are solely responsible for safeguarding
-            your login credentials. TracknRent is not liable for unauthorized access resulting from your
-            failure to protect your account.
-          </p>
-          <div class="highlight-box">
-            <p class="text-sm m-0">
-              <strong>Security Tip:</strong> Use a strong, unique password and enable two-factor authentication
-              where available. Report any suspicious activity to us immediately.
-            </p>
-          </div>
-          <p>
-            You agree to notify us immediately of any unauthorized use of your account or any other breach of security.
-          </p>
+        <section id="s6">
+          <h2><ion-icon name="card"></ion-icon> 6. Subscriptions &amp; Payment</h2>
+          <p><span class="clause">6.1</span> Certain features require a paid Subscription. Current pricing is displayed on our pricing page in Nigerian Naira (₦) and is inclusive of any applicable VAT unless stated otherwise.</p>
+          <p><span class="clause">6.2</span> Subscriptions renew automatically at the end of each billing period unless cancelled before renewal. You authorise us or our payment processor to charge your nominated payment method.</p>
+          <p><span class="clause">6.3</span> We may change Subscription fees with at least <strong>30 days' notice</strong>. Continued use after the change date constitutes acceptance.</p>
+          <p><span class="clause">6.4</span> If a payment fails, we may suspend access after a <strong>7-day grace period</strong>. Data is retained for 30 days after suspension.</p>
+          <p><span class="clause">6.5</span> Payments are processed by third-party providers. We do not store full card numbers on our servers. Our handling of payment data is governed by the <em>Central Bank of Nigeria Guidelines on Operations of Electronic Payment Channels</em> and PCI-DSS where applicable.</p>
         </section>
 
-        <!-- ===== SECTION 5 ===== -->
-        <section id="membership">
-          <h2><ion-icon name="people"></ion-icon> 5. Business Membership</h2>
-          <p>
-            Business owners may invite partners and staff to their workspace. Once a user joins through a
-            valid invite, they become part of the workspace with permissions determined by their assigned role.
-          </p>
-          <p>
-            TracknRent reserves the right to revoke access to any user suspected of fraud, abuse, or violation
-            of these Terms. Business owners are responsible for the actions of their team members.
-          </p>
+        <section id="s7">
+          <h2><ion-icon name="close-circle"></ion-icon> 7. Cancellation &amp; Refunds</h2>
+          <p><span class="clause">7.1</span> You may cancel your Subscription at any time from your Account settings. Cancellation takes effect at the end of your current billing cycle; you retain access until then.</p>
+          <p><span class="clause">7.2</span> Except where required by the <em>Federal Competition and Consumer Protection Act 2018</em> ("FCCPA") or another mandatory law, fees are <strong>non-refundable</strong> and we do not provide pro-rata refunds for partial periods.</p>
+          <p><span class="clause">7.3</span> If we terminate your Subscription for a reason other than your breach, we will refund the unused portion on a pro-rata basis within 14 days.</p>
         </section>
 
-        <!-- ===== SECTION 6 ===== -->
-        <section id="roles">
-          <h2><ion-icon name="shield"></ion-icon> 6. Roles & Permissions</h2>
-          <p>TracknRent offers three primary user roles:</p>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-4">
-            <div class="bg-purple-50 border border-purple-100 rounded-xl p-4 text-center">
-              <div class="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center text-white mx-auto mb-2">
-                <ion-icon name="crown" class="text-xl"></ion-icon>
-              </div>
-              <h4 class="font-bold text-purple-700">Owner</h4>
-              <p class="text-xs text-gray-600 m-0">Full administrative control, billing access, and user management</p>
-            </div>
-            <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center">
-              <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white mx-auto mb-2">
-                <ion-icon name="people" class="text-xl"></ion-icon>
-              </div>
-              <h4 class="font-bold text-blue-600">Partner</h4>
-              <p class="text-xs text-gray-600 m-0">High-level operational and management access</p>
-            </div>
-            <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
-              <div class="w-12 h-12 bg-gray-400 rounded-full flex items-center justify-center text-white mx-auto mb-2">
-                <ion-icon name="eye" class="text-xl"></ion-icon>
-              </div>
-              <h4 class="font-bold text-gray-600">Viewer</h4>
-              <p class="text-xs text-gray-600 m-0">View-only access to business data</p>
-            </div>
-          </div>
+        <section id="s8">
+          <h2><ion-icon name="ribbon"></ion-icon> 8. Intellectual Property</h2>
+          <p><span class="clause">8.1</span> All intellectual property in the Service — including source code, design, trademarks, logos, documentation, and underlying infrastructure — belongs exclusively to <strong>TracknRent</strong> or its licensors and is protected by the <em>Copyright Act 2022</em> and the <em>Trademarks Act 1965</em>.</p>
+          <p><span class="clause">8.2</span> You receive a limited, non-exclusive, non-transferable, revocable licence to use the Service for your internal business purposes, subject to these Terms.</p>
+          <p><span class="clause">8.3</span> You retain ownership of your Content. You grant us a worldwide, royalty-free, sub-licensable licence to host, back up, process, and display your Content strictly to operate, secure, and improve the Service. This licence ends when you delete the Content or close your Account, except for backups retained in accordance with our Retention Policy.</p>
+          <p><span class="clause">8.4</span> Feedback, suggestions, or ideas you send to us become our property without obligation of compensation, provided we do not publicly attribute them to you.</p>
         </section>
 
-        <!-- ===== SECTION 7 ===== -->
-        <section id="subscription">
-          <h2><ion-icon name="card"></ion-icon> 7. Subscription & Payments</h2>
-          <p>
-            Some features of TracknRent require a paid subscription. All fees are displayed transparently
-            before payment. Pricing plans are subject to change with notice.
-          </p>
-          <ul>
-            <li><strong>Subscription Fees:</strong> Charged on a recurring basis according to your selected plan</li>
-            <li><strong>Payment Terms:</strong> Payments are due at the start of each billing cycle</li>
-            <li><strong>Taxes:</strong> You are responsible for all applicable taxes</li>
-            <li><strong>Currency:</strong> All fees are in Nigerian Naira (₦) unless otherwise stated</li>
-          </ul>
+        <section id="s9">
+          <h2><ion-icon name="layers"></ion-icon> 9. Third-Party Services</h2>
+          <p><span class="clause">9.1</span> The Service integrates with third-party providers, including Firebase (Google), Cloudinary, OneSignal, and payment processors. Your use of those integrations is also subject to the providers' own terms.</p>
+          <p><span class="clause">9.2</span> We are not responsible for outages, acts, or omissions of third-party services, though we will use reasonable efforts to minimise impact.</p>
         </section>
 
-        <!-- ===== SECTION 8 ===== -->
-        <section id="cancellation">
-          <h2><ion-icon name="close-circle"></ion-icon> 8. Cancellation & Refunds</h2>
-          <p>
-            You may cancel your subscription at any time through your account settings. Cancellation will take
-            effect at the end of your current billing cycle.
-          </p>
-          <div class="highlight-box">
-            <p class="text-sm m-0">
-              <strong>Refund Policy:</strong> Payments are non-refundable except where required by the laws of
-              Nigeria. We do not provide pro-rata refunds for partial billing periods.
-            </p>
-          </div>
+        <section id="s10">
+          <h2><ion-icon name="help-circle"></ion-icon> 10. Warranty Disclaimer</h2>
+          <p><span class="clause">10.1</span> The Service is provided <strong>"as is"</strong> and <strong>"as available"</strong>, without warranties of any kind, express or implied, including warranties of merchantability, fitness for a particular purpose, or non-infringement.</p>
+          <p><span class="clause">10.2</span> We do not warrant that the Service will be uninterrupted, error-free, or free of harmful components, or that defects will be corrected.</p>
+          <p><span class="clause">10.3</span> Nothing in this clause limits any warranty that cannot be excluded under the FCCPA.</p>
         </section>
 
-        <!-- ===== SECTION 9 ===== -->
-        <section id="privacy">
-          <h2><ion-icon name="shield-lock"></ion-icon> 9. Data Privacy</h2>
-          <p>
-            We process personal data in accordance with the <strong>Nigeria Data Protection Regulation (NDPR)</strong>
-            and applicable data protection laws. Users are responsible for ensuring that any customer data they
-            upload is lawfully collected and processed.
-          </p>
-          <ul>
-            <li><strong>Data Collection:</strong> We collect data necessary to provide our Service</li>
-            <li><strong>Data Use:</strong> Data is used to operate, improve, and personalize the Service</li>
-            <li><strong>Data Sharing:</strong> We do not sell your data to third parties</li>
-            <li><strong>Data Retention:</strong> Data is retained as long as your account is active</li>
-          </ul>
-          <p>
-            For more information, please see our full <a href="#" class="text-purple-600 font-semibold hover:underline">Privacy Policy</a>.
-          </p>
-        </section>
-
-        <!-- ===== SECTION 10 ===== -->
-        <section id="ip">
-          <h2><ion-icon name="ribbon"></ion-icon> 10. Intellectual Property</h2>
-          <p>
-            All software code, UI design, platform infrastructure, and related materials remain the exclusive
-            property of <strong>TracknRent</strong>. Users may not copy, sell, reproduce, or reverse-engineer
-            any part of the platform without written permission.
-          </p>
-          <ul>
-            <li><strong>Our IP:</strong> All trademarks, logos, and service marks are owned by TracknRent</li>
-            <li><strong>User Content:</strong> You retain ownership of data you upload, but grant us a license to use it to provide the Service</li>
-            <li><strong>Feedback:</strong> Any feedback you provide becomes our property</li>
-          </ul>
-        </section>
-
-        <!-- ===== SECTION 11 ===== -->
-        <section id="liability">
+        <section id="s11">
           <h2><ion-icon name="warning"></ion-icon> 11. Limitation of Liability</h2>
-          <p>
-            To the fullest extent permitted by law, TracknRent and its affiliates shall not be liable for:
-          </p>
+          <p><span class="clause">11.1</span> To the maximum extent permitted by Nigerian law, TracknRent, its directors, employees, and affiliates will <strong>not</strong> be liable for:</p>
           <ul>
-            <li>Any indirect, incidental, special, or consequential damages</li>
-            <li>Loss of profits, revenue, or business opportunity</li>
-            <li>Loss of data or system downtime</li>
-            <li>Damages exceeding the total fees paid in the 12 months prior to the claim</li>
+            <li>Indirect, incidental, special, exemplary, or consequential damages;</li>
+            <li>Loss of profit, revenue, anticipated savings, goodwill, or business opportunity;</li>
+            <li>Loss, corruption, or unauthorised access to Content, except to the extent caused by our gross negligence or wilful misconduct;</li>
+            <li>Acts or omissions of third-party services.</li>
           </ul>
-          <p>
-            Our platform is provided "as is" without warranties of any kind, either express or implied.
-          </p>
+          <p><span class="clause">11.2</span> Our aggregate liability arising out of or in connection with these Terms is limited to the greater of (a) the total Subscription fees you paid to us in the <strong>12 months preceding the event giving rise to the claim</strong>, or (b) ₦50,000.</p>
+          <p><span class="clause">11.3</span> Nothing in these Terms excludes or limits liability for fraud, fraudulent misrepresentation, death or personal injury caused by our negligence, or any other liability that cannot lawfully be excluded.</p>
         </section>
 
-        <!-- ===== SECTION 12 ===== -->
-        <section id="indemnification">
-          <h2><ion-icon name="scale"></ion-icon> 12. Indemnification</h2>
-          <p>
-            You agree to indemnify and hold harmless TracknRent and its employees, directors, and partners
-            from any claims, damages, or expenses arising from:
-          </p>
+        <section id="s12">
+          <h2><ion-icon name="scale"></ion-icon> 12. Indemnity</h2>
+          <p><span class="clause">12.1</span> You agree to indemnify, defend, and hold harmless TracknRent and its officers, directors, employees, and agents against any claims, damages, losses, liabilities, and expenses (including reasonable legal fees) arising out of or relating to:</p>
           <ul>
-            <li>Your use of the Service</li>
-            <li>Your violation of these Terms</li>
-            <li>Your violation of any rights of a third party</li>
-            <li>Your content or data uploaded to the platform</li>
+            <li>Your breach of these Terms;</li>
+            <li>Your Content, including any allegation that it infringes third-party rights or violates applicable law;</li>
+            <li>Your failure to obtain lawful consent for any Customer Data you upload;</li>
+            <li>Your use of the Service in a manner not authorised by us.</li>
           </ul>
         </section>
 
-        <!-- ===== SECTION 13 ===== -->
-        <section id="termination">
-          <h2><ion-icon name="exit"></ion-icon> 13. Termination</h2>
-          <p>
-            We reserve the right to suspend or terminate your account immediately if:
-          </p>
+        <section id="s13">
+          <h2><ion-icon name="exit"></ion-icon> 13. Suspension &amp; Termination</h2>
+          <p><span class="clause">13.1</span> We may suspend or terminate your Account immediately and without refund if you:</p>
           <ul>
-            <li>You violate these Terms</li>
-            <li>You fail to pay subscription fees</li>
-            <li>You engage in fraudulent or illegal activity</li>
-            <li>We are required by law to do so</li>
+            <li>Materially breach these Terms;</li>
+            <li>Fail to pay Subscription fees after the grace period;</li>
+            <li>Engage in fraud, illegal activity, or activity that endangers other users;</li>
+            <li>Are required to be terminated by law or court order.</li>
           </ul>
-          <p>
-            Upon termination, your right to use the Service will cease immediately. You may export your data
-            before termination if permitted by law.
-          </p>
+          <p><span class="clause">13.2</span> You may close your Account at any time from Settings. On closure, we will delete or anonymise your Personal Data in accordance with Section 23, except where retention is required by law (e.g. tax records under the <em>Companies and Allied Matters Act 2020</em>).</p>
+          <p><span class="clause">13.3</span> Clauses that by their nature should survive termination — including IP, warranty disclaimer, liability, indemnity, and governing law — will survive.</p>
         </section>
 
-        <!-- ===== SECTION 14 ===== -->
-        <section id="governing">
-          <h2><ion-icon name="gavel"></ion-icon> 14. Governing Law</h2>
-          <p>
-            These Terms are governed by and construed in accordance with the laws of the
-            <strong>Federal Republic of Nigeria</strong>. Any disputes arising under these Terms shall be
-            subject to the exclusive jurisdiction of the courts of Nigeria.
-          </p>
-          <p>
-            If you are accessing the Service from outside Nigeria, you do so at your own risk and are
-            responsible for compliance with local laws.
-          </p>
+        <section id="s14">
+          <h2><ion-icon name="gavel"></ion-icon> 14. Governing Law &amp; Disputes</h2>
+          <p><span class="clause">14.1</span> These Terms are governed by the laws of the <strong>Federal Republic of Nigeria</strong>.</p>
+          <p><span class="clause">14.2</span> The parties will first attempt to resolve any dispute through good-faith negotiation within 30 days of written notice.</p>
+          <p><span class="clause">14.3</span> If negotiation fails, the dispute will be resolved by the courts of <strong>Lagos State, Nigeria</strong>, to whose exclusive jurisdiction the parties submit — without prejudice to any right to seek urgent injunctive relief in any competent court.</p>
+          <p><span class="clause">14.4</span> Nothing in this clause prevents either party from seeking relief before a court of competent jurisdiction where necessary to protect its rights pending resolution.</p>
         </section>
 
-        <!-- ===== SECTION 15 ===== -->
-        <section id="changes">
+        <section id="s15">
           <h2><ion-icon name="create"></ion-icon> 15. Changes to Terms</h2>
-          <p>
-            We may update these Terms from time to time. We will notify you of significant changes by:
-          </p>
-          <ul>
-            <li>Posting the new Terms on this page</li>
-            <li>Sending an email notification</li>
-            <li>Displaying a notice within the platform</li>
-          </ul>
-          <p>
-            Your continued use of the Service after any changes constitutes your acceptance of the new Terms.
-            The "Last Updated" date at the top indicates when changes were made.
-          </p>
+          <p><span class="clause">15.1</span> We may amend these Terms from time to time. Material changes will be notified by email or in-app notification at least <strong>14 days</strong> before they take effect.</p>
+          <p><span class="clause">15.2</span> Continued use of the Service after the effective date constitutes acceptance of the amended Terms. If you do not agree, you may close your Account before the effective date.</p>
+          <p><span class="clause">15.3</span> The "Last Updated" date at the top of this page reflects the most recent revision.</p>
         </section>
 
-        <!-- ===== SECTION 16 ===== -->
-        <section id="contact">
-          <h2><ion-icon name="mail"></ion-icon> 16. Contact Us</h2>
-          <p>
-            If you have any questions about these Terms, please contact us:
+        <section id="s16">
+          <h2><ion-icon name="document-text"></ion-icon> 16. General Provisions</h2>
+          <p><span class="clause">16.1</span> <strong>Entire Agreement.</strong> These Terms, together with any order form or pricing page, constitute the entire agreement between the parties and supersede all prior agreements on the same subject.</p>
+          <p><span class="clause">16.2</span> <strong>Severability.</strong> If any clause is held invalid or unenforceable, the remaining clauses continue in full force.</p>
+          <p><span class="clause">16.3</span> <strong>Assignment.</strong> You may not assign or transfer these Terms without our prior written consent. We may assign them in connection with a merger, acquisition, or sale of assets.</p>
+          <p><span class="clause">16.4</span> <strong>No Waiver.</strong> Our failure to enforce any right is not a waiver of that right.</p>
+          <p><span class="clause">16.5</span> <strong>Force Majeure.</strong> Neither party is liable for delays or failures caused by events beyond its reasonable control, including natural disasters, war, network failures, or government action.</p>
+          <p><span class="clause">16.6</span> <strong>Notices.</strong> Legal notices to us must be sent to <a href="mailto:francisfortune62@gmail.com" class="text-purple-600 font-semibold hover:underline">francisfortune62@gmail.com</a>. Notices to you may be sent to the email address registered on your Account.</p>
+        </section>
+
+        <!-- ===================================================== -->
+        <!-- PART II — PRIVACY POLICY                              -->
+        <!-- ===================================================== -->
+
+        <div class="mt-16 mb-8 pb-8 border-b border-gray-100">
+          <h1 class="text-2xl md:text-3xl font-extrabold text-purple-700 mb-3">Part II — Privacy Policy &amp; Data Protection Notice</h1>
+          <p class="text-gray-600 leading-relaxed">
+            This Privacy Policy explains what Personal Data we collect, how we use it, who we share it with, and
+            the rights you have under the <strong>Nigeria Data Protection Act 2023 ("NDPA")</strong> and, where
+            applicable, the <strong>EU/UK GDPR</strong>. It should be read together with Part I above.
           </p>
+        </div>
+
+        <section id="p1">
+          <h2><ion-icon name="business"></ion-icon> 17. Data Controller</h2>
+          <p><span class="clause">17.1</span> For Personal Data you provide to us as a User of the Service, TracknRent is the <strong>data controller</strong>.</p>
+          <p><span class="clause">17.2</span> For Personal Data relating to <em>your own clients</em> that you store inside the Service ("Customer Data"), <strong>you are the controller and we are the processor</strong>. You are responsible for complying with the NDPA in respect of that Customer Data, including obtaining valid consent where required.</p>
+          <p><span class="clause">17.3</span> Our registered contact for privacy matters is <a href="mailto:francisfortune62@gmail.com" class="text-purple-600 font-semibold hover:underline">francisfortune62@gmail.com</a>.</p>
+        </section>
+
+        <section id="p2">
+          <h2><ion-icon name="list"></ion-icon> 18. Categories of Data We Collect</h2>
+          <p><span class="clause">18.1</span> We collect the following categories of Personal Data:</p>
+          <ul>
+            <li><strong>Account Data</strong> — name, email, phone number, business name, password (hashed).</li>
+            <li><strong>Business Content</strong> — inventory, bookings, client names and contact details, event details, prices, receipts, and images you upload.</li>
+            <li><strong>Transaction Data</strong> — Subscription tier, payment status, invoice records. We do <strong>not</strong> store full card numbers.</li>
+            <li><strong>Technical Data</strong> — IP address, browser type, operating system, device identifiers, time zone, and one-time login tokens.</li>
+            <li><strong>Usage Data</strong> — pages viewed, features used, session duration, error logs, and clicks inside the app.</li>
+            <li><strong>Communications Data</strong> — messages you send us, feedback, and support tickets.</li>
+            <li><strong>Notification Data</strong> — a push subscription token if you enable notifications.</li>
+          </ul>
+          <p><span class="clause">18.2</span> We do <strong>not</strong> intentionally collect special-category data (health, biometric, genetic, political, religious, trade-union, or sexual-orientation data). You must not upload such data to the Service without our prior written agreement.</p>
+        </section>
+
+        <section id="p3">
+          <h2><ion-icon name="shield-checkmark"></ion-icon> 19. Lawful Basis for Processing</h2>
+          <p><span class="clause">19.1</span> Under NDPA s.25 (and corresponding GDPR Art. 6), we process Personal Data on one or more of these bases:</p>
+          <ul>
+            <li><strong>Contract</strong> — to provide the Service you have signed up for.</li>
+            <li><strong>Legitimate Interests</strong> — to secure the Service, prevent fraud, improve features, and enforce our Terms.</li>
+            <li><strong>Legal Obligation</strong> — to comply with tax, accounting, and regulatory duties.</li>
+            <li><strong>Consent</strong> — for optional processing such as marketing emails or non-essential cookies. You may withdraw consent at any time.</li>
+            <li><strong>Vital Interests</strong> — in rare emergencies where necessary to protect life.</li>
+          </ul>
+        </section>
+
+        <section id="p4">
+          <h2><ion-icon name="settings"></ion-icon> 20. How We Use Personal Data</h2>
+          <p><span class="clause">20.1</span> We use Personal Data to:</p>
+          <ul>
+            <li>Create and secure your Account, authenticate logins, and prevent unauthorised access.</li>
+            <li>Provide the core Service — inventory, bookings, receipts, analytics.</li>
+            <li>Send transactional notifications (new bookings, overdue returns, low stock, damage reports).</li>
+            <li>Process Subscription payments and issue receipts.</li>
+            <li>Respond to support requests and enforce our Terms.</li>
+            <li>Comply with legal and regulatory obligations.</li>
+            <li>Improve the Service through aggregated, de-identified usage analytics.</li>
+            <li>Send product updates and marketing — only where you have consented or where permitted by law, and always with an unsubscribe option.</li>
+          </ul>
+          <p><span class="clause">20.2</span> We do <strong>not</strong> use your Content or Customer Data to train machine-learning models, and we do not sell Personal Data.</p>
+        </section>
+
+        <section id="p5">
+          <h2><ion-icon name="share-social"></ion-icon> 21. Sharing &amp; Sub-Processors</h2>
+          <p><span class="clause">21.1</span> We share Personal Data only as described below, and only to the extent necessary:</p>
+          <ul>
+            <li><strong>Infrastructure providers</strong> — Firebase (Google) for authentication, database, and file storage; Cloudinary for image hosting; OneSignal for push notifications; Vercel for web hosting.</li>
+            <li><strong>Payment processors</strong> — to process Subscription payments.</li>
+            <li><strong>Analytics</strong> — Google Analytics for aggregated usage statistics.</li>
+            <li><strong>Professional advisers</strong> — lawyers, accountants, auditors, under strict confidentiality.</li>
+            <li><strong>Authorities</strong> — where required by law, court order, or to protect our rights.</li>
+            <li><strong>Successors</strong> — in connection with a merger, acquisition, or sale of assets, subject to equivalent data protection commitments.</li>
+          </ul>
+          <p><span class="clause">21.2</span> A current list of sub-processors is available on request. We impose written data protection terms on every sub-processor consistent with NDPA s.28 and GDPR Art. 28.</p>
+        </section>
+
+        <section id="p6">
+          <h2><ion-icon name="globe"></ion-icon> 22. International Transfers</h2>
+          <p><span class="clause">22.1</span> Some of our sub-processors (notably Google, Cloudinary, and OneSignal) store data outside Nigeria, including in the United States and the European Economic Area.</p>
+          <p><span class="clause">22.2</span> Where Personal Data is transferred outside Nigeria, we rely on (a) an adequacy decision by the Nigeria Data Protection Commission ("NDPC") where available, or (b) appropriate safeguards such as Standard Contractual Clauses, or (c) your explicit consent for specific transfers. Our transfers also comply with NDPA Part VI.</p>
+        </section>
+
+        <section id="p7">
+          <h2><ion-icon name="lock-closed"></ion-icon> 23. Retention &amp; Security</h2>
+          <h3>Retention</h3>
+          <p><span class="clause">23.1</span> We retain Personal Data only as long as necessary for the purposes described in this Policy:</p>
+          <ul>
+            <li><strong>Account Data</strong> — retained while your Account is active and for 30 days after deletion (to permit recovery).</li>
+            <li><strong>Business Content</strong> — retained while your Account is active. On deletion, removed within 30 days from live systems and within 90 days from backups.</li>
+            <li><strong>Transaction &amp; invoice records</strong> — retained for <strong>7 years</strong> to comply with Nigerian tax and accounting laws.</li>
+            <li><strong>Logs &amp; security data</strong> — retained for up to 12 months.</li>
+          </ul>
+
+          <h3>Security</h3>
+          <p><span class="clause">23.2</span> We implement technical and organisational measures appropriate to the risk, including:</p>
+          <ul>
+            <li>Encryption in transit (TLS 1.2+) and at rest (AES-256) at the infrastructure provider level.</li>
+            <li>Hashed passwords — we never store plaintext passwords.</li>
+            <li>Role-based access control, least-privilege access for staff, and periodic access reviews.</li>
+            <li>Firestore security rules enforcing per-business isolation.</li>
+            <li>Backups and disaster-recovery procedures.</li>
+          </ul>
+          <p><span class="clause">23.3</span> No system is completely secure. If you become aware of a vulnerability, please report it responsibly to <a href="mailto:francisfortune62@gmail.com" class="text-purple-600 font-semibold hover:underline">francisfortune62@gmail.com</a>.</p>
+        </section>
+
+        <section id="p8">
+          <h2><ion-icon name="person"></ion-icon> 24. Your Rights</h2>
+          <p><span class="clause">24.1</span> Under NDPA ss.34–38 (and corresponding GDPR rights where applicable), you have the right to:</p>
+          <ul>
+            <li><strong>Access</strong> — obtain a copy of your Personal Data.</li>
+            <li><strong>Rectification</strong> — correct inaccurate or incomplete data.</li>
+            <li><strong>Erasure</strong> — request deletion, subject to our legal retention obligations.</li>
+            <li><strong>Restriction</strong> — limit how we process your data in certain circumstances.</li>
+            <li><strong>Portability</strong> — receive your data in a structured, machine-readable format.</li>
+            <li><strong>Object</strong> — object to processing based on legitimate interests or for direct marketing.</li>
+            <li><strong>Withdraw Consent</strong> — withdraw consent at any time where processing relies on it.</li>
+            <li><strong>Non-Discrimination</strong> — exercise your rights without being penalised.</li>
+          </ul>
+          <p><span class="clause">24.2</span> Many rights can be exercised directly from your Account settings. For others, email <a href="mailto:francisfortune62@gmail.com" class="text-purple-600 font-semibold hover:underline">francisfortune62@gmail.com</a>. We will respond within <strong>30 days</strong> as required by NDPA s.3.1.</p>
+          <p><span class="clause">24.3</span> If you are an end-client of one of our Customers, please direct requests to that Customer first — they are the controller for your data.</p>
+        </section>
+
+        <section id="p9">
+          <h2><ion-icon name="cafe"></ion-icon> 25. Cookies &amp; Tracking</h2>
+          <p><span class="clause">25.1</span> We use cookies and similar technologies for:</p>
+          <ul>
+            <li><strong>Essential</strong> — session authentication and CSRF protection (cannot be disabled).</li>
+            <li><strong>Analytics</strong> — Google Analytics for aggregated usage statistics.</li>
+            <li><strong>Preferences</strong> — remembering your settings and last-used views.</li>
+          </ul>
+          <p><span class="clause">25.2</span> You can control cookies through your browser settings. Blocking essential cookies will break the Service.</p>
+        </section>
+
+        <section id="p10">
+          <h2><ion-icon name="happy"></ion-icon> 26. Children's Privacy</h2>
+          <p><span class="clause">26.1</span> The Service is intended for business users aged 18 and above. We do not knowingly collect Personal Data from children under 18. If you become aware that a child has provided us with Personal Data, please contact us and we will delete it promptly.</p>
+        </section>
+
+        <section id="p11">
+          <h2><ion-icon name="alert-circle"></ion-icon> 27. Breach Notification</h2>
+          <p><span class="clause">27.1</span> If we become aware of a Personal Data breach likely to result in a risk to your rights and freedoms, we will notify the <strong>Nigeria Data Protection Commission</strong> within <strong>72 hours</strong> of becoming aware, in accordance with NDPA s.40 and (where applicable) GDPR Art. 33.</p>
+          <p><span class="clause">27.2</span> Where the breach is likely to result in a high risk to you, we will also notify you directly without undue delay, describing the nature of the breach and the steps we are taking.</p>
+        </section>
+
+        <section id="p12">
+          <h2><ion-icon name="mail"></ion-icon> 28. Contact &amp; Complaints</h2>
+          <p><span class="clause">28.1</span> For any questions, requests, or complaints about this Policy or your Personal Data, contact our privacy team:</p>
           <div class="bg-gray-50 rounded-2xl p-6 mt-2 border border-gray-200">
             <p class="m-0"><strong>Email:</strong> <a href="mailto:francisfortune62@gmail.com" class="text-purple-600 hover:underline">francisfortune62@gmail.com</a></p>
             <p class="m-0 mt-1"><strong>Website:</strong> <a href="https://tracknrent.vercel.app" class="text-purple-600 hover:underline">tracknrent.vercel.app</a></p>
-            <p class="m-0 mt-1"><strong>Support Hours:</strong> Monday - Friday, 9:00 AM - 6:00 PM (WAT)</p>
+            <p class="m-0 mt-1"><strong>Support Hours:</strong> Monday – Friday, 9:00 AM – 6:00 PM (WAT)</p>
           </div>
+          <p class="mt-4"><span class="clause">28.2</span> If you are not satisfied with our response, you have the right to lodge a complaint with the <strong>Nigeria Data Protection Commission</strong> (<em>ndpc.gov.ng</em>) or, where applicable, your local supervisory authority in the EU/UK.</p>
         </section>
 
-        <!-- ===== FOOTER ===== -->
         <div class="mt-12 pt-8 border-t border-gray-100 text-center">
-          <p class="text-sm text-gray-400 m-0">
-            By using TracknRent, you agree to these Terms and Conditions.
+          <p class="text-sm text-gray-500 m-0">
+            By using TracknRent, you confirm that you have read and agree to this combined Terms of Service and Privacy Policy.
           </p>
-          <div class="flex items-center justify-center gap-4 mt-4 text-xs text-gray-400">
+          <div class="flex items-center justify-center gap-4 mt-4 text-xs text-gray-400 flex-wrap">
             <a href="index.html" class="hover:text-purple-600 transition">Home</a>
-            <span>•</span>
-            <a href="marketplace.html" class="hover:text-purple-600 transition">Marketplace</a>
             <span>•</span>
             <a href="signup.html" class="hover:text-purple-600 transition">Sign Up</a>
             <span>•</span>
             <a href="mailto:francisfortune62@gmail.com" class="hover:text-purple-600 transition">Support</a>
+            <span>•</span>
+            <a href="https://ndpc.gov.ng" target="_blank" rel="noopener" class="hover:text-purple-600 transition">NDPC</a>
           </div>
           <p class="text-xs text-gray-400 mt-4 m-0">
             &copy; 2026 TracknRent. All rights reserved.
@@ -542,15 +619,28 @@
     </div>
   </main>
 
-  <!-- ===== FOOTER ===== -->
   <footer class="bg-white border-t border-gray-200 py-6 text-center text-xs text-gray-400">
     <div class="max-w-6xl mx-auto px-6">
       <p class="m-0">Made with ❤️ in Nigeria</p>
-      <p class="m-0 text-[10px]">TracknRent v2.0 • Terms and Conditions • September 5, 2026</p>
+      <p class="m-0 text-[10px]">TracknRent v2.0 • Terms of Service &amp; Privacy Policy • Last updated 4 October 2026</p>
     </div>
   </footer>
 
-  <!-- ===== PWA SCRIPT ===== -->
+  <script>
+    /* Highlight active TOC link on scroll */
+    const sections = document.querySelectorAll('section[id]');
+    const tocLinks = document.querySelectorAll('.toc-link');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const id = entry.target.id;
+          tocLinks.forEach(l => l.classList.toggle('active', l.getAttribute('href') === `#${id}`));
+        }
+      });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+    sections.forEach(s => observer.observe(s));
+  </script>
+
   <script src="assets/js/pwa.js"></script>
 
 </body>
