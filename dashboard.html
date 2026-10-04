@@ -1002,9 +1002,10 @@
                 <li><a href="inventory.html"> <span class="icon">
                             <span class="material-symbols-outlined icon" >inventory_2</span> </span> <span class="title">Inventory</span> </a>
                 </li>
-                <li><a href="public.html"> <span class="icon">
-                            <span class="material-symbols-outlined icon" > Public</span> </span> <span class="title">Public Profile</span> </a>
-                </li>
+ <li><a href="rental-to-rental.html">
+                        <span class="icon"><span class="material-symbols-outlined">swap_horiz</span></span>
+                        <span class="title">Rental</span>
+                    </a></li>
             </ul>
         </div><!-- ========================= Main ==================== -->
         <div class="main">
@@ -1057,6 +1058,7 @@
 </div>
 
 <!-- Notification Modal -->
+<!-- Notification Modal -->
 <div id="notifModal" style="
     display: none;
     position: fixed;
@@ -1064,18 +1066,44 @@
     right: 20px;
     width: 320px;
     max-height: 400px;
-    overflow-y: auto;
     background: white;
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.2);
     z-index: 1000;
-    padding: 15px;
+    overflow: hidden;
+    flex-direction: column;
 ">
-  <h3 style="margin-bottom: 10px; color: purple;">Notifications</h3>
-  <div id="notifList">
+  <h3 style="margin: 15px 15px 10px 15px; color: purple;">Notifications</h3>
+
+  <!-- Scrollable list area -->
+  <div id="notifList" style="
+      flex: 1 1 auto;
+      overflow-y: auto;
+      padding: 0 15px 10px 15px;
+  ">
     <p style="text-align:center; color: #888;">No notifications yet</p>
   </div>
+
+  <!-- Pinned footer link -->
+  <a href="history.html"
+     style="
+      display: block;
+      flex: 0 0 auto;
+      text-align: center;
+      padding: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #800080;
+      border-top: 1px solid #e5e7eb;
+      text-decoration: none;
+      background: #fff;
+     ">
+    See all notifications →
+  </a>
 </div>
+
+
+
             </div><!-- ======================= Dashboard Content ========================= -->
 
             <section class="dashboard"><!-- Welcome Section -->
@@ -1231,9 +1259,10 @@
                 <li class="inventory"><a href="inventory.html"> <span class="icon">
                             <span class="material-symbols-outlined" >inventory_2</span> </span> <span class="title">Inventory</span> </a>
                 </li>
-                <li class="profile"><a href="public.html"> <span class="icon">
-                            <span class="material-symbols-outlined" > Public</span> </span> <span class="title">Profile</span> </a>
-                </li>
+   <li><a href="rental-to-rental.html">
+                        <span class="icon"><span class="material-symbols-outlined">swap_horiz</span></span>
+                        <span class="title">Rental</span>
+                    </a></li>
             </ul>
         </nav>
     </div><!-- =========== Scripts =========  -->

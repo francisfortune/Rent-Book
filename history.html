@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications | Tracknrent</title>
+    <link rel="canonical" href="https://tracknrent.vercel.app/history.html" />
+    <meta name="description" content="Full notification history for your rental business.">
+
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script type="module" src="assets/js/onesignal.js" defer></script>
+
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="shortcut icon" href="favicon.ico">
+
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined");
+
+        :root {
+            --brand: #800080;
+            --brand-dark: #5c005c;
+            --brand-light: #f5edf6;
+            --brand-border: #d8b4fe;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f6fa;
+            overflow-x: hidden;
+        }
+        html, body { height: 100%; width: 100%; }
+        .container { position: relative; width: 100%; height: 100%; }
+
+        /* NAV */
+        .navigation {
+            position: fixed; width: 280px; height: 100%;
+            background: var(--brand); border-left: 10px solid var(--brand);
+            transition: 0.5s; overflow: hidden;
+        }
+        .navigation.active { width: 80px; }
+        .navigation ul { position: absolute; top: 0; left: 0; width: 100%; }
+        .navigation ul li {
+            position: relative; width: 100%; list-style: none;
+            border-top-left-radius: 30px; border-bottom-left-radius: 30px;
+        }
+        .navigation ul li:hover, .navigation ul li.hovered { background-color: white; }
+        .navigation ul li:nth-child(1) { margin-bottom: 35px; pointer-events: none; }
+        .navigation ul li a {
+            position: relative; display: flex; width: 100%;
+            text-decoration: none; color: white; margin: 20px; font-size: 23px;
+        }
+        .navigation ul li:hover a, .navigation ul li.hovered a { color: var(--brand); }
+        .navigation ul li a .icon {
+            position: relative; display: block; min-width: 60px;
+            height: 60px; line-height: 75px; text-align: center;
+        }
+        .navigation ul li a .title {
+            position: relative; display: block; padding: 0 10px;
+            padding-top: 5.5px; height: 60px; line-height: 60px;
+            text-align: start; white-space: nowrap; font-weight: 500;
+        }
+        .logo { width: 75px; height: 65px; margin-top: 5px; }
+        .brand {
+            position: relative; display: block; padding: 0 3px;
+            height: 60px; line-height: 60px; text-align: start;
+            white-space: nowrap; font-weight: 800; font-size: 1.5rem;
+            font-family: "Ubuntu", sans-serif;
+        }
+
+        /* MAIN */
+        .main {
+            position: absolute; width: calc(100% - 280px); left: 280px;
+            min-height: 100%; background: white; transition: 0.5s;
+        }
+        .main.active { width: calc(100% - 80px); left: 80px; }
+
+        .topbar {
+            position: sticky; top: 0; left: 0; width: 100%; height: 60px;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 20px; background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 100; gap: 10px;
+        }
+        .toggle {
+            width: 60px; height: 60px; display: flex;
+            justify-content: center; align-items: center;
+            font-size: 2.5rem; cursor: pointer; color: var(--brand);
+        }
+        .page-title { display: flex; align-items: center; gap: 10px; color: #2d3748; }
+        .page-name { font-size: 1.5rem; font-weight: 600; }
+        .mobile-brand {
+            display: none; align-items: center; gap: 8px;
+            color: var(--brand); font-size: 1.3rem; font-weight: 700;
+        }
+        .user { position: relative; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; cursor: pointer; }
+
+        .dashboard { padding: 0 30px 45px 30px; height: auto; padding-bottom: 70px; }
+
+        .welcome-section {
+            background: var(--brand); padding: 30px;
+            border-radius: 0 0 15px 15px; margin-bottom: 30px;
+            color: white; text-align: center;
+        }
+        .welcome-text { font-size: 2rem; font-weight: 700; margin-bottom: 10px; }
+        .welcome-subtitle { font-size: 1.1rem; opacity: 0.95; }
+
+        html, body, .container, .main, .dashboard {
+            max-width: 100vw !important; overflow-x: hidden !important;
+        }
+
+        .bottom-nav {
+            position: fixed !important; bottom: 0 !important; left: 0 !important;
+            width: 100% !important; max-width: 100vw !important;
+            z-index: 1000 !important; box-sizing: border-box !important;
+        }
+
+        /* TOOLBAR */
+        .history-toolbar {
+            display: flex; flex-wrap: wrap; gap: 10px;
+            margin-bottom: 20px; align-items: center;
+        }
+        .history-toolbar select,
+        .history-toolbar input {
+            padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 10px;
+            font-size: 0.9rem; font-family: inherit; outline: none; background: #fff;
+        }
+        .history-toolbar select { min-width: 130px; }
+        .history-toolbar input { flex: 1; min-width: 180px; }
+
+        .clear-all-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 10px 16px; background: #fee2e2; color: #b91c1c;
+            border: 1px solid #fca5a5; border-radius: 10px;
+            font-weight: 700; font-size: 0.85rem; cursor: pointer;
+            font-family: inherit; margin-left: auto;
+        }
+        .clear-all-btn:hover { background: #fecaca; }
+        .clear-all-btn:disabled {
+            opacity: 0.5; cursor: not-allowed;
+        }
+        .clear-all-btn .material-symbols-outlined { font-size: 16px; }
+
+        /* LIST */
+        .notif-list {
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .notif-card {
+            display: flex; align-items: flex-start; gap: 12px;
+            padding: 16px; border-radius: 12px;
+            border: 1px solid #e5e7eb; background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: transform 0.15s;
+        }
+        .notif-card:hover { transform: translateY(-1px); }
+        .notif-card.unread {
+            background: var(--brand-light);
+            border-color: var(--brand-border);
+        }
+        .notif-card.read {
+            background: #f9fafb;
+            border-color: #e5e7eb;
+            opacity: 0.9;
+        }
+
+        .notif-icon {
+            flex-shrink: 0; width: 40px; height: 40px;
+            border-radius: 10px; display: flex;
+            align-items: center; justify-content: center;
+            background: var(--brand-light); color: var(--brand);
+        }
+        .notif-card.read .notif-icon {
+            background: #ecfdf5; color: #059669;
+        }
+        .notif-icon .material-symbols-outlined { font-size: 20px; }
+
+        .notif-body { flex: 1; min-width: 0; cursor: pointer; }
+        .notif-msg {
+            font-size: 0.92rem; color: #1f2937;
+            line-height: 1.45; word-break: break-word;
+        }
+        .notif-card.unread .notif-msg { font-weight: 600; }
+        .notif-card.read .notif-msg { font-weight: 400; }
+        .notif-meta {
+            display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+            font-size: 0.75rem; color: #6b7280; margin-top: 4px;
+        }
+        .notif-meta .material-symbols-outlined { font-size: 14px; }
+        .notif-meta .by { color: #9ca3af; }
+
+        .notif-actions {
+            display: flex; flex-direction: column; gap: 6px;
+            align-items: flex-end; flex-shrink: 0;
+        }
+        .notif-tick { font-size: 18px; line-height: 1; }
+        .notif-tick.read-tick { color: #059669; }
+        .notif-tick.unread-tick { color: var(--brand); }
+
+        .notif-delete {
+            background: none; border: none; color: #dc2626;
+            cursor: pointer; font-size: 1rem; padding: 2px 4px;
+            border-radius: 6px;
+        }
+        .notif-delete:hover { background: #fef2f2; }
+
+        /* EMPTY + LOAD MORE */
+        .empty-state {
+            text-align: center; padding: 60px 20px; color: #9ca3af;
+            font-size: 0.95rem;
+        }
+        .empty-state .material-symbols-outlined {
+            font-size: 3rem; display: block;
+            margin-bottom: 10px; opacity: 0.5;
+        }
+
+        .load-more-wrap {
+            display: flex; justify-content: center; margin-top: 24px;
+        }
+        .load-more-btn {
+            padding: 12px 24px; background: #fff; color: var(--brand);
+            border: 1px solid var(--brand-border); border-radius: 10px;
+            font-weight: 700; font-size: 0.9rem; cursor: pointer;
+            font-family: inherit;
+        }
+        .load-more-btn:hover { background: var(--brand-light); }
+        .load-more-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* TOAST */
+        .toast {
+            position: fixed; bottom: 90px; left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #1f2937; color: #fff;
+            padding: 12px 20px; border-radius: 10px;
+            font-size: 0.88rem; font-weight: 500;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            z-index: 9999; opacity: 0;
+            transition: opacity 0.25s, transform 0.25s;
+            pointer-events: none; max-width: 90vw;
+        }
+        .toast.show {
+            opacity: 1; transform: translateX(-50%) translateY(0);
+        }
+
+        /* BOTTOM NAV */
+        .bottom-nav {
+            display: none; background: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1); padding: 10px 0;
+        }
+        .bottom-nav ul {
+            display: flex; justify-content: space-around; align-items: center;
+            list-style: none; margin: 0; padding: 0;
+        }
+        .bottom-nav ul li { flex: 1; text-align: center; }
+        .bottom-nav ul li a {
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+            color: #718096; text-decoration: none; padding: 5px;
+        }
+        .bottom-nav ul li a .icon { font-size: 1.5rem; line-height: 1; }
+        .bottom-nav ul li a .title { font-size: 0.7rem; font-weight: 500; white-space: nowrap; }
+        .bottom-nav ul li.active a { color: var(--brand); }
+
+        @media (max-width: 991px) {
+            .navigation { left: -280px; }
+            .navigation.active { width: 280px; left: 0; }
+            .main { width: 100%; left: 0; }
+            .main.active { left: 280px; }
+            .topbar { left: 0; width: 100%; }
+            .main.active .topbar { left: 280px; width: calc(100% - 280px); }
+            .dashboard { padding: 0 25px 25px 25px; }
+        }
+        @media (max-width: 768px) {
+            .topbar { left: 0; width: 100%; }
+            .page-title { display: none; }
+            .mobile-brand { display: flex; }
+            .navigation { width: 100%; left: -100%; z-index: 1000; }
+            .navigation.active { width: 100%; left: 0; }
+            .toggle { display: none; }
+            .main.active .toggle { color: white; position: fixed; right: 0; left: initial; }
+            .dashboard { padding: 0 20px 80px 20px; }
+            .welcome-section { padding: 20px; margin-bottom: 20px; }
+            .welcome-text { font-size: 1.5rem; }
+            .welcome-subtitle { font-size: 1rem; }
+            .bottom-nav { display: block !important; }
+            .clear-all-btn { margin-left: 0; width: 100%; justify-content: center; }
+        }
+        @media (max-width: 480px) {
+            .welcome-text { font-size: 1.3rem; }
+            .welcome-subtitle { font-size: 0.95rem; }
+            .welcome-section { padding: 15px; }
+            .bottom-nav ul li a .title { font-size: 0.65rem; }
+            .dashboard { padding: 0 15px 75px 15px; }
+        }
+    </style>
+    <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+</head>
+
+<body>
+
+<div class="container">
+    <div class="navigation">
+        <ul>
+            <li><a href="dashboard.html">
+                <span class="icon"><div class="logo">
+                    <img src="assets/imgs/logo.png" alt="Tracknrent"
+                        style="width: 74px; height: 50px; object-fit: contain; margin-right: 4px;" />
+                </div></span>
+                <span class="brand">Tracknrent</span>
+            </a></li>
+            <li><a href="dashboard.html">
+                <span class="icon"><span class="material-symbols-outlined">home</span></span>
+                <span class="title">Dashboard</span>
+            </a></li>
+            <li><a href="bookings.html">
+                <span class="icon"><span class="material-symbols-outlined">calendar_today</span></span>
+                <span class="title">Bookings</span>
+            </a></li>
+            <li><a href="add.html">
+                <span class="icon"><span class="material-symbols-outlined">add_circle</span></span>
+                <span class="title">Add</span>
+            </a></li>
+            <li><a href="inventory.html">
+                <span class="icon"><span class="material-symbols-outlined">inventory_2</span></span>
+                <span class="title">Inventory</span>
+            </a></li>
+ <li><a href="rental-to-rental.html">
+                        <span class="icon"><span class="material-symbols-outlined">swap_horiz</span></span>
+                        <span class="title">Rental</span>
+                    </a></li>
+        </ul>
+    </div>
+
+    <div class="main">
+        <div class="topbar">
+            <div class="toggle"><span class="material-symbols-outlined">menu</span></div>
+            <div class="page-title"><h2 class="page-name" id="brand-name-mobile"></h2></div>
+            <div class="mobile-brand">
+                <h1 style="color: black;">Track<span style="color: #800080;">nrent</span></h1>
+                <!-- <span id="brand-name-mobile-2">Loading...</span> -->
+            </div>
+            <div class="user">
+                <div id="user-avatar"
+                    style="width: 100%; height: 100%; border-radius: 50%; background: #800080; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.2rem; text-transform: uppercase;">?</div>
+            </div>
+        </div>
+
+        <section class="dashboard">
+            <div class="welcome-section">
+                <h1 class="welcome-text">Notifications</h1>
+                <p class="welcome-subtitle">Everything that's happened in your business</p>
+            </div>
+
+            <div class="history-toolbar">
+                <select id="filterRead">
+                    <option value="all">All</option>
+                    <option value="unread">Unread</option>
+                    <option value="read">Read</option>
+                </select>
+                <input type="text" id="searchInput" placeholder="Search notifications...">
+                <button class="clear-all-btn" id="clearAllBtn">
+                    <span class="material-symbols-outlined">delete_sweep</span>
+                    Clear All
+                </button>
+            </div>
+
+            <div class="notif-list" id="notifList">
+                <div class="empty-state">
+                    <span class="material-symbols-outlined">hourglass_empty</span>
+                    Loading...
+                </div>
+            </div>
+
+            <div class="load-more-wrap" id="loadMoreWrap" style="display:none;">
+                <button class="load-more-btn" id="loadMoreBtn">Load older notifications</button>
+            </div>
+        </section>
+    </div>
+
+    <nav class="bottom-nav">
+        <ul>
+            <li><a href="dashboard.html">
+                <span class="icon"><span class="material-symbols-outlined">home</span></span>
+                <span class="title">Dashboard</span>
+            </a></li>
+            <li><a href="bookings.html">
+                <span class="icon"><span class="material-symbols-outlined">calendar_today</span></span>
+                <span class="title">Bookings</span>
+            </a></li>
+            <li><a href="add.html">
+                <span class="icon"><span class="material-symbols-outlined">add_circle</span></span>
+                <span class="title">Add</span>
+            </a></li>
+            <li><a href="inventory.html">
+                <span class="icon"><span class="material-symbols-outlined">inventory_2</span></span>
+                <span class="title">Inventory</span>
+            </a></li>
+            <li><a href="rental-to-rental.html">
+                <span class="icon"><span class="material-symbols-outlined">swap_horiz</span></span>
+                <span class="title">Rental</span>
+            </a></li>
+        </ul>
+    </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+    let toggle = document.querySelector(".toggle");
+    let navigation = document.querySelector(".navigation");
+    let main = document.querySelector(".main");
+    if (toggle) {
+        toggle.onclick = function () {
+            navigation.classList.toggle("active");
+            main.classList.toggle("active");
+        };
+    }
+    let list = document.querySelectorAll(".navigation li");
+    function activeLink() {
+        list.forEach((item) => item.classList.remove("hovered"));
+        this.classList.add("hovered");
+    }
+    list.forEach((item) => item.addEventListener("mouseover", activeLink));
+</script>
+
+<script type="module" src="assets/js/avatar.js"></script>
+<script type="module" src="assets/js/firebase.js"></script>
+<script type="module" src="assets/js/history.js"></script>
+<script src="assets/js/pwa.js"></script>
+
+</body>
+</html>

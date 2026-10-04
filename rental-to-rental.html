@@ -1,0 +1,1204 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rental to Rental | Tracknrent</title>
+    <link rel="canonical" href="https://tracknrent.vercel.app/rental-to-rental.html" />
+    <meta name="description" content="Lend to and borrow from other rental businesses.">
+    <meta name="keywords" content="Tracknrent rental to rental, lend items, borrow items, vendor tracking">
+
+    <!-- ✅ MUST BE FIRST — Loads OneSignal SDK -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+
+    <!-- ✅ Then your module -->
+    <script type="module" src="assets/js/onesignal.js" defer></script>
+
+    <!-- FAVICON -->
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="shortcut icon" href="favicon.ico">
+
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined");
+
+        :root {
+            --brand: #800080;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f6fa;
+            overflow-x: hidden;
+        }
+
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* =============== Navigation ================ */
+        .navigation {
+            position: fixed;
+            width: 280px;
+            height: 100%;
+            background: var(--brand);
+            border-left: 10px solid var(--brand);
+            transition: 0.5s;
+            overflow: hidden;
+        }
+
+        .navigation.active {
+            width: 80px;
+        }
+
+        .navigation ul {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+        }
+
+        .navigation ul li {
+            position: relative;
+            width: 100%;
+            list-style: none;
+            border-top-left-radius: 30px;
+            border-bottom-left-radius: 30px;
+        }
+
+        .navigation ul li:hover,
+        .navigation ul li.hovered {
+            background-color: white;
+        }
+
+        .navigation ul li:nth-child(1) {
+            margin-bottom: 35px;
+            pointer-events: none;
+        }
+
+        .navigation ul li a {
+            position: relative;
+            display: block;
+            width: 100%;
+            display: flex;
+            text-decoration: none;
+            color: white;
+            margin: 20px;
+            font-size: 23px;
+        }
+
+        .navigation ul li:hover a,
+        .navigation ul li.hovered a {
+            color: var(--brand);
+        }
+
+        .navigation ul li a .icon {
+            position: relative;
+            display: block;
+            min-width: 60px;
+            height: 60px;
+            line-height: 75px;
+            text-align: center;
+        }
+
+        .navigation ul li a .title {
+            position: relative;
+            display: block;
+            padding: 0 10px;
+            padding-top: 5.5px;
+            height: 60px;
+            line-height: 60px;
+            text-align: start;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        .logo {
+            width: 75px;
+            height: 65px;
+            margin-top: 5px;
+        }
+
+        .brand {
+            position: relative;
+            display: block;
+            padding: 0 3px;
+            height: 60px;
+            line-height: 60px;
+            text-align: start;
+            white-space: nowrap;
+            font-weight: 800;
+            font-size: 1.5rem;
+            font-family: "Ubuntu", sans-serif;
+        }
+
+        /* ================ Main ================ */
+        .main {
+            position: absolute;
+            width: calc(100% - 280px);
+            left: 280px;
+            min-height: 100%;
+            background: white;
+            transition: 0.5s;
+        }
+
+        .main.active {
+            width: calc(100% - 80px);
+            left: 80px;
+        }
+
+        .topbar {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            z-index: 100;
+            gap: 10px;
+        }
+
+        .main.active .topbar {
+            left: 0;
+            width: 100%;
+        }
+
+        .toggle {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            cursor: pointer;
+            color: var(--brand);
+        }
+
+        .page-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #2d3748;
+        }
+
+        .page-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .mobile-brand {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            color: var(--brand);
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .user {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        /* ================ Dashboard Content ================ */
+        .dashboard {
+            padding: 0 30px 70px 30px;
+            overflow-y: visible;
+            height: auto;
+            max-width: 100vw !important;
+            overflow-x: hidden !important;
+        }
+
+        .welcome-section {
+            background: var(--brand);
+            padding: 30px;
+            border-radius: 0 0 15px 15px;
+            margin-top: 0;
+            margin-bottom: 25px;
+            color: white;
+            text-align: center;
+        }
+
+        .welcome-text {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .welcome-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+
+        html, body, .container, .main {
+            max-width: 100vw !important;
+            overflow-x: hidden !important;
+        }
+
+        /* ================ Summary Strip ================ */
+        .summary-strip {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 14px;
+            padding: 18px;
+            box-shadow: 0 5px 18px rgba(0, 0, 0, 0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .summary-card .numbers {
+            font-size: 1.7rem;
+            font-weight: 800;
+            color: #1f2937;
+        }
+
+        .summary-card .cardName {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #6b7280;
+        }
+
+        .summary-card .iconBx {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: #f5e6f5;
+            color: var(--brand);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ================ Tabs ================ */
+        .rt-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #ece6ec;
+        }
+
+        .rt-tab {
+            padding: 10px 18px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #9ca3af;
+            background: none;
+            border: none;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .rt-tab.active {
+            color: var(--brand);
+            border-bottom-color: var(--brand);
+        }
+
+        /* ================ Filters ================ */
+        .rt-filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+
+        .rt-filters select,
+        .rt-filters input {
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            font-size: 0.9rem;
+            background: white;
+        }
+
+        .rt-filters input {
+            flex: 1 1 220px;
+        }
+
+        /* ================ Add button + inline card ================ */
+        .add-lentout-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 12px 22px;
+            background: var(--brand);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            margin-bottom: 18px;
+            box-shadow: 0 4px 15px rgba(128, 0, 128, 0.25);
+        }
+
+        .add-lentout-btn:hover {
+            background: #6b1a6b;
+        }
+
+        .form-card {
+            background: #fff;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 7px 25px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            margin-bottom: 24px;
+            display: none;
+        }
+
+        .form-card.open {
+            display: block;
+        }
+
+        .form-card h3 {
+            margin-bottom: 15px;
+            color: var(--brand);
+            font-size: 1.15rem;
+        }
+
+        .form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            font-size: 0.9rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 70px;
+        }
+
+        .items-list {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .item-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: flex-start;
+            background: #faf7fb;
+            border: 1px solid #ecd9ef;
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        .item-row-main {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            width: 100%;
+        }
+
+        .item-name {
+            flex: 1 1 200px;
+            min-width: 150px;
+            padding: 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            outline: none;
+        }
+
+        .item-qty,
+        .item-price {
+            flex: 0 1 90px;
+            padding: 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            outline: none;
+        }
+
+        .item-row button.remove-item-btn {
+            flex: 0 0 40px;
+            height: 40px;
+            background: #fed7d7;
+            color: #742a2a;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .item-avail-hint {
+            width: 100%;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .add-item-btn {
+            margin-top: 4px;
+            margin-bottom: 15px;
+            width: fit-content;
+        }
+
+        .btn {
+            position: relative;
+            padding: 10px 18px;
+            background: var(--brand);
+            color: white;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background: #6b1a6b;
+            transform: translateY(-2px);
+        }
+
+        .btn.btn-secondary {
+            background: #f1f1f4;
+            color: #4a5568;
+        }
+
+        .btn.btn-secondary:hover {
+            background: #e5e5ea;
+        }
+
+        .btn.btn-danger {
+            background: #dc2626;
+        }
+
+        .btn.btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .live-preview {
+            margin-top: 10px;
+            padding: 14px;
+            border: 2px dashed #e9d5f4;
+            border-radius: 12px;
+            background: #faf5fb;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            text-align: center;
+        }
+
+        .live-preview .lp-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #9ca3af;
+        }
+
+        .live-preview .lp-value {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #1f2937;
+        }
+
+        /* ================ Rows list ================ */
+        .rt-row {
+            background: white;
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .rt-row:hover {
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.09);
+        }
+
+        .rt-row-edit-btn {
+            background: #f5e6f5;
+            color: var(--brand);
+            border: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .pill .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: #9ca3af;
+        }
+
+        .empty-state .material-symbols-outlined {
+            font-size: 3rem;
+            opacity: 0.4;
+        }
+
+        /* ================ Modal ================ */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .modal-card {
+            background: white;
+            width: 100%;
+            max-width: 560px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            border-radius: 16px;
+            overflow: hidden;
+            margin: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 18px;
+            background: var(--brand);
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .modal-header button {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            color: white;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 18px;
+            font-size: .95rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        /* ============================================
+           RESPONSIVE
+        ============================================ */
+        @media (max-width: 991px) {
+            .navigation {
+                left: -280px;
+            }
+
+            .navigation.active {
+                width: 280px;
+                left: 0;
+            }
+
+            .main {
+                width: 100%;
+                left: 0;
+            }
+
+            .main.active {
+                left: 280px;
+            }
+
+            .topbar {
+                left: 0;
+                width: 100%;
+            }
+
+            .main.active .topbar {
+                left: 280px;
+                width: calc(100% - 280px);
+            }
+
+            .dashboard {
+                padding: 0 25px 70px 25px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .topbar {
+                left: 0;
+                width: 100%;
+            }
+
+            .main.active .topbar {
+                left: 0;
+                width: 100%;
+            }
+
+            .page-title {
+                display: none;
+            }
+
+            .mobile-brand {
+                display: flex;
+            }
+
+            .navigation {
+                width: 100%;
+                left: -100%;
+                z-index: 1000;
+            }
+
+            .navigation.active {
+                width: 100%;
+                left: 0;
+            }
+
+            .toggle {
+                display: none;
+            }
+
+            .main.active .toggle {
+                color: white;
+                position: fixed;
+                right: 0;
+                left: initial;
+            }
+
+            .dashboard {
+                padding: 0 20px 90px 20px;
+            }
+
+            .welcome-section {
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+
+            .welcome-text {
+                font-size: 1.5rem;
+            }
+
+            .welcome-subtitle {
+                font-size: 1rem;
+            }
+
+            .summary-strip {
+                grid-template-columns: 1fr;
+            }
+
+            .form-grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .bottom-nav {
+                display: block !important;
+            }
+
+            .item-name {
+                flex: 1 1 100%;
+                min-width: 100px;
+            }
+
+            .item-qty,
+            .item-price {
+                flex: 1 1 40%;
+                min-width: 60px;
+            }
+
+            .live-preview {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .welcome-text {
+                font-size: 1.3rem;
+            }
+
+            .form-card {
+                padding: 16px;
+            }
+
+            .dashboard {
+                padding: 0 15px 90px 15px;
+            }
+
+            .rt-row {
+                padding: 12px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .form-card {
+                padding: 12px;
+            }
+
+            .item-row {
+                padding: 8px;
+            }
+
+            .form-group input,
+            .form-group select {
+                padding: 9px;
+                font-size: 0.85rem;
+            }
+        }
+
+        /* ================ Bottom Nav (Mobile) ================ */
+        .bottom-nav {
+            display: none;
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            max-width: 100vw !important;
+            z-index: 1000 !important;
+            box-sizing: border-box !important;
+            background: white;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            padding: 10px 0;
+        }
+
+        .bottom-nav ul {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .bottom-nav ul li {
+            flex: 1;
+            text-align: center;
+        }
+
+        .bottom-nav ul li a {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            color: #718096;
+            text-decoration: none;
+            padding: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .bottom-nav ul li a .icon {
+            font-size: 1.5rem;
+            min-width: auto;
+            height: auto;
+            line-height: 1;
+        }
+
+        .bottom-nav ul li a .title {
+            font-size: 0.7rem;
+            font-weight: 500;
+            white-space: nowrap;
+            padding: 0;
+            height: auto;
+            line-height: 1;
+        }
+
+        .bottom-nav ul li.active a {
+            color: var(--brand);
+        }
+
+        @media (max-width: 768px) {
+            .bottom-nav {
+                display: block !important;
+            }
+        }
+    </style>
+    <style>
+        @view-transition {
+            navigation: auto;
+        }
+    </style>
+    <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+</head>
+
+<body>
+
+    <!-- =============== Navigation ================ -->
+    <div class="container">
+        <div class="navigation">
+            <ul>
+                <li><a href="dashboard.html">
+                        <span class="icon">
+                            <div class="logo">
+                                <img src="assets/imgs/logo.png" alt="Tracknrent" style="width: 74px; height: 50px; object-fit: contain; margin-right: 4px;" />
+                            </div>
+                        </span>
+                        <span class="brand">Tracknrent</span>
+                    </a></li>
+                <li><a href="dashboard.html">
+                        <span class="icon"><span class="material-symbols-outlined">home</span></span>
+                        <span class="title">Dashboard</span>
+                    </a></li>
+                <li><a href="bookings.html">
+                        <span class="icon"><span class="material-symbols-outlined">calendar_today</span></span>
+                        <span class="title">Bookings</span>
+                    </a></li>
+                <li><a href="add.html">
+                        <span class="icon"><span class="material-symbols-outlined">add_circle</span></span>
+                        <span class="title">Add</span>
+                    </a></li>
+                <li><a href="inventory.html">
+                        <span class="icon"><span class="material-symbols-outlined">inventory_2</span></span>
+                        <span class="title">Inventory</span>
+                    </a></li>
+                <li class="hovered"><a href="rental-to-rental.html">
+                        <span class="icon"><span class="material-symbols-outlined">swap_horiz</span></span>
+                        <span class="title">Rental</span>
+                    </a></li>
+            </ul>
+        </div>
+
+        <!-- ========================= Main ==================== -->
+        <div class="main">
+            <div class="topbar">
+                <div class="toggle"><span class="material-symbols-outlined">menu</span></div>
+                <div class="page-title">
+                    <h2 class="page-name" id="brand-name-mobile"></h2>
+                </div>
+                <div class="mobile-brand">
+                    <h1 style="color: black;">Track<span style="color: var(--brand);">nrent</span></h1>
+                </div>
+
+                <div class="user">
+                    <div id="user-avatar" style="width: 100%; height: 100%; border-radius: 50%; background: var(--brand); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.2rem; text-transform: uppercase;">
+                        ?
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======================= Content ========================= -->
+            <section class="dashboard">
+
+                <div class="welcome-section">
+                    <h1 class="welcome-text">Rental to Rental</h1>
+                    <p class="welcome-subtitle">Lend &amp; borrow with other businesses</p>
+                </div>
+
+                <div class="summary-strip">
+                    <div class="summary-card">
+                        <div>
+                            <div class="numbers" id="statLentOut">0</div>
+                            <div class="cardName">Lent Out</div>
+                        </div>
+                        <div class="iconBx"><span class="material-symbols-outlined">output</span></div>
+                    </div>
+                    <div class="summary-card">
+                        <div>
+                            <div class="numbers" id="statBorrowedIn">0</div>
+                            <div class="cardName">Borrowed In</div>
+                        </div>
+                        <div class="iconBx"><span class="material-symbols-outlined">input</span></div>
+                    </div>
+                    <div class="summary-card">
+                        <div>
+                            <div class="numbers" id="statOverdue">0</div>
+                            <div class="cardName">Overdue</div>
+                        </div>
+                        <div class="iconBx"><span class="material-symbols-outlined">warning</span></div>
+                    </div>
+                </div>
+
+                <div class="rt-tabs">
+                    <button type="button" class="rt-tab active" id="tabLentOut" onclick="switchRentalTab('lentOut')">Lent Out</button>
+                    <button type="button" class="rt-tab" id="tabBorrowedIn" onclick="switchRentalTab('borrowedIn')">Borrowed In</button>
+                </div>
+
+                <div class="rt-filters">
+                    <select id="statusFilter" onchange="applyRentalFilters()">
+                        <option value="">All Status</option>
+                        <option value="upcoming">Upcoming</option>
+                        <option value="active">Active</option>
+                        <option value="overdue">Overdue</option>
+                        <option value="returned">Returned</option>
+                    </select>
+                    <input type="text" id="searchFilter" placeholder="Search business or item..." oninput="applyRentalFilters()">
+                </div>
+
+                <!-- ============ LENT OUT TAB ============ -->
+              <div id="lentOutPanel">
+    <button type="button" class="add-lentout-btn" id="addLentOutBtn" onclick="toggleAddLentOutForm()">
+        <span class="material-symbols-outlined" style="font-size:1.1rem;">add_circle</span> Add Lent Out
+    </button>
+
+    <div id="lentOutList"></div>
+</div>
+
+                <!-- ============ BORROWED IN TAB ============ -->
+                <div id="borrowedInPanel" style="display:none;">
+                    <div id="borrowedInList"></div>
+                </div>
+
+            </section>
+        </div>
+
+        <!-- =============== Bottom Navigation (Mobile) ================ -->
+        <nav class="bottom-nav">
+            <ul>
+                <li><a href="dashboard.html">
+                        <span class="icon"><span class="material-symbols-outlined">home</span></span>
+                        <span class="title">Dashboard</span>
+                    </a></li>
+                <li><a href="bookings.html">
+                        <span class="icon"><span class="material-symbols-outlined">calendar_today</span></span>
+                        <span class="title">Bookings</span>
+                    </a></li>
+                <li><a href="add.html">
+                        <span class="icon"><span class="material-symbols-outlined">add_circle</span></span>
+                        <span class="title">Add</span>
+                    </a></li>
+                <li><a href="inventory.html">
+                        <span class="icon"><span class="material-symbols-outlined">inventory_2</span></span>
+                        <span class="title">Inventory</span>
+                    </a></li>
+                <li class="active"><a href="rental-to-rental.html">
+                        <span class="icon"><span class="material-symbols-outlined">swap_horiz</span></span>
+                        <span class="title">Rental</span>
+                    </a></li>
+            </ul>
+        </nav>
+
+        <!-- =============== Detail / Edit / Return Modal ================ -->
+
+<!-- =============== Add Lent Out Modal (centered, like openBooking) ================ -->
+<div class="modal-overlay" id="addLentOutModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 id="addLentOutModalTitle">New Lent-Out Batch</h3>
+            <button onclick="toggleAddLentOutForm(false)">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label>Business Name</label>
+                    <input id="loBusinessName" required placeholder="e.g. Grace Event Rentals">
+                </div>
+                <div class="form-group">
+                    <label>Contact Person</label>
+                    <input id="loContactPerson" placeholder="Optional">
+                </div>
+                <div class="form-group">
+                    <label>Contact Phone</label>
+                    <input id="loContactPhone" placeholder="Optional">
+                </div>
+                <div class="form-group"></div>
+                <div class="form-group">
+                    <label>Lent On</label>
+                    <input type="date" id="loOutDate" required>
+                </div>
+                <div class="form-group">
+                    <label>Return Date</label>
+                    <input type="date" id="loReturnDate" required>
+                </div>
+            </div>
+
+            <h3 style="margin-top:10px;">Items</h3>
+            <div id="loItemsContainer" class="items-list"></div>
+            <button type="button" class="btn btn-secondary add-item-btn" onclick="addLentOutItemRow()">+ Add Item</button>
+
+            <div class="form-grid-2">
+           <div class="form-group">
+    <label>Total (₦)</label>
+    <input type="number" id="loTotal" placeholder="0">
+</div>
+           
+
+<div class="form-group">
+    <label>Amount Paid (₦)</label>
+    <input type="number" id="loPaid" placeholder="0">
+</div>
+
+            </div>
+
+            <div class="live-preview">
+                <div><p class="lp-label">Total</p><p class="lp-value" id="loPreviewTotal">₦0</p></div>
+                <div><p class="lp-label">Paid</p><p class="lp-value" id="loPreviewPaid">₦0</p></div>
+                <div><p class="lp-label">Balance</p><p class="lp-value" id="loPreviewBalance">₦0</p></div>
+            </div>
+
+
+
+            <div class="form-group" style="margin-top:12px;">
+                <label>Receipt Image(s)</label>
+                <div class="receipt-upload-container"
+                     style="border: 2px dashed #e2e8f0; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer;"
+                     onclick="document.getElementById('loReceiptInput').click()">
+                    <input type="file" id="loReceiptInput" accept="image/*" capture="environment" multiple style="display: none;">
+                    <div id="loReceiptPreviewList"
+                         style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:10px;"></div>
+                    <span class="material-symbols-outlined" style="font-size: 2rem; color: #718096;">photo_camera</span>
+                    <p id="loReceiptText" style="color: #718096; font-size: 0.9rem; margin-top: 8px;">Tap to add receipt photo(s)</p>
+                </div>
+            </div>
+
+
+
+ <div class="form-group" style="margin-top:12px;">
+                <label>Notes</label>
+                <textarea id="loNotes" placeholder="Optional"></textarea>
+            </div>
+
+
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="toggleAddLentOutForm(false)">Cancel</button>
+                <button type="button" class="btn" id="saveLentOutBtn" onclick="saveNewLentOutBatch()">Save Lent Out</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+
+        <div class="modal-overlay" id="rentalModal">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h3 id="rentalModalTitle">Rental Batch</h3>
+                    <button onclick="closeRentalModal()">✕</button>
+                </div>
+                <div id="rentalModalContent" class="modal-body"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- =========== Scripts =========  -->
+    <script>
+        // Menu Toggle
+        let toggle = document.querySelector(".toggle");
+        let navigation = document.querySelector(".navigation");
+        let main = document.querySelector(".main");
+
+        toggle.onclick = function () {
+            navigation.classList.toggle("active");
+            main.classList.toggle("active");
+        };
+
+        // Add hovered class on selected list item
+        let list = document.querySelectorAll(".navigation li");
+
+        function activeLink() {
+            list.forEach((item) => {
+                item.classList.remove("hovered");
+            });
+            this.classList.add("hovered");
+        }
+
+        list.forEach((item) => item.addEventListener("mouseover", activeLink));
+
+        // Bottom Nav Active State
+        let bottomNavItems = document.querySelectorAll(".bottom-nav li");
+
+        function activeBottomLink() {
+            bottomNavItems.forEach((item) => {
+                item.classList.remove("active");
+            });
+            this.classList.add("active");
+        }
+
+        bottomNavItems.forEach((item) => item.addEventListener("click", activeBottomLink));
+    </script>
+
+    <script type="module" src="assets/js/avatar.js"></script>
+    <script type="module" src="assets/js/firebase.js"></script>
+    <script type="module" src="assets/js/rental-to-rental.js"></script>
+    <script src="assets/js/pwa.js"></script>
+
+</body>
+
+</html>
