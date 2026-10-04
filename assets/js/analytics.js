@@ -358,7 +358,7 @@ label.style.cssText = "font-size:12px; font-weight:700; color:white; white-space
 
 
 
-const select = document.createElement("select");
+ const select = document.createElement("select");
   select.id = "monthPicker";
   select.style.cssText = `
     padding: 8px 14px;

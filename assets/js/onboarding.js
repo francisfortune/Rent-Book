@@ -24,41 +24,108 @@ const NOTIF_DISMISS_KEY = "tracknrent_notif_prompt_dismissed_at";
 const NOTIF_ATTEMPT_KEY = "tracknrent_notif_attempt_at";
 const COOLDOWN_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
 
+/* ============================================================
+   AVATAR DROPDOWN HELPERS
+   ------------------------------------------------------------------
+   The final three tour cards (Settings / Public Profile / Analytics)
+   live INSIDE the avatar dropdown. To highlight each menu item
+   individually, we open the dropdown automatically before those
+   steps and close it when we leave them.
+============================================================ */
+function isDropdownAvailable() {
+  return !!document.getElementById("user-dropdown");
+}
+
+function openAvatarDropdown() {
+  const dd = document.getElementById("user-dropdown");
+  const avatar = document.getElementById("user-avatar");
+  if (!dd) return;
+  dd.classList.remove("hidden");
+  dd.style.display = "block";
+  if (avatar) {
+    avatar.style.outline = "3px solid purple";
+    avatar.style.outlineOffset = "2px";
+  }
+}
+
+function closeAvatarDropdown() {
+  const dd = document.getElementById("user-dropdown");
+  const avatar = document.getElementById("user-avatar");
+  if (dd) {
+    dd.classList.add("hidden");
+    dd.style.display = "none";
+  }
+  if (avatar) {
+    avatar.style.outline = "";
+    avatar.style.outlineOffset = "";
+  }
+}
+
+/* ============================================================
+   TOUR STEPS
+============================================================ */
 const steps = [
   {
     selector: ".brand, #brand, .mobile-brand, #mobile-brand",
     title: "Welcome to Tracknrent! 🚀",
-    desc: "Easily manage your rental items, inventory, and event bookings all in one place. Let's show you around!"
+    desc: "Your all-in-one rental workspace — inventory, bookings, payments, and vendor lends in one place."
   },
   {
     selector: ".cardBox",
-    title: "Dashboard Overview 📊",
-    desc: "See your total items, active bookings, completed returns, and overdue rentals at a glance."
+    title: "Today at a Glance 📊",
+    desc: "Six live counters for inventory, active bookings, upcoming events, returns, overdue jobs, and overbooked stock. Tap any card to jump into the filtered list."
   },
   {
     selector: '.bookings, a[href="bookings.html"]',
-    title: "Bookings Record 📋",
-    desc: "Track every order, from newly scheduled rentals to completed returns."
+    title: "Bookings 📋",
+    desc: "Every rental order. Filter by status, search by client or vendor, and open any row for receipts and payment history."
   },
   {
     selector: '.add, a[href="add.html"]',
     title: "New Booking ➕",
-    desc: "Create client orders, assign rental gear, generate receipts, and alert your team instantly."
+    desc: "Create a booking in one screen. Stock is checked live, and a WhatsApp receipt is ready the moment you save."
   },
   {
     selector: '.inventory, a[href="inventory.html"]',
-    title: "Inventory Catalog 📦",
-    desc: "Check real-time stock levels. Available items update automatically to prevent double-booking."
+    title: "Inventory 📦",
+    desc: "Your catalog. See what's owned, what's free now, and what's out. Low-stock alerts fire automatically."
   },
   {
-    selector: '.profile, a[href="public.html"]',
-    title: "Online Storefront 🌐",
-    desc: "Set up your public rental page so prospective clients can browse and reach out."
+    selector: '.rent, a[href="rental-to-rental.html"]',
+    title: "Rental ↔ Rental 🔄",
+    desc: "Track lends to other rental companies and borrows from vendors — with overdue alerts and damage logs."
   },
   {
-  selector: "#user-avatar",
-    title: "Settings & Analytics ⚙️📈",
-    desc: "Tap your avatar to open Settings — customize your profile, invite team members, and manage notifications. From there, jump into Analytics to see revenue trends, top customers, outstanding balances, and damage losses."
+    selector: "#notifBtn",
+    title: "Notifications 🔔",
+    desc: "Real-time alerts for new bookings, overdue returns, low stock, and damage. A red dot means something needs you."
+  },
+  {
+    selector: "#user-avatar",
+    title: "Your Account Menu ⚙️",
+    desc: "Tap your avatar any time to reach Settings, Public Profile, and Analytics. The next three steps walk through each.",
+    _isAccountIntro: true
+  },
+  {
+    selector: '#user-dropdown a[href="settings.html"]',
+    title: "Settings ⚙️",
+    desc: "Profile, business name, team invites, notification prefs, and your return-message template.",
+    keepDropdownOpen: true,
+    _requiresDropdown: true
+  },
+  {
+    selector: '#user-dropdown a[href="public.html"]',
+    title: "Public Profile 🌐",
+    desc: "Your online storefront. Pick a slug, upload a cover, and share the link so clients can browse your catalog.",
+    keepDropdownOpen: true,
+    _requiresDropdown: true
+  },
+  {
+    selector: '#user-dropdown a[href="analytics.html"]',
+    title: "Analytics 📈",
+    desc: "Revenue trends, top customers, outstanding balances, and damage losses — filterable by any date range.",
+    keepDropdownOpen: true,
+    _requiresDropdown: true
   }
 ];
 
@@ -126,11 +193,22 @@ function createOverlayAndTooltip() {
   }
 }
 
+/* ============================================================
+   STEP NAVIGATION
+============================================================ */
 function showStep(stepIndex) {
   const step = steps[stepIndex];
   if (!step) {
     endTour();
     return;
+  }
+
+  // Dropdown lifecycle: open for dropdown-backed account steps,
+  // close as soon as we leave them.
+  if (step.keepDropdownOpen) {
+    openAvatarDropdown();
+  } else {
+    closeAvatarDropdown();
   }
 
   let targetEl = null;
@@ -163,7 +241,7 @@ function showStep(stepIndex) {
       <button id="ob-skip" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.85rem;font-weight:500;padding:4px 8px;">Skip</button>
     </div>
     <h3 style="font-weight:700;font-size:1.15rem;margin:0 0 8px;color:#111827;">${step.title}</h3>
-    <p style="font-size:0.875rem;color:#4b5563;line-height:1.6;margin:0 0 20px;">${step.desc}</p>
+<div style="font-size:0.875rem;color:#4b5563;line-height:1.6;margin:0 0 20px;">${step.desc}</div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
       <button id="ob-back" style="background:#f3f4f6;color:#4b5563;border:none;padding:8px 16px;border-radius:10px;cursor:pointer;font-weight:600;font-size:0.85rem;${stepIndex === 0 ? "visibility:hidden;" : ""}">Back</button>
       <button id="ob-next" style="background:purple;color:#ffffff;border:none;padding:8px 20px;border-radius:10px;cursor:pointer;font-weight:600;font-size:0.85rem;box-shadow:0 4px 6px -1px rgba(84,11,158,0.2);">${stepIndex === steps.length - 1 ? "Finish" : "Next"}</button>
@@ -181,6 +259,11 @@ function showStep(stepIndex) {
       currentStep--;
       showStep(currentStep);
     };
+  }
+
+  // Dropdown steps shift layout; re-measure once it's painted.
+  if (step.keepDropdownOpen) {
+    setTimeout(updatePositions, 60);
   }
 }
 
@@ -230,6 +313,7 @@ function updatePositions() {
 }
 
 function endTour() {
+  closeAvatarDropdown();
   localStorage.setItem(ONBOARDING_FLAG, "true");
   if (overlayEl) overlayEl.remove();
   if (tooltipEl) tooltipEl.remove();

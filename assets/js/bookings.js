@@ -926,15 +926,33 @@ window.deleteBooking = async function(bookingId, businessId) {
 };
 
 /* =========================
-   URL HIGHLIGHT / STATUS PRE-FILTER
+   URL HIGHLIGHT / STATUS PRE-FILTER / VENDOR PRE-FILTER
 ========================= */
 const urlParams = new URLSearchParams(window.location.search);
 const highlightId = urlParams.get("highlight");
 const presetStatus = urlParams.get("status");
+const presetVendor = urlParams.get("vendor");
 
 if (presetStatus) {
   const filterEl = document.getElementById("filterStatus");
   if (filterEl) filterEl.value = presetStatus;
+}
+
+// ===== NEW: Vendor deep-link from rental-to-rental.html =====
+// The Borrowed In tab's vendor header navigates here with ?vendor=<name>.
+// We prefill the search box with that name and dispatch an input event so
+// the existing filterAndRender() runs and narrows the table. The extended
+// search predicate (further down) also matches on item supplier, so this
+// works whether the vendor is spelled exactly or with different casing.
+if (presetVendor) {
+  const searchEl = document.getElementById("searchInput");
+  if (searchEl) {
+    searchEl.value = presetVendor;
+    // Defer so the Firestore snapshot has rendered at least once. If the
+    // snapshot hasn't arrived yet, the input event still fires and the
+    // snapshot callback will use the current value when it renders.
+    setTimeout(() => searchEl.dispatchEvent(new Event("input")), 0);
+  }
 }
 
 function getInventoryMap() {
@@ -2487,7 +2505,10 @@ onAuthStateChanged(auth, async (user) => {
       function filterAndRender() {
         const sFilter = document.getElementById("filterStatus")?.value || "";
         const dFilter = document.getElementById("filterDate")?.value || "";
-        const search  = (document.getElementById("searchInput")?.value || "").toLowerCase();
+        // ===== FIX: lowercase the search term ONCE so every comparison is
+        // case-insensitive regardless of what the user (or a deep-link from
+        // the Borrowed In vendor header) typed.
+        const search = (document.getElementById("searchInput")?.value || "").trim().toLowerCase();
 
         if (!tbody) return;
         tbody.innerHTML = "";
@@ -2498,7 +2519,16 @@ onAuthStateChanged(auth, async (user) => {
 
           let matchesStatus = !sFilter || (sFilter === "overbooked" ? isOverbooked : currentStatus === sFilter);
           const matchesDate   = !dFilter || data.event?.date === dFilter;
-          const matchesSearch = !search || data.client?.name?.toLowerCase().includes(search);
+
+          // ===== FIX: case-insensitive search across client name AND every
+          // item's supplier. This is what makes the ?vendor=<name> deep-link
+          // from rental-to-rental.html land on the right bookings regardless
+          // of casing differences between the two pages.
+          const matchesSearch = !search ||
+            (data.client?.name || "").toLowerCase().includes(search) ||
+            (data.items || []).some(i =>
+              (i.supplier || "").toLowerCase().includes(search)
+            );
 
           return matchesStatus && matchesDate && matchesSearch;
         });
@@ -2520,6 +2550,13 @@ onAuthStateChanged(auth, async (user) => {
       if (sF) sF.onchange = filterAndRender;
       if (dF) dF.onchange = filterAndRender;
       if (sI) sI.oninput = filterAndRender;
+
+      // ===== FIX: if a ?vendor= deep-link landed on this page, populate the
+      // search box BEFORE the first filterAndRender() runs so the table is
+      // already filtered on the first paint — no flash of unfiltered rows.
+      if (presetVendor && sI && sI.value !== presetVendor) {
+        sI.value = presetVendor;
+      }
 
       filterAndRender();
 

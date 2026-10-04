@@ -4,6 +4,60 @@ import { getBusinessIdByEmail } from "./shared.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+const BRAND = "#800080";
+const BRAND_HOVER_BG = "#f3e8ff";
+
+/**
+ * Which dropdown item should be "active" — based on the current page's
+ * filename. Returns null if the current page isn't in the menu.
+ */
+function getActiveDropdownKey() {
+  const path = window.location.pathname.toLowerCase();
+  if (path.endsWith("dashboard.html") || path === "/" || path.endsWith("index.html")) return "dashboard";
+  if (path.endsWith("analytics.html")) return "analytics";
+  if (path.endsWith("settings.html")) return "settings";
+  if (path.endsWith("public.html")) return "public";
+  if (path.endsWith("ai-assistant.html")) return "ai";
+  return null;
+}
+
+/**
+ * Build one dropdown row (anchor). Handles hover + active styling in
+ * one place so every row behaves identically.
+ */
+function dropdownRow({ key, href, icon, label, activeKey }) {
+  const isActive = key === activeKey;
+
+  const baseStyle = `
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    font-size: 0.875rem;
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s;
+    border-left: 3px solid transparent;
+    color: #374151;
+    background: transparent;
+  `;
+
+  const activeStyle = `
+    color: ${BRAND};
+    background: ${BRAND_HOVER_BG};
+    font-weight: 700;
+    border-left: 3px solid ${BRAND};
+  `;
+
+  return `
+    <a href="${href}"
+       data-dropdown-key="${key}"
+       style="${isActive ? activeStyle : baseStyle}"
+       onmouseover="this.style.backgroundColor='${BRAND_HOVER_BG}'; this.style.color='${BRAND}';"
+       onmouseout="if(!this.dataset.active){this.style.backgroundColor='transparent'; this.style.color='#374151';}">
+      <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">${icon}</span>
+      ${label}
+    </a>`;
+}
+
 async function initAvatarAndDropdown() {
   const avatarEl = document.getElementById("user-avatar");
   if (!avatarEl) return;
@@ -19,55 +73,47 @@ async function initAvatarAndDropdown() {
   // 2. Create the dropdown element if it doesn't exist
   let dropdownEl = document.getElementById("user-dropdown");
   if (!dropdownEl) {
+    const activeKey = getActiveDropdownKey();
+
     dropdownEl = document.createElement("div");
     dropdownEl.id = "user-dropdown";
     dropdownEl.className = "hidden absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden transform origin-top-right transition-all";
-    
-    // Apply inline fallback styles to ensure premium styling even if Tailwind is delayed
+
+    // Inline fallback styling (works even if Tailwind is delayed)
     dropdownEl.style.position = "absolute";
     dropdownEl.style.right = "0";
-    dropdownEl.style.marginTop = "8px";
-    dropdownEl.style.width = "192px";
+    dropdownEl.style.paddingTop = "40px";
+    dropdownEl.style.width = "200px";
     dropdownEl.style.backgroundColor = "#ffffff";
     dropdownEl.style.borderRadius = "12px";
     dropdownEl.style.boxShadow = "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)";
     dropdownEl.style.border = "1px solid #f1f5f9";
     dropdownEl.style.zIndex = "999";
     dropdownEl.style.overflow = "hidden";
+    dropdownEl.style.display = "none"; // starts closed; toggled by click handler
 
     dropdownEl.innerHTML = `
       <div style="padding: 4px 0;">
-        <a href="dashboard.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#800080';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
-          <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">home</span>
-          Dashboard
-        </a>
+        ${dropdownRow({ key: "dashboard", href: "dashboard.html", icon: "home", label: "Dashboard", activeKey })}
+       ${dropdownRow({ key: "ai", href: "ai-assistant.html", icon: "chat", label: "AI Assistant", activeKey })}
 
+        ${dropdownRow({ key: "analytics", href: "analytics.html", icon: "bar_chart", label: "Analytics", activeKey })}
+        ${dropdownRow({ key: "public", href: "public.html", icon: "public", label: "Public Profile", activeKey })}
+                ${dropdownRow({ key: "settings", href: "settings.html", icon: "settings", label: "Settings", activeKey })}
 
-<a href="ai-assistant.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#800080';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
-          <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">chat</span>
-          AI Assistant
-        </a>
-
-
-        
-                <a href="analytics.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#800080';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
-          <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">bar_chart</span>
-          Analytics
-        </a>
-
-
-        <a href="settings.html" style="display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #374151; text-decoration: none; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f3e8ff'; this.style.color='#800080';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#374151';">
-          <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">settings</span>
-          Settings
-        </a>
-        
         <div style="height: 1px; background-color: #f1f5f9; margin: 4px 0;"></div>
+
         <button id="logoutBtn" style="width: 100%; display: flex; align-items: center; padding: 10px 16px; font-size: 0.875rem; color: #e71a1a; border: none; background: transparent; text-align: left; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#fef2f2';" onmouseout="this.style.backgroundColor='transparent';">
           <span class="material-symbols-outlined" style="margin-right: 12px; font-size: 1.25rem;">logout</span>
           Logout
         </button>
       </div>
     `;
+
+    // Mark the active row so onmouseout knows not to reset it
+    const activeRow = dropdownEl.querySelector(`a[data-dropdown-key="${activeKey}"]`);
+    if (activeRow) activeRow.dataset.active = "true";
+
     if (isWrapped) {
       parent.after(dropdownEl);
     } else {
@@ -78,7 +124,8 @@ async function initAvatarAndDropdown() {
   // 3. Handle click event on avatar
   avatarEl.addEventListener("click", (e) => {
     e.stopPropagation();
-    // Close other modals if any (like notifModal in dashboard)
+
+    // Close other modals if any (e.g. notifModal on dashboard)
     const notifModal = document.getElementById("notifModal");
     if (notifModal) notifModal.style.display = "none";
 
@@ -90,8 +137,6 @@ async function initAvatarAndDropdown() {
       dropdownEl.style.display = "none";
     }
   });
-
-
 
   // 4. Close dropdown on click outside
   window.addEventListener("click", (e) => {
@@ -118,8 +163,8 @@ async function initAvatarAndDropdown() {
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
       const pathname = window.location.pathname;
-      if (!pathname.includes("signup.html") && 
-          !pathname.includes("log-in.html") && 
+      if (!pathname.includes("signup.html") &&
+          !pathname.includes("log-in.html") &&
           !pathname.includes("profile.html") &&
           !pathname.includes("terms.html") &&
           !pathname.includes("reset.html") &&

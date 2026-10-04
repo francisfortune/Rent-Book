@@ -9,8 +9,12 @@
 //      cascades — activeBookingsCache is set once and reused.
 //   5. All notifications go through a single sendInventoryNotification()
 //      helper that logs errors instead of crashing.
-//   6. Overbooked panel now shows ANY booking with borrowed / not-in-inventory
+//   6. Overbooked panel shows ANY booking with borrowed / not-in-inventory
 //      items (matching the booking modal's "Vendor / Borrowed Items" block).
+//   7. Overbooked panel ALSO shows rental-to-rental batches whose items[]
+//      contain any shortage > 0 — i.e. lend-outs that exceeded stock.
+//      This mirrors the "Overbooked" badge on rental-to-rental.html so
+//      both pages agree on what "overbooked" means.
 // ---------------------------------------------------------------------------
 
 import { auth, db } from "./firebase.js";
@@ -102,6 +106,7 @@ let lastRenderedItems = { filtered: [], all: [] };
 // Track every active listener so we can clean up if auth state changes.
 let unsubInventory = null;
 let unsubOverbooked = null;
+let unsubLentOutOverbooked = null;
 
 /* =========================================================
    HELPERS
@@ -134,6 +139,18 @@ function getBorrowedItems(booking) {
       (i.supplier && String(i.supplier).trim() !== "") ||
       i.isCustom
   );
+}
+
+/**
+ * A rental-to-rental batch is "overbooked" if any of its items[] has
+ * shortage > 0. Same rule as rental-to-rental.js's isRentalOverbooked().
+ * Only batches with an items[] array count — legacy one-doc-per-item docs
+ * don't have shortage fields, so they're skipped.
+ */
+function isLentOutOverbooked(batch) {
+  if (!batch || batch.status === "returned" || batch.status === "cancelled") return false;
+  if (!Array.isArray(batch.items)) return false;
+  return batch.items.some((i) => Number(i.shortage || 0) > 0);
 }
 
 /* =========================================================
@@ -247,9 +264,16 @@ function renderInventory(filteredItems, allItems) {
 
 /* =========================================================
    OVERBOOKED PANEL
-   Shows ANY booking that has borrowed or not-in-inventory items,
-   whether or not isBookingOverbooked() flags it. This matches what
-   the booking modal displays in its "Vendor / Borrowed Items" block.
+   Two sources feed this panel:
+     1. Bookings   — items borrowed from a vendor (shortage > 0,
+        supplier set, or isCustom). Same rule as bookings.js's
+        "Vendor / Borrowed Items" block.
+     2. Lend-outs  — externalRentals batches whose items[] have
+        shortage > 0 (you lent more than you had).
+        Same rule as rental-to-rental.js's Overbooked badge.
+
+   Both are merged into one list. Rows are labelled with a
+   "Booking" or "Lent Out" pill and routed accordingly.
 ========================================================= */
 function listenToOverbooked(businessId) {
   const overbookedList =
@@ -258,31 +282,20 @@ function listenToOverbooked(businessId) {
 
   if (!overbookedList) return;
 
-  // Clean up prior subscription if any
+  // Clean up prior subscriptions if any
   if (unsubOverbooked) unsubOverbooked();
+  if (unsubLentOutOverbooked) unsubLentOutOverbooked();
 
-  const ref = collection(db, "businesses", businessId, "bookings");
+  // Shared state written by both listeners, rendered together.
+  let bookingRows = [];
+  let lendRows = [];
 
-  unsubOverbooked = onSnapshot(ref, (snap) => {
-    // Keep the shared active-bookings cache fresh.
-    activeBookingsCache = snap.docs
-      .map((d) => ({ id: d.id, ...d.data() }))
-      .filter((b) => b.status !== "returned" && b.status !== "cancelled");
-
-    if (lastRenderedItems.all.length) {
-      renderInventory(lastRenderedItems.filtered, lastRenderedItems.all);
-    }
-
+  function renderMergedOverbooked() {
     overbookedList.innerHTML = "";
 
-    const allBookings = snap.docs
-      .map((d) => ({ id: d.id, ...d.data() }))
-      .filter((b) => b.status !== "returned" && b.status !== "cancelled");
+    const all = [...bookingRows, ...lendRows];
 
-    // Broadened: any booking with borrowed OR not-in-inventory items.
-    const relevant = allBookings.filter(hasBorrowedOrCustomItems);
-
-    if (!relevant.length) {
+    if (!all.length) {
       overbookedList.innerHTML = `
         <p class="text-center text-gray-400 py-6 italic text-sm">
           No overbooked items 🎉
@@ -291,52 +304,170 @@ function listenToOverbooked(businessId) {
       return;
     }
 
-    relevant.forEach((b) => {
-      const borrowedItems = getBorrowedItems(b).map((i) => {
-        const vendor = i.supplier || "Unknown Vendor";
-        const qty = Number(i.shortage || i.qty || 0);
-        const customTag = i.isCustom ? " (not in inventory)" : "";
-        return `• ${qty} × ${i.name}${customTag}
-          <span class="text-purple-700 font-bold">[${vendor}]</span>`;
-      });
+    // Newest-first sort on the best timestamp we have.
+    all.sort((a, b) => (b._sortTs || 0) - (a._sortTs || 0));
 
+    all.forEach((row) => {
       const div = document.createElement("div");
       div.className =
         "p-4 mb-3 bg-white border border-gray-100 rounded-2xl shadow-sm border-l-4 border-l-orange-500 transition-all hover:shadow-md cursor-pointer";
 
-      div.innerHTML = `
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="font-bold text-gray-900 text-sm">
-              ${b.client?.name || "Client"}
-            </p>
-            <p class="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
-              <span class="material-symbols-outlined" style="font-size: 14px;">calendar_today</span>
-              ${b.event?.date || "No Date"}
-            </p>
-            <div class="mt-1">${renderLifecycleBadge(b, "text-[9px]")}</div>
-          </div>
-          <span class="bg-orange-100 text-orange-600 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
-            Shortage
-          </span>
-        </div>
+      if (row.kind === "booking") {
+        // Same layout as the original booking-sourced rows.
+        const borrowedItemsHtml = row.items
+          .map((i) => {
+            const vendor = i.supplier || "Unknown Vendor";
+            const qty = Number(i.shortage || i.qty || 0);
+            const customTag = i.isCustom ? " (not in inventory)" : "";
+            return `• ${qty} × ${i.name}${customTag}
+              <span class="text-purple-700 font-bold">[${vendor}]</span>`;
+          })
+          .join("<br>");
 
-        <div class="bg-purple-50 border border-purple-100 rounded-xl p-3 mt-3">
-          <p class="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-1">
-            Vendor / Borrowed Items
-          </p>
-          <div class="text-[11px] text-gray-700 leading-relaxed">
-            ${borrowedItems.join("<br>")}
+        div.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="font-bold text-gray-900 text-sm">
+                ${row.clientName}
+              </p>
+              <p class="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
+                <span class="material-symbols-outlined" style="font-size: 14px;">calendar_today</span>
+                ${row.eventDate}
+              </p>
+              <div class="mt-1">${row.lifecycleBadge || ""}</div>
+            </div>
+            <div class="flex flex-col items-end gap-1">
+              <span class="bg-orange-100 text-orange-600 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+                Shortage
+              </span>
+              <span class="bg-gray-100 text-gray-600 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+                Booking
+              </span>
+            </div>
           </div>
-        </div>
-      `;
+
+          <div class="bg-purple-50 border border-purple-100 rounded-xl p-3 mt-3">
+            <p class="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-1">
+              Vendor / Borrowed Items
+            </p>
+            <div class="text-[11px] text-gray-700 leading-relaxed">
+              ${borrowedItemsHtml}
+            </div>
+          </div>
+        `;
+      } else {
+        // Lend-out row (from externalRentals, batch shape).
+        const shortItemsHtml = row.items
+          .filter((i) => Number(i.shortage || 0) > 0)
+          .map((i) => {
+            const qty = Number(i.qty || 0);
+            const shortage = Number(i.shortage || 0);
+            const free = Number(i.availableAtRental || 0);
+            return `• ${qty} × ${i.name}
+              <span class="text-orange-700 font-bold">[short by ${shortage}, only ${free} free]</span>`;
+          })
+          .join("<br>");
+
+        div.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="font-bold text-gray-900 text-sm">
+                ${row.rentedTo}
+              </p>
+              <p class="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
+                <span class="material-symbols-outlined" style="font-size: 14px;">swap_horiz</span>
+                Lent on ${row.rentalDate} · Return ${row.returnDate}
+              </p>
+            </div>
+            <div class="flex flex-col items-end gap-1">
+              <span class="bg-orange-100 text-orange-600 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+                Shortage
+              </span>
+              <span class="bg-purple-100 text-purple-700 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+                Lent Out
+              </span>
+            </div>
+          </div>
+
+          <div class="bg-purple-50 border border-purple-100 rounded-xl p-3 mt-3">
+            <p class="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-1">
+              Over-lent Items
+            </p>
+            <div class="text-[11px] text-gray-700 leading-relaxed">
+              ${shortItemsHtml}
+            </div>
+          </div>
+        `;
+      }
 
       div.onclick = () => {
-        window.location.href = `bookings.html?highlight=${b.id}`;
+        if (row.kind === "booking") {
+          window.location.href = `bookings.html?highlight=${row.id}`;
+        } else {
+          window.location.href = `rental-to-rental.html`;
+        }
       };
 
       overbookedList.appendChild(div);
     });
+  }
+
+  /* ---- Source 1: bookings ---- */
+  const bookingsRef = collection(db, "businesses", businessId, "bookings");
+
+  unsubOverbooked = onSnapshot(bookingsRef, (snap) => {
+    // Keep the shared active-bookings cache fresh.
+    activeBookingsCache = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .filter((b) => b.status !== "returned" && b.status !== "cancelled");
+
+    // Re-render inventory (availability map depends on active bookings).
+    if (lastRenderedItems.all.length) {
+      renderInventory(lastRenderedItems.filtered, lastRenderedItems.all);
+    }
+
+    bookingRows = activeBookingsCache
+      .filter(hasBorrowedOrCustomItems)
+      .map((b) => {
+        const ts = b.createdAt?.toDate?.()?.getTime?.() || 0;
+        return {
+          kind: "booking",
+          id: b.id,
+          clientName: b.client?.name || "Client",
+          eventDate: b.event?.date || "No Date",
+          items: getBorrowedItems(b),
+          lifecycleBadge: renderLifecycleBadge(b, "text-[9px]"),
+          _sortTs: ts
+        };
+      });
+
+    renderMergedOverbooked();
+  });
+
+  /* ---- Source 2: rental-to-rental lend-outs ---- */
+  const lendRef = collection(db, "businesses", businessId, "externalRentals");
+
+  unsubLentOutOverbooked = onSnapshot(lendRef, (snap) => {
+    const batches = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+    lendRows = batches
+      .filter(isLentOutOverbooked)
+      .map((batch) => {
+        const ts = batch.createdAt?.toDate?.()?.getTime?.() || 0;
+        return {
+          kind: "lend",
+          id: batch.id,
+          rentedTo: batch.rentedTo || "Business",
+          rentalDate: batch.rentalDate || "—",
+          returnDate: batch.returnDate || "—",
+          items: batch.items,
+          _sortTs: ts
+        };
+      });
+
+    renderMergedOverbooked();
+  }, (err) => {
+    console.warn("[Inventory] lend-out overbooked subscription failed:", err);
   });
 }
 
