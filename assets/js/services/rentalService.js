@@ -364,3 +364,68 @@ export function onBorrowedItemsChange(businessId, callback) {
         console.error("Error listening to borrowed items changes:", error);
     });
 }
+
+
+
+
+
+
+/* =========================================================
+   BORROWED-IN DERIVED FROM BOOKINGS  (read-only view)
+   ----------------------------------------------------------
+   Flattens every "borrowed from a vendor" item across bookings
+   into one row per item. Status mirrors the underlying booking.
+
+   Nothing here writes. Bookings remain the source of truth.
+========================================================= */
+export async function getBorrowedInFromBookings(businessId) {
+    try {
+        const bookingsRef = collection(db, "businesses", businessId, "bookings");
+        const snap = await getDocs(bookingsRef);
+        const rows = [];
+
+        snap.docs.forEach((docSnap) => {
+            const b = docSnap.data();
+            const bookingId = docSnap.id;
+            const bookingStatus = b.status || "active";
+
+            (b.items || []).forEach((it, idx) => {
+                const shortage = Number(it.shortage || 0);
+                const supplier = (it.supplier || "").trim();
+                const isCustom = !!it.isCustom;
+
+                const isBorrowed =
+                    shortage > 0 || supplier !== "" || isCustom;
+                if (!isBorrowed) return;
+
+                const qty = Number(it.qty || 0);
+                const borrowedQty = shortage > 0 ? shortage : qty;
+
+                rows.push({
+                    id: `${bookingId}::${idx}`,
+                    bookingId,
+                    itemName: it.name || "Unknown",
+                    quantity: borrowedQty,
+                    vendor: supplier || "Unknown vendor",
+                    isCustom,
+                    bookingStatus,
+                    clientName: b.client?.name || "Client",
+                    eventDate: b.event?.date || "",
+                    returnDate: b.event?.returnDate || "",
+                    createdAt: b.createdAt
+                });
+            });
+        });
+
+        rows.sort((a, b) => {
+            const ta = a.createdAt?.toDate?.()?.getTime?.() || 0;
+            const tb = b.createdAt?.toDate?.()?.getTime?.() || 0;
+            return tb - ta;
+        });
+
+        return rows;
+    } catch (error) {
+        console.error("Error deriving borrowed-in from bookings:", error);
+        return [];
+    }
+}

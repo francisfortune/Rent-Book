@@ -11,8 +11,11 @@ import { getFullAnalytics, buildRange } from "./services/analytics-service.js";
 
 let currentBusinessId = null;
 let currentPreset = "this_month"; // default
+let currentMonthKey = null;       // "2026-08" when a specific month is picked
 let revenueChart = null;
 let lastData = null;
+
+const MONTHS_BACK = 24;           // how far back the month picker goes
 
 /* =========================
    FORMATTERS
@@ -52,6 +55,28 @@ function sinceLabel(daysSince) {
   return `${daysSince} days ago`;
 }
 
+/**
+ * Build {from, to} Date objects for a specific calendar month.
+ * @param {string} monthKey — "YYYY-MM"
+ */
+function buildMonthRange(monthKey) {
+  const [y, m] = monthKey.split("-").map(Number);
+  const from = new Date(y, m - 1, 1, 0, 0, 0, 0);
+  const to = new Date(y, m, 0, 23, 59, 59, 999); // last day of that month
+  return { from, to };
+}
+
+/**
+ * Human label for a month key, e.g. "2026-08" → "August 2026"
+ */
+function monthLabel(monthKey) {
+  const [y, m] = monthKey.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleString("en-NG", {
+    month: "long",
+    year: "numeric"
+  });
+}
+
 /* =========================
    RENDER: MONEY HEADER
 ========================= */
@@ -60,7 +85,6 @@ function renderMoneyHeader(data) {
 
   setText("bigRevenue", money(totalRevenue));
 
-  // Header line: change % and previous revenue
   const header = document.getElementById("bigRevenueHeader");
   if (header) {
     if (changePct === null || previousRevenue === 0) {
@@ -213,7 +237,6 @@ function renderDamages(data) {
       : "Fully covered by caution fees";
   }
 
-  // By item table
   const itemBody = document.getElementById("damageByItemTableBody");
   if (itemBody) {
     if (!d.byItem.length) {
@@ -229,7 +252,6 @@ function renderDamages(data) {
     }
   }
 
-  // By client table
   const clientBody = document.getElementById("damageByClientTableBody");
   if (clientBody) {
     if (!d.byClient.length) {
@@ -252,7 +274,6 @@ async function renderRevenueChart(businessId) {
   const canvas = document.getElementById("revenueChart");
   if (!canvas) return;
 
-  // We don't use the "from/to" range for the chart — always last 12 months.
   const { getMonthlyRevenue } = await import("./services/analytics-service.js");
   const monthly = await getMonthlyRevenue(businessId, { months: 12 });
   const labels = monthly.map(m => m.label);
@@ -306,18 +327,113 @@ async function renderRevenueChart(businessId) {
 }
 
 /* =========================
+   MONTH PICKER
+========================= */
+function buildMonthPickerOptions() {
+  const now = new Date();
+  const options = [];
+  for (let i = 0; i < MONTHS_BACK; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    options.push({ key, label: monthLabel(key) });
+  }
+  return options;
+}
+
+function injectMonthPicker() {
+  // Find the range-buttons container
+  const rangeWrap = document.querySelector(".range-buttons");
+  if (!rangeWrap) return;
+
+  // Skip if already injected (defensive against double-boot)
+  if (document.getElementById("monthPicker")) return;
+
+  const wrap = document.createElement("div");
+  wrap.style.cssText = "display:flex; align-items:center; gap:8px; margin-left:auto;";
+
+ const label = document.createElement("span");
+label.textContent = "Or pick a month:";
+label.style.cssText = "font-size:12px; font-weight:700; color:white; white-space:nowrap; background:#800080; padding:8px 4px; border-radius:8px;";
+
+
+
+
+const select = document.createElement("select");
+  select.id = "monthPicker";
+  select.style.cssText = `
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    color: #6b7280;
+    cursor: pointer;
+    font-family: inherit;
+    outline: none;
+    min-width: 160px;
+  `;
+
+  // Placeholder
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "— Pick a month —";
+  select.appendChild(placeholder);
+
+  buildMonthPickerOptions().forEach(({ key, label: text }) => {
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = text;
+    select.appendChild(opt);
+  });
+
+  select.addEventListener("change", () => {
+    const val = select.value;
+    if (!val) {
+      // User cleared the picker — go back to the default preset
+      currentMonthKey = null;
+      currentPreset = "this_month";
+      document.querySelectorAll("[data-preset]").forEach(b => {
+        b.classList.toggle("range-btn-active", b.dataset.preset === "this_month");
+      });
+      loadAndRender();
+      return;
+    }
+    currentMonthKey = val;
+
+    // Deactivate preset buttons
+    document.querySelectorAll("[data-preset]").forEach(b => {
+      b.classList.remove("range-btn-active");
+    });
+
+    loadAndRender();
+  });
+
+  wrap.appendChild(label);
+  wrap.appendChild(select);
+  rangeWrap.appendChild(wrap);
+
+  // On narrow screens, let it wrap below the preset buttons
+  rangeWrap.style.flexWrap = "wrap";
+}
+
+/* =========================
    LOAD + RENDER EVERYTHING
 ========================= */
 async function loadAndRender() {
   if (!currentBusinessId) return;
 
-  // Show loading state
   setText("bigRevenue", "…");
 
-  const { from, to } = buildRange(currentPreset);
+  let range;
+  if (currentMonthKey) {
+    range = buildMonthRange(currentMonthKey);
+  } else {
+    range = buildRange(currentPreset);
+  }
 
   try {
-    const data = await getFullAnalytics(currentBusinessId, { from, to });
+    const data = await getFullAnalytics(currentBusinessId, range);
     lastData = data;
 
     renderMoneyHeader(data);
@@ -327,7 +443,8 @@ async function loadAndRender() {
     renderTopItems(data.topItems);
     renderDamages(data);
 
-    console.log(`[Analytics] ✅ Rendered ${data.bookingCountInRange} bookings`);
+    const periodLabel = currentMonthKey ? monthLabel(currentMonthKey) : currentPreset;
+    console.log(`[Analytics] ✅ Rendered ${data.bookingCountInRange} bookings for ${periodLabel}`);
   } catch (err) {
     console.error("[Analytics] Failed to load:", err);
     setText("bigRevenue", "—");
@@ -342,10 +459,20 @@ function wireRangeButtons() {
   buttons.forEach(btn => {
     btn.addEventListener("click", () => {
       const preset = btn.dataset.preset;
-      if (preset === currentPreset) return;
-      currentPreset = preset;
 
-      // Update active styling
+      // Any preset click clears the month picker
+      currentMonthKey = null;
+      const picker = document.getElementById("monthPicker");
+      if (picker) picker.value = "";
+
+      if (preset === currentPreset) {
+        // Still ensure styling is right, then reload if user had a month active
+        buttons.forEach(b => b.classList.toggle("range-btn-active", b.dataset.preset === preset));
+        loadAndRender();
+        return;
+      }
+
+      currentPreset = preset;
       buttons.forEach(b => {
         b.classList.toggle("range-btn-active", b.dataset.preset === preset);
       });
@@ -374,6 +501,9 @@ onAuthStateChanged(auth, async (user) => {
 
   // Render chart once (it fetches its own 12-month data)
   await renderRevenueChart(currentBusinessId);
+
+  // Inject the month picker into the range-buttons row
+  injectMonthPicker();
 
   // Load everything for the default preset
   wireRangeButtons();

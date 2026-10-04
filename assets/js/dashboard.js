@@ -1,5 +1,6 @@
 import { auth, db } from "./firebase.js";
 import { sendPush } from "./onesignal.js";
+import { markNotificationReadAndRedirect, deleteNotificationForMe } from "./notification-helpers.js";
 import { getBusinessIdByEmail } from "./shared.js";
 
 
@@ -358,7 +359,7 @@ function triggerNotificationAlert() {
 
 function listenToNotifications(businessId) {
   const notifRef = collection(db, "businesses", businessId, "notifications");
-  const q = query(notifRef, orderBy("createdAt", "desc"), limit(30));
+  const q = query(notifRef, orderBy("createdAt", "desc"), limit(20));
 
   const dot = document.getElementById("notifDot");
   const notifList = document.getElementById("notifList");
@@ -445,76 +446,14 @@ function listenToNotifications(businessId) {
   const btn = document.getElementById("notifBtn");
   if (btn && modal) {
     btn.onclick = () => {
-      modal.style.display = modal.style.display === "none" ? "block" : "none";
+modal.style.display = modal.style.display === "none" ? "flex" : "none";
     };
   }
 }
-// DELETE (PER USER ONLY)
-window.deleteNotification = async function(businessId, notifId) {
-  try {
-    const user = auth.currentUser;
-    if (!user) return;
-    const notifRef = doc(db, "businesses", businessId, "notifications", notifId);
-    await updateDoc(notifRef, { deletedFor: arrayUnion(user.uid) });
-  } catch (e) {
-    console.error("Delete notification error:", e);
-  }
-};
+
 
 // MARK AS READ + REDIRECT
-window.markNotificationReadAndRedirect = async function(businessId, notifId, type, bookingId) {
-  try {
-    const notifRef = doc(db, "businesses", businessId, "notifications", notifId);
-const user = auth.currentUser;
 
-await updateDoc(notifRef, {
-  readBy: arrayUnion(user.uid)
-});
-    const modal = document.getElementById("notifModal");
-    if (modal) modal.style.display = "none";
-
-    let targetPage = "dashboard.html";
-
-    // ✅ BOOKINGS (covers ALL booking types)
-    if (type.includes("booking")) {
-      targetPage = bookingId
-        ? `bookings.html?highlight=${bookingId}`
-        : "bookings.html";
-    }
-
-    // ✅ ADD PAGE
-    else if (type === "add") {
-      targetPage = "add.html";
-    }
-
-    // ✅ INVENTORY PAGE
-    else if (type === "inventory") {
-      targetPage = "inventory.html";
-    }
-
-      // ✅ INVENTORY PAGE
-    else if (type === "inventory") {
-      targetPage = "settings.html";
-    }
-
-    else if (type === "welcome") {
-  targetPage = "dashboard.html";
-}
-
-    // SETTINGS PAGE (ROBUST)
-else if (String(type).toLowerCase() === "settings") {
-  targetPage = "settings.html";
-}
-   if (targetPage) {
-  window.location.href = targetPage;
-} else {
-  console.warn("No page matched for type:", type);
-}
-
-  } catch (e) {
-    console.error("Notification redirect error:", e);
-  }
-};
 
 // --- Avatar Dropdown Logic handled by avatar.js ---
 const notifBtn = document.getElementById('notifBtn');
