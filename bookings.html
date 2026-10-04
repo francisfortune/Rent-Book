@@ -1144,6 +1144,82 @@ table tr th {
         padding: 0 20px 80px 20px; /* Top padding set to 0 */
     }
 }
+/* ============================================
+   FILTER DROPDOWNS — option + optgroup styling
+   Native selects cap how far CSS can go — hover/selected
+   highlight inside the popup is OS-controlled. But we CAN
+   style resting colors, optgroup labels, and the select box.
+============================================ */
+.filters select {
+    color: #1f2937;
+    font-weight: 600;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23800080' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+    transition: border-color .15s, box-shadow .15s;
+}
+
+.filters select:hover {
+    border-color: #800080;
+}
+
+.filters select:focus {
+    outline: none;
+    border-color: #800080;
+    box-shadow: 0 0 0 3px rgba(128, 0, 128, 0.12);
+}
+
+/* Options at rest — most browsers respect these */
+.filters select option {
+    font-weight: 600;
+    color: #1f2937;
+    background: #ffffff;
+    padding: 8px 12px;
+}
+
+/* Optgroup labels (if you ever add grouped options) */
+.filters select optgroup {
+    font-weight: 800;
+    font-style: normal;
+    color: #800080;
+    background: #faf5ff;
+}
+
+/* Best-effort selected option — some browsers ignore this,
+   but Chrome and Edge on desktop will honor it in most cases. */
+.filters select option:checked {
+    background: #800080 linear-gradient(0deg, #800080 0%, #800080 100%);
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.filters input[type="text"] {
+    color: #1f2937;
+    font-weight: 500;
+    transition: border-color .15s, box-shadow .15s;
+}
+
+.filters input[type="text"]:hover {
+    border-color: #800080;
+}
+
+.filters input[type="text"]:focus {
+    outline: none;
+    border-color: #800080;
+    box-shadow: 0 0 0 3px rgba(128, 0, 128, 0.12);
+}
+
+/* Match the date input's focus state too */
+.filters input[type="date"]:focus {
+    outline: none;
+    border-color: #800080;
+    box-shadow: 0 0 0 3px rgba(128, 0, 128, 0.12);
+}
 
 
     </style>

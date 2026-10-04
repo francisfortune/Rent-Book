@@ -20,7 +20,7 @@
     <!-- ✅ Then your module -->
     <script type="module" src="assets/js/onesignal.js" defer></script>
 
-    <!-- Chart.js for the revenue chart -->
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
     <!-- FAVICON -->
@@ -173,7 +173,6 @@
             left: 80px;
         }
 
-        /* Full Width Topbar */
         .topbar {
             position: sticky;
             top: 0;
@@ -188,11 +187,6 @@
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
             z-index: 100;
             gap: 10px;
-        }
-
-        .main.active .topbar {
-            left: 0;
-            width: 100%;
         }
 
         .toggle {
@@ -214,11 +208,6 @@
             color: #2d3748;
         }
 
-        .page-title ion-icon {
-            font-size: 1.5rem;
-            color: purple;
-        }
-
         .page-name {
             font-size: 1.5rem;
             font-weight: 600;
@@ -233,10 +222,6 @@
             font-weight: 700;
         }
 
-        .mobile-brand .logo {
-            font-size: 1.5rem;
-        }
-
         .user {
             position: relative;
             width: 40px;
@@ -244,15 +229,6 @@
             border-radius: 50%;
             overflow: hidden;
             cursor: pointer;
-        }
-
-        .user img {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
         }
 
         /* ================ Dashboard Content ================ */
@@ -267,7 +243,7 @@
             padding: 30px;
             border-radius: 0 0 15px 15px;
             margin-top: 0;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             color: white;
             text-align: center;
         }
@@ -283,9 +259,6 @@
             opacity: 0.95;
         }
 
-        /* ============================================
-           OVERFLOW & FIXED BOTTOM NAV
-        ============================================ */
         html,
         body,
         .container,
@@ -310,7 +283,7 @@
         }
 
         /* ============================================
-           ANALYTICS CARDS  (matches .form-card style)
+           CARDS
         ============================================ */
         .card {
             background: #fff;
@@ -387,12 +360,25 @@
             opacity: 0.95;
         }
 
-        /* Range buttons */
+        /* ============================================
+           TOP CONTROLS — shared range picker above tabs
+        ============================================ */
+        .top-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            background: #fff;
+            border-radius: 12px;
+            padding: 12px 16px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 14px;
+        }
+
         .range-buttons {
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
-            margin-bottom: 22px;
         }
 
         .range-buttons button {
@@ -419,12 +405,192 @@
             border-color: purple !important;
         }
 
+        .month-picker-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .month-picker-wrap span {
+            font-size: 12px;
+            font-weight: 700;
+            color: #6b7280;
+            white-space: nowrap;
+        }
+
+        #monthPicker {
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            color: #6b7280;
+            cursor: pointer;
+            font-family: inherit;
+            outline: none;
+            min-width: 160px;
+        }
+
+        /* ============================================
+           TAB STRIP
+        ============================================ */
+        .analytics-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 22px;
+            border-bottom: 2px solid #ece6ec;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .analytics-tab {
+            padding: 10px 20px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #9ca3af;
+            background: none;
+            border: none;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            font-family: inherit;
+            transition: color .15s;
+            white-space: nowrap;
+        }
+
+        .analytics-tab:hover {
+            color: #6b21a5;
+        }
+
+        .analytics-tab.active {
+            color: purple;
+            border-bottom-color: purple;
+        }
+
+        /* ============================================
+           ALL REVENUE TAB — hero header with split bar
+        ============================================ */
+        .hero-header {
+            background: linear-gradient(135deg, #800080 0%, #4d004d 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 32px 32px 26px;
+            box-shadow: 0 10px 30px rgba(128, 0, 128, 0.28);
+            margin-bottom: 22px;
+        }
+
+        .hero-header .hero-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .15em;
+            opacity: .85;
+            margin-bottom: 8px;
+        }
+
+        .hero-header .hero-total {
+            font-size: 2.75rem;
+            font-weight: 900;
+            line-height: 1.05;
+            margin-bottom: 10px;
+            word-break: break-word;
+        }
+
+        .hero-header .hero-sub {
+            font-size: 14px;
+            opacity: .95;
+            margin-bottom: 20px;
+        }
+
+        /* Split bar */
+        .split-bar {
+            display: flex;
+            height: 12px;
+            width: 100%;
+            border-radius: 999px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.15);
+            margin-bottom: 16px;
+        }
+
+        .split-bar .seg-customers {
+            background: #f0abfc;
+        }
+
+        .split-bar .seg-partners {
+            background: #86efac;
+        }
+
+        .split-bar .seg-empty {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .split-legend {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .split-legend .leg {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .split-legend .leg .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .split-legend .leg .dot.customers {
+            background: #f0abfc;
+        }
+
+        .split-legend .leg .dot.partners {
+            background: #86efac;
+        }
+
+        .split-legend .leg .meta {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .split-legend .leg .leg-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            opacity: .8;
+        }
+
+        .split-legend .leg .leg-value {
+            font-size: 1rem;
+            font-weight: 900;
+            margin-top: 2px;
+            word-break: break-word;
+        }
+
+        .split-legend .leg .leg-pct {
+            font-size: 12px;
+            font-weight: 700;
+            opacity: .75;
+            margin-left: 6px;
+        }
+
         /* Snapshot grid */
         .snapshot-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
             gap: 14px;
             margin-bottom: 25px;
+        }
+
+        .snapshot-grid.cols-4 {
+            grid-template-columns: repeat(4, 1fr);
         }
 
         .snap-card {
@@ -457,6 +623,14 @@
             font-size: 1.45rem;
             font-weight: 900;
             color: #1f2937;
+            word-break: break-word;
+        }
+
+        .snap-card .hint {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-top: 6px;
+            line-height: 1.35;
             word-break: break-word;
         }
 
@@ -556,7 +730,6 @@
             margin-top: 4px;
         }
 
-        /* Two-column damage tables */
         .damage-tables {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -574,11 +747,14 @@
         }
 
         /* ============================================
-           RESPONSIVE (mirrors add.html breakpoints)
+           RESPONSIVE
         ============================================ */
         @media (max-width: 1200px) {
             .snapshot-grid {
                 grid-template-columns: repeat(3, 1fr);
+            }
+            .snapshot-grid.cols-4 {
+                grid-template-columns: repeat(2, 1fr);
             }
         }
 
@@ -586,47 +762,37 @@
             .navigation {
                 left: -280px;
             }
-
             #brand-name-mobile {
                 visibility: hidden;
             }
-
             .navigation.active {
                 width: 280px;
                 left: 0;
             }
-
             .main {
                 width: 100%;
                 left: 0;
             }
-
             .main.active {
                 left: 280px;
             }
-
             .topbar {
                 left: 0;
                 width: 100%;
             }
-
             .main.active .topbar {
                 left: 280px;
                 width: calc(100% - 280px);
             }
-
             .dashboard {
                 padding: 0 25px 25px 25px;
             }
-
             .snapshot-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
-
             .damage-summary {
                 grid-template-columns: repeat(2, 1fr);
             }
-
             .damage-tables {
                 grid-template-columns: 1fr;
             }
@@ -637,69 +803,68 @@
                 left: 0;
                 width: 100%;
             }
-
-            .main.active .topbar {
-                left: 0;
-                width: 100%;
-            }
-
             .page-title {
                 display: none;
             }
-
             .mobile-brand {
                 display: flex;
             }
-
             .navigation {
                 width: 100%;
                 left: -100%;
                 z-index: 1000;
             }
-
             .navigation.active {
                 width: 100%;
                 left: 0;
             }
-
             .toggle {
                 display: none;
             }
-
             .main.active .toggle {
                 color: white;
                 position: fixed;
                 right: 0;
                 left: initial;
             }
-
             .dashboard {
                 padding: 0 20px 80px 20px;
             }
-
             .welcome-section {
                 padding: 20px;
                 margin-bottom: 20px;
             }
-
             .welcome-text {
                 font-size: 1.5rem;
             }
-
             .welcome-subtitle {
                 font-size: 1rem;
             }
-
             .bottom-nav {
                 display: block !important;
             }
-
             .money-header {
                 padding: 22px 24px;
             }
-
             .money-header .big {
                 font-size: 2rem;
+            }
+            .hero-header {
+                padding: 24px 20px 20px;
+            }
+            .hero-header .hero-total {
+                font-size: 2.15rem;
+            }
+            .split-legend {
+                grid-template-columns: 1fr;
+            }
+            .month-picker-wrap {
+                margin-left: 0;
+                width: 100%;
+            }
+            #monthPicker {
+                flex: 1;
+                min-width: 0;
             }
         }
 
@@ -707,53 +872,44 @@
             .welcome-text {
                 font-size: 1.3rem;
             }
-
             .welcome-subtitle {
                 font-size: 0.95rem;
             }
-
             .welcome-section {
                 padding: 15px;
             }
-
             .bottom-nav ul li a .title {
                 font-size: 0.65rem;
             }
-
             .dashboard {
                 padding: 0 15px 75px 15px;
             }
-
             .money-header {
                 padding: 18px 20px;
             }
-
             .money-header .big {
                 font-size: 1.75rem;
             }
-
+            .hero-header .hero-total {
+                font-size: 1.85rem;
+            }
             .snapshot-grid {
                 grid-template-columns: 1fr 1fr;
                 gap: 10px;
             }
-
             .snap-card {
                 padding: 14px;
             }
-
             .snap-card .value {
                 font-size: 1.2rem;
             }
-
             .damage-summary {
                 grid-template-columns: 1fr 1fr;
                 gap: 10px;
             }
-
             .card {
                 padding: 16px;
             }
-
             .range-buttons button {
                 flex: 1;
                 padding: 8px 12px;
@@ -761,9 +917,7 @@
             }
         }
 
-        /* ============================================
-           BOTTOM NAV
-        ============================================ */
+        /* ================ Bottom Nav (Mobile) ================ */
         .bottom-nav {
             display: none;
             background: white;
@@ -822,23 +976,46 @@
             }
         }
 
-        .btn {
-            position: relative;
-            padding: 8px 15px;
-            background: purple;
-            color: white;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            border: none;
-            cursor: pointer;
-        }
+#monthPicker optgroup {
+    font-weight: 800;
+    color: #4b5563;
+}
+#monthPicker option {
+    font-weight: 600;
+    color: #1f2937;
+}
+/* ============================================
+   MONTH PICKER — optgroup + option styling
+   (native selects limit how far CSS can go —
+    hover/selected highlight is OS-controlled)
+============================================ */
+#monthPicker {
+    color: #1f2937;
+}
 
-        .btn:hover {
-            background: #6b21a5;
-            transform: translateY(-2px);
-        }
+#monthPicker optgroup {
+    font-weight: 800;
+    color: #800080;
+    background: #faf5ff;
+    font-style: normal;
+}
+
+#monthPicker option {
+    font-weight: 600;
+    color: #374151;
+    background: #ffffff;
+    padding: 6px 10px;
+}
+
+/* The currently-selected option — best-effort. Some browsers
+   respect this, most override it with the system highlight. */
+#monthPicker option:checked {
+    background: #800080 linear-gradient(0deg, #800080 0%, #800080 100%);
+    color: #ffffff;
+    font-weight: 700;
+}
+
+
     </style>
     <style>
         @view-transition {
@@ -850,7 +1027,6 @@
 
 <body>
 
-    <!-- =============== Navigation ================ -->
     <div class="container">
         <div class="navigation">
             <ul>
@@ -886,7 +1062,6 @@
             </ul>
         </div>
 
-        <!-- ========================= Main ==================== -->
         <div class="main">
             <div class="topbar">
                 <div class="toggle"><span class="material-symbols-outlined">menu</span></div>
@@ -895,7 +1070,6 @@
                 </div>
                 <div class="mobile-brand">
                     <h1 style="color: black;">Track<span style="color: purple;">nrent</span></h1>
-                    <span id="brand-name-mobile">Loading...</span>
                 </div>
 
                 <div class="user">
@@ -904,10 +1078,8 @@
                         ?
                     </div>
                 </div>
-
             </div>
 
-            <!-- ======================= Dashboard Content ========================= -->
             <section class="dashboard">
 
                 <div class="welcome-section">
@@ -915,208 +1087,492 @@
                     <p class="welcome-subtitle">How your business is doing</p>
                 </div>
 
-                <!-- Range buttons -->
-                <div class="range-buttons">
-                    <button data-preset="this_month" class="range-btn-active">This Month</button>
-                    <button data-preset="this_year">This Year</button>
-                    <button data-preset="all_time">All Time</button>
-                </div>
+                <!-- ============================================
+                     SHARED CONTROLS — range picker + month picker
+                ============================================ -->
+                <div class="top-controls">
+                    <div class="range-buttons">
+                        <button data-preset="this_month" class="range-btn-active">This Month</button>
+                        <button data-preset="this_year">This Year</button>
+                        <button data-preset="all_time">All Time</button>
 
-                <!-- MONEY HEADER -->
-                <div class="money-header">
-                    <p class="label">Revenue</p>
-                    <p class="big" id="bigRevenue">…</p>
-                    <p class="sub" id="bigRevenueHeader"></p>
-                </div>
-
-                <!-- SNAPSHOT CARDS -->
-                <div class="snapshot-grid">
-                    <div class="snap-card">
-                        <div class="label">Bookings</div>
-                        <div class="value" id="snapBookings">0</div>
+                    <div class="month-picker-wrap">
+                        <select id="monthPicker">
+                            <option value="">Pick a month</option>
+                        </select>
                     </div>
-                    <div class="snap-card good">
-                        <div class="label">Returned</div>
-                        <div class="value" id="snapReturned">0</div>
-                    </div>
-                    <div class="snap-card danger">
-                        <div class="label">Owed to you</div>
-                        <div class="value" id="snapOwed">₦0</div>
-                    </div>
-                    <div class="snap-card warn">
-                        <div class="label">Overdue</div>
-                        <div class="value" id="snapOverdue">0</div>
-                    </div>
-                    <div class="snap-card danger">
-                        <div class="label">Damage losses</div>
-                        <div class="value" id="snapDamages">₦0</div>
                     </div>
                 </div>
 
-                <!-- WHO OWES YOU MONEY -->
-                <!-- Note: cancelled bookings are excluded from this list. -->
-                <div class="card">
-                    <div class="section-title">
-                        <h2>
-                            <span class="material-symbols-outlined" style="color:#dc2626;">warning</span>
-                            Who owes you money
-                        </h2>
-                        <span class="section-badge"><span id="outstandingCount">0</span> clients</span>
-                    </div>
-                    <div class="table-wrap">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Client</th>
-                                    <th>Owed</th>
-                                    <th>Since</th>
-                                    <th class="right">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="outstandingTableBody">
-                                <tr><td colspan="4" style="text-align:center;padding:24px;color:#9ca3af;">Loading…</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <p id="outstandingTotal" style="text-align:right;margin-top:12px;font-size:13px;font-weight:700;color:#4b5563;"></p>
+                <!-- ============================================
+                     TABS
+                ============================================ -->
+                <div class="analytics-tabs">
+                    <button type="button" class="analytics-tab active" id="tabAll"
+                        onclick="switchAnalyticsTab('all')">All Revenue</button>
+                    <button type="button" class="analytics-tab" id="tabCustomers"
+                        onclick="switchAnalyticsTab('customers')">Customers</button>
+                    <button type="button" class="analytics-tab" id="tabPartners"
+                        onclick="switchAnalyticsTab('partners')">Rental Partners</button>
                 </div>
 
-                <!-- BEST CUSTOMERS -->
-                <div class="card">
-                    <div class="section-title">
-                        <h2>
-                            <span class="material-symbols-outlined" style="color:purple;">star</span>
-                            Your best customers
-                        </h2>
-                    </div>
-                    <div class="table-wrap">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Client</th>
-                                    <th>Phone</th>
-                                    <th>Bookings</th>
-                                    <th class="right">Total spent</th>
-                                </tr>
-                            </thead>
-                            <tbody id="bestCustomersTableBody">
-                                <tr><td colspan="4" style="text-align:center;padding:24px;color:#9ca3af;">Loading…</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                <!-- ========================================================= -->
+                <!-- ALL REVENUE PANEL                                          -->
+                <!-- ========================================================= -->
+                <div id="allPanel">
 
-                <!-- TOP ITEMS -->
-                <div class="card">
-                    <div class="section-title">
-                        <h2>
-                            <span class="material-symbols-outlined" style="color:purple;">inventory_2</span>
-                            Your most rented items
-                        </h2>
-                    </div>
-                    <div class="table-wrap">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Item</th>
-                                    <th>Units rented</th>
-                                    <th>Bookings</th>
-                                    <th class="right">Revenue</th>
-                                </tr>
-                            </thead>
-                            <tbody id="topItemsTableBody">
-                                <tr><td colspan="4" style="text-align:center;padding:24px;color:#9ca3af;">Loading…</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                    <div class="hero-header">
+                        <p class="hero-label">Total revenue</p>
+                        <p class="hero-total" id="allTotalRevenue">…</p>
+                        <p class="hero-sub" id="allRevenueSub"></p>
 
-                <!-- DAMAGE REPORT -->
-                <div class="card">
-                    <div class="section-title">
-                        <h2>
-                            <span class="material-symbols-outlined" style="color:#dc2626;">broken_image</span>
-                            Damage losses
-                        </h2>
-                    </div>
-
-                    <div class="damage-summary">
-                        <div class="damage-stat">
-                            <div class="label">Total damages</div>
-                            <div class="value" id="damageTotal">₦0</div>
-                            <div class="hint">Recorded in this period</div>
+                        <div class="split-bar">
+                            <div class="seg-customers" id="splitSegCustomers" style="width:0%;"></div>
+                            <div class="seg-partners" id="splitSegPartners" style="width:0%;"></div>
+                            <div class="seg-empty" id="splitSegEmpty" style="width:100%;"></div>
                         </div>
-                        <div class="damage-stat">
-                            <div class="label">Damage rate</div>
-                            <div class="value" id="damageRate">0.00%</div>
-                            <div class="hint">As % of revenue</div>
-                        </div>
-                        <div class="damage-stat">
-                            <div class="label">Caution fees kept</div>
-                            <div class="value" id="damageCautionKept">₦0</div>
-                            <div class="hint">Retained from clients</div>
-                        </div>
-                        <div class="damage-stat">
-                            <div class="label" id="damageNetLabel">Net damage cost</div>
-                            <div class="value" id="damageNetCost">₦0</div>
-                            <div class="hint">Damages minus caution kept</div>
-                        </div>
-                    </div>
 
-                    <div class="damage-tables">
-                        <div>
-                            <h3>By item</h3>
-                            <div class="table-wrap">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Item</th>
-                                            <th>Times</th>
-                                            <th>Units</th>
-                                            <th class="right">₦ Lost</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="damageByItemTableBody">
-                                        <tr><td colspan="4" style="text-align:center;padding:16px;color:#9ca3af;">Loading…</td></tr>
-                                    </tbody>
-                                </table>
+                        <div class="split-legend">
+                            <div class="leg">
+                                <span class="dot customers"></span>
+                                <div class="meta">
+                                    <div class="leg-label">From customers</div>
+                                    <div class="leg-value">
+                                        <span id="splitCustomersValue">₦0</span>
+                                        <span class="leg-pct" id="splitCustomersPct">0%</span>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div>
-                            <h3>By client</h3>
-                            <div class="table-wrap">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Client</th>
-                                            <th>Times</th>
-                                            <th class="right">₦ Charged</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="damageByClientTableBody">
-                                        <tr><td colspan="3" style="text-align:center;padding:16px;color:#9ca3af;">Loading…</td></tr>
-                                    </tbody>
-                                </table>
+                            <div class="leg">
+                                <span class="dot partners"></span>
+                                <div class="meta">
+                                    <div class="leg-label">From rental partners</div>
+                                    <div class="leg-value">
+                                        <span id="splitPartnersValue">₦0</span>
+                                        <span class="leg-pct" id="splitPartnersPct">0%</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- REVENUE CHART -->
-                <div class="card">
-                    <div class="section-title">
-                        <h2>
-                            <span class="material-symbols-outlined" style="color:purple;">trending_up</span>
-                            Revenue over the last 12 months
-                        </h2>
+                    <div class="snapshot-grid cols-4">
+                        <div class="snap-card">
+                            <div class="label">Total sales</div>
+                            <div class="value" id="allSnapTotal">₦0</div>
+                            <div class="hint" id="allSnapTotalHint">0 bookings · 0 batches</div>
+                        </div>
+                        <div class="snap-card danger">
+                            <div class="label">Owed to you</div>
+                            <div class="value" id="allSnapOwed">₦0</div>
+                            <div class="hint" id="allSnapOwedHint">—</div>
+                        </div>
+                        <div class="snap-card warn">
+                            <div class="label">Overdue</div>
+                            <div class="value" id="allSnapOverdue">0</div>
+                            <div class="hint" id="allSnapOverdueHint">—</div>
+                        </div>
+                        <div class="snap-card danger">
+                            <div class="label">Damage losses</div>
+                            <div class="value" id="allSnapDamages">₦0</div>
+                            <div class="hint" id="allSnapDamagesHint">—</div>
+                        </div>
                     </div>
-                    <div class="chart-container">
-                        <canvas id="revenueChart"></canvas>
+
+                    <div class="card">
+                        <div class="section-title">
+                            <h2>
+                                <span class="material-symbols-outlined" style="color:purple;">trending_up</span>
+                                Revenue over the last 12 months
+                            </h2>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="allRevenueChart"></canvas>
+                        </div>
                     </div>
+
                 </div>
+                <!-- /ALL REVENUE PANEL -->
+
+                <!-- ========================================================= -->
+                <!-- CUSTOMERS PANEL                                            -->
+                <!-- ========================================================= -->
+                <div id="customersPanel" style="display:none;">
+
+                    <div class="money-header">
+                        <p class="label">Revenue from customers</p>
+                        <p class="big" id="bigRevenue">…</p>
+                        <p class="sub" id="bigRevenueHeader"></p>
+                    </div>
+
+                    <div class="snapshot-grid">
+                        <div class="snap-card">
+                            <div class="label">Bookings</div>
+                            <div class="value" id="snapBookings">0</div>
+                        </div>
+                        <div class="snap-card good">
+                            <div class="label">Returned</div>
+                            <div class="value" id="snapReturned">0</div>
+                        </div>
+                        <div class="snap-card danger">
+                            <div class="label">Owed to you</div>
+                            <div class="value" id="snapOwed">₦0</div>
+                        </div>
+                        <div class="snap-card warn">
+                            <div class="label">Overdue</div>
+                            <div class="value" id="snapOverdue">0</div>
+                        </div>
+                        <div class="snap-card danger">
+                            <div class="label">Damage losses</div>
+                            <div class="value" id="snapDamages">₦0</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">
+                            <h2>
+                                <span class="material-symbols-outlined" style="color:#dc2626;">warning</span>
+                                Who owes you money
+                            </h2>
+                            <span class="section-badge"><span id="outstandingCount">0</span> clients</span>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Client</th>
+                                        <th>Owed</th>
+                                        <th>Since</th>
+                                        <th class="right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="outstandingTableBody">
+                                    <tr><td colspan="4" style="text-align:center;padding:24px;color:#9ca3af;">Loading…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p id="outstandingTotal"
+                            style="text-align:right;margin-top:12px;font-size:13px;font-weight:700;color:#4b5563;"></p>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">
+                            <h2>
+                                <span class="material-symbols-outlined" style="color:purple;">star</span>
+                                Your best customers
+                            </h2>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Client</th>
+                                        <th>Phone</th>
+                                        <th>Bookings</th>
+                                        <th class="right">Total spent</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bestCustomersTableBody">
+                                    <tr><td colspan="4" style="text-align:center;padding:24px;color:#9ca3af;">Loading…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">
+                            <h2>
+                                <span class="material-symbols-outlined" style="color:purple;">inventory_2</span>
+                                Your most rented items
+                            </h2>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Units rented</th>
+                                        <th>Bookings</th>
+                                        <th class="right">Revenue</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="topItemsTableBody">
+                                    <tr><td colspan="4" style="text-align:center;padding:24px;color:#9ca3af;">Loading…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">
+                            <h2>
+                                <span class="material-symbols-outlined" style="color:#dc2626;">broken_image</span>
+                                Damage losses
+                            </h2>
+                        </div>
+
+                        <div class="damage-summary">
+                            <div class="damage-stat">
+                                <div class="label">Total damages</div>
+                                <div class="value" id="damageTotal">₦0</div>
+                                <div class="hint">Recorded in this period</div>
+                            </div>
+                            <div class="damage-stat">
+                                <div class="label">Damage rate</div>
+                                <div class="value" id="damageRate">0.00%</div>
+                                <div class="hint">As % of customer revenue</div>
+                            </div>
+                            <div class="damage-stat">
+                                <div class="label">Caution fees kept</div>
+                                <div class="value" id="damageCautionKept">₦0</div>
+                                <div class="hint">Retained from clients</div>
+                            </div>
+                            <div class="damage-stat">
+                                <div class="label" id="damageNetLabel">Net damage cost</div>
+                                <div class="value" id="damageNetCost">₦0</div>
+                                <div class="hint">Damages minus caution kept</div>
+                            </div>
+                        </div>
+
+                        <div class="damage-tables">
+                            <div>
+                                <h3>By item</h3>
+                                <div class="table-wrap">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Item</th>
+                                                <th>Times</th>
+                                                <th>Units</th>
+                                                <th class="right">₦ Lost</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="damageByItemTableBody">
+                                            <tr><td colspan="4" style="text-align:center;padding:16px;color:#9ca3af;">Loading…</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div>
+                                <h3>By client</h3>
+                                <div class="table-wrap">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Client</th>
+                                                <th>Times</th>
+                                                <th class="right">₦ Charged</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="damageByClientTableBody">
+                                            <tr><td colspan="3" style="text-align:center;padding:16px;color:#9ca3af;">Loading…</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">
+                            <h2>
+                                <span class="material-symbols-outlined" style="color:purple;">trending_up</span>
+                                Customer revenue over the last 12 months
+                            </h2>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                    </div>
+
+                </div>
+                <!-- /CUSTOMERS PANEL -->
+
+                <!-- ========================================================= -->
+                <!-- RENTAL PARTNERS PANEL                                      -->
+                <!-- ========================================================= -->
+                <div id="partnersPanel" style="display:none;">
+
+                    <div class="money-header partner">
+                        <p class="label">Lent-out revenue</p>
+                        <p class="big" id="partnerBigRevenue">…</p>
+                        <p class="sub" id="partnerBigRevenueHeader"></p>
+                    </div>
+
+                    <div class="snapshot-grid">
+                        <div class="snap-card">
+                            <div class="label">Batches</div>
+                            <div class="value" id="partnerSnapBatches">0</div>
+                        </div>
+                        <div class="snap-card good">
+                            <div class="label">Returned</div>
+                            <div class="value" id="partnerSnapReturned">0</div>
+                        </div>
+                        <div class="snap-card danger">
+                            <div class="label">Owed to you</div>
+                            <div class="value" id="partnerSnapOwed">₦0</div>
+                        </div>
+                        <div class="snap-card warn">
+                            <div class="label">Overdue</div>
+                            <div class="value" id="partnerSnapOverdue">0</div>
+                        </div>
+                        <div class="snap-card danger">
+                            <div class="label">Damage losses</div>
+                            <div class="value" id="partnerSnapDamages">₦0</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">
+                            <h2>
+                                <span class="material-symbols-outlined" style="color:#dc2626;">warning</span>
+                                Partners who owe you money
+                            </h2>
+                            <span class="section-badge"><span id="partnerOutstandingCount">0</span> partners</span>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Partner</th>
+                                        <th>Owed</th>
+                                        <th>Since</th>
+                                        <th class="right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="partnerOutstandingTableBody">
+                                    <tr><td colspan="4" style="text-align:center;padding:24px;color:#9ca3af;">Loading…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p id="partnerOutstandingTotal"
+                            style="text-align:right;margin-top:12px;font-size:13px;font-weight:700;color:#4b5563;"></p>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">
+                            <h2>
+                                <span class="material-symbols-outlined" style="color:purple;">star</span>
+                                Your best rental partners
+                            </h2>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Partner</th>
+                                        <th>Phone</th>
+                                        <th>Batches</th>
+                                        <th class="right">Total paid</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="partnerBestTableBody">
+                                    <tr><td colspan="4" style="text-align:center;padding:24px;color:#9ca3af;">Loading…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">
+                            <h2>
+                                <span class="material-symbols-outlined" style="color:purple;">inventory_2</span>
+                                Items you lend out most
+                            </h2>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Units lent</th>
+                                        <th>Batches</th>
+                                        <th class="right">Revenue</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="partnerTopItemsTableBody">
+                                    <tr><td colspan="4" style="text-align:center;padding:24px;color:#9ca3af;">Loading…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">
+                            <h2>
+                                <span class="material-symbols-outlined" style="color:#dc2626;">broken_image</span>
+                                Damage from rental partners
+                            </h2>
+                        </div>
+
+                        <div class="damage-summary" style="grid-template-columns:repeat(2, 1fr);">
+                            <div class="damage-stat">
+                                <div class="label">Total damages</div>
+                                <div class="value" id="partnerDamageTotal">₦0</div>
+                                <div class="hint">Recorded in this period</div>
+                            </div>
+                            <div class="damage-stat">
+                                <div class="label">Damage rate</div>
+                                <div class="value" id="partnerDamageRate">0.00%</div>
+                                <div class="hint">As % of lent-out revenue</div>
+                            </div>
+                        </div>
+
+                        <div class="damage-tables">
+                            <div>
+                                <h3>By item</h3>
+                                <div class="table-wrap">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Item</th>
+                                                <th>Times</th>
+                                                <th>Units</th>
+                                                <th class="right">₦ Lost</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="partnerDamageByItemTableBody">
+                                            <tr><td colspan="4" style="text-align:center;padding:16px;color:#9ca3af;">Loading…</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div>
+                                <h3>By partner</h3>
+                                <div class="table-wrap">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Partner</th>
+                                                <th>Times</th>
+                                                <th class="right">₦ Charged</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="partnerDamageByPartnerTableBody">
+                                            <tr><td colspan="3" style="text-align:center;padding:16px;color:#9ca3af;">Loading…</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">
+                            <h2>
+                                <span class="material-symbols-outlined" style="color:purple;">trending_up</span>
+                                Lent-out revenue over the last 12 months
+                            </h2>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="partnerRevenueChart"></canvas>
+                        </div>
+                    </div>
+
+                </div>
+                <!-- /RENTAL PARTNERS PANEL -->
 
             </section>
-
         </div>
 
         <!-- =============== Bottom Navigation (Mobile) ================ -->
@@ -1158,29 +1614,48 @@
             main.classList.toggle("active");
         };
 
-        // Add hovered class on selected list item
         let list = document.querySelectorAll(".navigation li");
-
         function activeLink() {
-            list.forEach((item) => {
-                item.classList.remove("hovered");
-            });
+            list.forEach((item) => item.classList.remove("hovered"));
             this.classList.add("hovered");
         }
-
         list.forEach((item) => item.addEventListener("mouseover", activeLink));
 
-        // Bottom Nav Active State
         let bottomNavItems = document.querySelectorAll(".bottom-nav li");
-
         function activeBottomLink() {
-            bottomNavItems.forEach((item) => {
-                item.classList.remove("active");
-            });
+            bottomNavItems.forEach((item) => item.classList.remove("active"));
             this.classList.add("active");
         }
-
         bottomNavItems.forEach((item) => item.addEventListener("click", activeBottomLink));
+
+        // ── Analytics tabs ──
+        window.switchAnalyticsTab = function (tab) {
+            const panels = {
+                all: document.getElementById("allPanel"),
+                customers: document.getElementById("customersPanel"),
+                partners: document.getElementById("partnersPanel")
+            };
+            const tabs = {
+                all: document.getElementById("tabAll"),
+                customers: document.getElementById("tabCustomers"),
+                partners: document.getElementById("tabPartners")
+            };
+
+            Object.keys(panels).forEach(key => {
+                panels[key].style.display = (key === tab) ? "block" : "none";
+                tabs[key].classList.toggle("active", key === tab);
+            });
+
+            // Lazy-load partner data the first time the tab is opened
+            if (tab === "partners" && typeof window.loadPartnerAnalytics === "function") {
+                window.loadPartnerAnalytics();
+            }
+            // All Revenue also lazy-loads on first open (usually instant since
+            // it's the default tab, but keeps things safe if it's ever flipped)
+            if (tab === "all" && typeof window.loadAllRevenueAnalytics === "function") {
+                window.loadAllRevenueAnalytics();
+            }
+        };
     </script>
 
     <script type="module" src="assets/js/avatar.js"></script>
